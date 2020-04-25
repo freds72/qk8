@@ -236,7 +236,16 @@ end
 
 local _lava={}
 local _palettes={}
+-- textured edge renderer
+local dither_pat={0b1111111111111111,0b0111111111111111,0b0111111111011111,0b0101111111011111,0b0101111101011111,0b0101101101011111,0b0101101101011110,0b0101101001011110,0b0101101001011010,0b0001101001011010,0b0001101001001010,0b0000101001001010,0b0000101000001010,0b0000001000001010,0b0000001000001000,0b0000000000000000}
+
 function _init()
+	-- fillp color mode
+	poke(0x5f34, 1)
+
+	for k,fp in pairs(dither_pat) do
+		dither_pat[k]=fp>>16
+	end
 	--[[
 	for i=1,15 do
 		pal(i,128+i,1)
@@ -277,6 +286,7 @@ local _parts={}
 function _update()
 	-- update texture
 
+	--[[
 	local t=time()/4
 	local cx={
 		[0]=sin(t+0/50)<<2,
@@ -305,6 +315,7 @@ function _update()
 				((y+cx[x])&0xf)<<4])
 		end
 	end 
+	]]
 
 	-- restore lightmap
 	-- reload()
@@ -336,7 +347,7 @@ function _update()
 				local d=v_dot(f.n,fp)
 				if d<0.2*0.2 then
 					local u,v=8+8*fp[1],16-8*fp[2]
-					mset(u,v,79)
+					--mset(u,v,79)
 				end
 			end
 
@@ -389,11 +400,8 @@ end
 
 -->8
 
--- textured edge renderer
-local dither_pat={0b1111111111111111,0b0111111111111111,0b0111111111011111,0b0101111111011111,0b0101111101011111,0b0101101101011111,0b0101101101011110,0b0101101001011110,0b0101101001011010,0b0001101001011010,0b0001101001001010,0b0000101001001010,0b0000101000001010,0b0000001000001010,0b0000001000001000,0b0000000000000000}
-
 function polytex(v,lu,lv)
-	local p0,spans,palettes=v[#v],{},_palettes
+	local p0,spans,dither_pat=v[#v],{},dither_pat
 	local x0,y0,w0,u0,v0=p0.x,p0.y,p0.w,p0.u,p0.v
 	for i=1,#v do
 		local p1=v[i]
@@ -419,6 +427,7 @@ function polytex(v,lu,lv)
 				if(a>b) a,aw,au,av,b,bw,bu,bv=b,bw,bu,bv,a,aw,au,av
 				local dab=b-a
 				local daw,dau,dav=(bw-aw)/dab,(bu-au)/dab,(bv-av)/dab
+				if(a<0) au-=a*dau av-=a*dav aw-=a*daw a=0
 				local ca,cb=ceil(a),min(ceil(b)-1,127)
 				-- sub-pix shift
 				local sa=ca-a
@@ -426,33 +435,17 @@ function polytex(v,lu,lv)
 				av+=sa*dav
 				aw+=sa*daw
 				local dw,du,dv=daw<<2,dau<<2,dav<<2
-				local s0
 				for k=ca,cb-4,4 do
-					local u,v=au/aw,av/aw
-					local s=max(5-(mget(lu+u,lv+v)-64)/3)\1
-					if(s!=s0) pal(palettes[s]) s0=s
-				
-					tline(k,y,k+3,y,u,v,dau/aw,dav/aw)
+					-- pick lightmap array directly (saves lu+/lv+)
+					rectfill(k,y,k+3,y,0x1087|(dither_pat[lu+au/aw|(lv+av/aw)>>16] or 0))
 					ca+=4
 					au+=du
 					av+=dv
 					aw+=dw
 				end
+				-- left over from stride rendering
 				if ca<=cb then
-					local u,v=au/aw,av/aw
-					local s=max(5-(mget(lu+u,lv+v)-64)/3)\1
-					if(s!=s0) pal(palettes[s]) s0=s
-					
-					tline(ca,y,cb,y,u,v,dau/aw,dav/aw)
-					-- get lightmap
-					--[[
-					local s=mget(au/aw,av/aw+8)
-					if s!=0 then
-						fillp(dither_pat[s-63]+0x0.f)
-						rectfill(ca,y,cb,y,8)
-						fillp()
-					end
-					]]
+					rectfill(ca,y,cb,y,0x1087|(dither_pat[lu+au/aw|(lv+av/aw)>>16] or 0))
 				end
 			else
 				spans[y]={x=x0,w=w0,u=u0,v=v0}
@@ -464,7 +457,7 @@ function polytex(v,lu,lv)
 		end
 		x0,y0,w0,u0,v0=_x1,_y1,_w1,_u1,_v1
 	end
-	pal()
+	fillp()
 end
 __gfx__
 00000000200882202202200200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
