@@ -109,7 +109,7 @@ def export_face(obcontext, f):
     return fs
 
 # export room faces (vertex groups) and portals
-def export_rooms(obcontext):
+def export_level(obcontext):
     # data
     s = ""
     obdata = obcontext.data
@@ -189,7 +189,7 @@ s += "{}{}{}".format(pack_double(plyr.location.x), pack_double(plyr.location.z),
 # select first mesh object
 obcontext = [o for o in scene.objects if o.type == 'MESH'][0]
 
-s += export_rooms(obcontext)
+s += export_level(obcontext)
 
 #
 with open(args.out, 'w') as f:

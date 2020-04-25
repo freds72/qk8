@@ -20,7 +20,6 @@ s = ""
 
 # 3d models
 file_list = ['church']
-s = s + "{:02x}".format(len(file_list))
 for blend_file in file_list:
     print("Exporting: {}.blend".format(blend_file))
     fd, path = tempfile.mkstemp()
