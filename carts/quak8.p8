@@ -5,7 +5,7 @@ __lua__
 -- by freds72
 
 -- globals
-local cam
+local cam,plyr,level
 
 -- clipping globals
 local sessionid=0
@@ -45,6 +45,13 @@ function v_add(v,dv,scale)
 		v[2]+scale*dv[2],
 		v[3]+scale*dv[3]}
 end
+function v_min(a,b)
+	return {min(a[1],b[1]),min(a[2],b[2]),min(a[3],b[3])}
+end
+function v_max(a,b)
+	return {max(a[1],b[1]),max(a[2],b[2]),max(a[3],b[3])}
+end
+
 -- safe vector length
 function v_len(v)
 	local x,y,z=v[1],v[2],v[3]
@@ -93,11 +100,16 @@ end
 function m_up(m)
 	return {m[5],m[6],m[7]}
 end
+-- returns right vector from matrix
+function m_right(m)
+	return {m[1],m[2],m[3]}
+end
+
 function m_x_v(m,v)
 	local x,y,z=v[1],v[2],v[3]
 	return {m[1]*x+m[5]*y+m[9]*z+m[13],m[2]*x+m[6]*y+m[10]*z+m[14],m[3]*x+m[7]*y+m[11]*z+m[15]}
 end
-
+-- optimized 4x4 matrix mulitply
 function m_x_m(a,b)
 	local a11,a12,a13,a21,a22,a23,a31,a32,a33=a[1],a[5],a[9],a[2],a[6],a[10],a[3],a[7],a[11]
 	local b11,b12,b13,b14,b21,b22,b23,b24,b31,b32,b33,b34=b[1],b[5],b[9],b[13],b[2],b[6],b[10],b[14],b[3],b[7],b[11],b[15]
@@ -125,30 +137,12 @@ function make_m_from_euler(x,y,z)
 end
 
 -- camera
-function make_cam(focal)
-	local yangle,zangle=0,0
-	local dyangle,dzangle=0,0
-
-	-- suppress offset calc
+function make_cam(x0,y0,focal)
+	-- shift
 	camera(-64,-64)
-
 	return {
 		pos={0,0,0},
-		control=function(self,pos,dist)
-			if(btn(0)) dyangle+=1
-			if(btn(1)) dyangle-=1
-			if(btn(2)) dzangle+=1
-			if(btn(3)) dzangle-=1
-
-			yangle+=dyangle/128
-			zangle+=dzangle/128
-			-- friction
-			dyangle*=0.8
-			dzangle*=0.8
-
-			local m=make_m_from_euler(zangle,yangle,0)
-			local pos=v_add(pos,m_fwd(m),dist)
-
+		track=function(self,pos,m)
 			-- inverse view matrix
 			-- only invert orientation part
 			m[2],m[5]=m[5],m[2]
@@ -163,7 +157,13 @@ function make_cam(focal)
 			})
 			
 			self.pos=pos
-		end
+		end, 
+	 	unproject=function(self,sx,sy)
+   		local m=self.m
+		 	local x,y,z=0.25*(sx-64)/focal,0.25*(64-sy)/focal,0.25
+		 	-- to world
+			return {m[1]*x+m[2]*y+m[3]*z,m[5]*x+m[6]*y+m[7]*z,m[9]*x+m[10]*y+m[11]*z}
+	 	end
 	}
 end
 
@@ -217,10 +217,9 @@ function collect_faces(faces,cam_pos,v_cache,out)
 				-- mix of near+far vertices?
 				if(is_clipped>0) verts=z_poly_clip(z_near,verts)
 				if #verts>2 then
-					verts.f=face
-					-- color replace
+					-- original object reference
+					verts.ref=face
 					verts.c=face.c
-					verts.key=ni/(y*y+z*z)
 					out[#out+1]=verts
 				end
 			end
@@ -229,20 +228,33 @@ function collect_faces(faces,cam_pos,v_cache,out)
 	end
 end
 
--- draw face
--- handles clipping as needed
-function draw_face(v0,v1,v2,v3,col)
-	if v0.outcode&v1.outcode&v2.outcode&(v3 and v3.outcode or 0xffff)==0 then
-		local verts={v0,v1,v2,v3}
-		if(v0.clipcode+v1.clipcode+v2.clipcode+(v3 and v3.clipcode or 0)>0) verts=z_poly_clip(z_near,verts)
-		if(#verts>2) polyfill(verts,col)
-	end
-end
-
+-- draw faces
 function draw_faces(faces)
 	for i,d in ipairs(faces) do
 		polyfill(d,d.c)
 	end
+end
+
+function collect_room(room,cam_pos,v_cache,out)
+	-- avoid looping
+	room.session=sessionid
+	-- collect portals
+	local out_portals={}
+	collect_faces(room.portals,cam_pos,v_cache,out_portals)
+	-- collect visible portals
+	for _,portal in pairs(out_portals) do
+		-- 'direct' the graph
+		local to=portal.ref.to
+		if to.session==sessionid then
+			to=portal.ref.from
+		end
+		if to.session!=sessionid then
+			collect_room(to,cam_pos,v_cache,out)
+		end
+	end
+	-- collect faces
+	-- far faces = top of 'stack'
+	collect_faces(room.faces,cam.pos,v_cache,out)
 end
 
 -- clipping
@@ -275,6 +287,9 @@ end
 local dither_pat={0b1111111111111111,0b0111111111111111,0b0111111111011111,0b0101111111011111,0b0101111101011111,0b0101101101011111,0b0101101101011110,0b0101101001011110,0b0101101001011010,0b0001101001011010,0b0001101001001010,0b0000101001001010,0b0000101000001010,0b0000001000001010,0b0000001000001000,0b0000000000000000}
 
 function _init()
+	-- mouse support
+	poke(0x5f2d,1)
+
 	-- fillp color mode
 	poke(0x5f34, 1)
 
@@ -282,30 +297,87 @@ function _init()
 		dither_pat[k]=fp>>16
 	end
 
-	cam=make_cam(64,64,64)
+	cam=make_cam()
 	level=unpack_level()
+	plyr={
+		pos=v_clone(level.start),
+		hdg=0,
+		pitch=0
+	}
 end
 
+local mousex,mousey
+local mouselb=false
+local roll=0
+
 function _update()
-	-- update texture
-	cam:control(level.start)
+	-- input
+	local mx,my,lmb=stat(32),stat(33),stat(34)==1
+
+  local dx,dz=0,0
+  if(btn(0) or btn(0,1)) dx=-4
+  if(btn(1) or btn(1,1)) dx=4
+  if(btn(2) or btn(2,1)) dz=1
+  if(btn(3) or btn(3,1)) dz=-1
+	roll+=dx
+	roll=lerp(roll,0,0.8)
+
+  if mousex then
+   if abs(mousex-64)<32 then
+   	plyr.hdg+=(mx-mousex)/128
+   else
+   	plyr.hdg+=(mx-64)/2048
+   end
+  end
+  if mousey then
+	  plyr.pitch+=(my-mousey)/128
+		plyr.pitch=mid(plyr.pitch,-0.25,0.25)
+	end
+	
+	-- player: moves on a plane
+  local m=make_m_from_euler(0,plyr.hdg,0)
+  plyr.pos=v_add(plyr.pos,m_right(m),0.1*dx)
+  plyr.pos=v_add(plyr.pos,m_fwd(m),0.1*dz)
+
+	-- camera: follow head
+	cam:track(plyr.pos,make_m_from_euler(plyr.pitch,plyr.hdg,-roll/64))
+	
+  mousex,mousey=mx,my
+	mouselb=lmb
 end
 
 function _draw()
 	sessionid+=1
 	cls()
 
-	local v_cache=setmetatable({m=cam.m},v_cache_cls)
-	local out={}
-	
+	local out,v_cache={},setmetatable({m=cam.m},v_cache_cls)
+	local msg=""
+
+	-- find camera room
+	local cx,cy,cz,active_room=cam.pos[1],cam.pos[2],cam.pos[3]
+	-- todo: optimize
 	for _,r in pairs(level.rooms) do
-		collect_faces(r.faces,cam.pos,v_cache,out)
+		local vmin,vmax=r.vmin,r.vmax
+		if cx>=vmin[1] and cx<vmax[1] and
+			cy>=vmin[2] and cy<vmax[2] and
+			cz>=vmin[3] and cz<vmax[3] then
+			active_room=r
+			break
+		end
 	end
+	if active_room then
+		collect_room(active_room,cam_pos,v_cache,out)
+		msg=active_room.id
+	end
+	
 	draw_faces(out)
 
-	rectfill(0,0,127,6,8)
-	local cpu=tostr(flr(100*stat(1))).."%"
-	print(cpu,128-#cpu*4,1,2)
+	-- reticule
+	pset(0,0,7)
+
+	local cpu=tostr(stat(1).."%")
+	print(cpu.."\n"..msg,-61,-62,0)
+	print(cpu.."\n"..msg,-62,-63,7)
 end
 
 -->8
@@ -370,20 +442,18 @@ end
 function unpack_level()
 	-- player start pos
 	local start=unpack_v()
-	print(start[1].."/"..start[2].."/"..start[3])
+
 	-- vertices
 	local verts={}
 	unpack_array(function()
 		add(verts,unpack_v())
 	end)
 
-	print("verts:"..#verts)
-
 	-- rooms
 	local rooms={}
 	unpack_array(function()
 		local id,faces=unpack_variant(),{}
-		print("room:"..id)
+		local vmin,vmax={32000,32000,32000},{-32000,-32000,-32000}	
 		-- faces
 		unpack_array(function()
 			local f=unpack_face(verts)
@@ -392,20 +462,34 @@ function unpack_level()
 			-- viz check
 			f.cp=v_dot(f.n,f[1])
 
+			-- expand bouding box
+			for _,v in ipairs(f) do
+				vmin,vmax=v_min(vmin,v),v_max(vmax,v)
+			end
+
 			add(faces,f)
 		end)
+
 		-- portals
 		local portals={}
 		unpack_array(function()
-			local portal={from=id,to=unpack_variant(),ni=unpack_variant()}
+			-- hardocde 'always visible' flag
+			local portal={from=id,to=unpack_variant(),flags=1,ni=unpack_variant()}
 			for i=1,portal.ni do
 				-- direct reference to vertex
 				portal[i]=verts[unpack_variant()]
 			end
 			add(portals,portal)
 		end)
-		rooms[id]={faces=faces,portals=portals}
+		rooms[id]={id=id,faces=faces,portals=portals,vmin=vmin,vmax=vmax}
 	end)
+	-- fix portal references
+	for _,r in pairs(rooms) do
+		for _,p in pairs(r.portals) do
+			p.from=rooms[p.from]
+			p.to=rooms[p.to]
+		end
+	end
 	return {rooms=rooms,start=start}
 end
 
