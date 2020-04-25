@@ -6,7 +6,12 @@ __lua__
 
 -- globals
 local cam
-local level
+
+-- clipping globals
+local sessionid=0
+local k_far,k_near=0,2
+local k_right,k_left=4,8
+local z_near=0.25
 
 -- helper functions
 function lerp(a,b,t)
@@ -119,13 +124,17 @@ function make_m_from_euler(x,y,z)
   		0,0,0,1}
 end
 
-function make_cam(x0,y0,focal)
+-- camera
+function make_cam(focal)
 	local yangle,zangle=0,0
 	local dyangle,dzangle=0,0
 
+	-- suppress offset calc
+	camera(-64,-64)
+
 	return {
 		pos={0,0,0},
-		control=function(self,dist)
+		control=function(self,pos,dist)
 			if(btn(0)) dyangle+=1
 			if(btn(1)) dyangle-=1
 			if(btn(2)) dzangle+=1
@@ -138,8 +147,7 @@ function make_cam(x0,y0,focal)
 			dzangle*=0.8
 
 			local m=make_m_from_euler(zangle,yangle,0)
-			local pos=m_fwd(m)
-			v_scale(pos,dist)
+			local pos=v_add(pos,m_fwd(m),dist)
 
 			-- inverse view matrix
 			-- only invert orientation part
@@ -155,41 +163,112 @@ function make_cam(x0,y0,focal)
 			})
 			
 			self.pos=pos
-		end,
-		project=function(self,verts)
-			local out={}
-      for i,v in pairs(verts) do
-				local x,y,z=v[1],v[2],v[3]
-				local w=focal/z
-				out[i]={x=x0+x*w,y=y0-y*w,w=w}
-			end
-			return out
 		end
 	}
 end
 
-function draw_model(model,m,cam)
-	-- cam pos in object space
-	local cam_pos=m_inv_x_v(m,cam.pos)
+-- 3d engine
+-- vertex cache class
+-- uses m (matrix) and v (vertices) from self
+-- saves the 'if not ...' in inner loop
+local v_cache_cls={
+	-- v is vertex reference
+	__index=function(t,v)
+		if(not v) return
+		-- inline: local a=m_x_v(t.m,t.v[k]) 
+		local m,x,y,z=t.m,v[1],v[2],v[3]
+		local ax,ay,az=m[1]*x+m[5]*y+m[9]*z+m[13],m[2]*x+m[6]*y+m[10]*z+m[14],m[3]*x+m[7]*y+m[11]*z+m[15]
 	
-	-- object to world
-	-- world to cam
-	m=m_x_m(cam.m,m)
+		local outcode=k_near
+		if(az>z_near) outcode=k_far
+		if(ax>az) outcode+=k_right
+		if(-ax>az) outcode+=k_left
 
-	for _,face in pairs(model.f) do
-		-- is face visible?
-		if true then --v_dot(face.n,cam_pos)<=face.cp then
-			local verts={}
-			for k=1,face.ni do
-				-- transform to world
-				local p=m_x_v(m,face[k])
-				verts[k]=p
+		-- not faster :/
+		-- local bo=-(((az-z_near)>>31)<<17)-(((az-ax)>>31)<<18)-(((az+ax)>>31)<<19)
+		-- assert(bo==outcode,"outcode:"..outcode.." bits:"..bo)
+
+		-- assume vertex is visible, compute 2d coords
+		local a={ax,ay,az,outcode=outcode,clipcode=outcode&2,x=(ax/az)<<6,y=-(ay/az)<<6} 
+		t[v]=a
+		return a
+	end
+}
+
+function collect_faces(faces,cam_pos,v_cache,out)
+	local sessionid=sessionid
+	for _,face in pairs(faces) do
+		-- avoid overdraw for shared faces
+		if face.session!=sessionid and (face.flags&0x1==0x1 or v_dot(face.n,cam_pos)>face.cp) then
+			-- project vertices
+			local v0,v1,v2,v3=v_cache[face[1]],v_cache[face[2]],v_cache[face[3]],v_cache[face[4]]			
+			-- mix of near/far verts?
+			if v0.outcode&v1.outcode&v2.outcode&(v3 and v3.outcode or 0xffff)==0 then
+				local verts={v0,v1,v2,v3}
+
+				local ni,is_clipped,y,z=9,v0.clipcode+v1.clipcode+v2.clipcode,v0[2]+v1[2]+v2[2],v0[3]+v1[3]+v2[3]
+				if v3 then
+					is_clipped+=v3.clipcode
+					y+=v3[2]
+					z+=v3[3]
+					-- number of faces^2
+					ni=16
+				end
+				-- mix of near+far vertices?
+				if(is_clipped>0) verts=z_poly_clip(z_near,verts)
+				if #verts>2 then
+					verts.f=face
+					-- color replace
+					verts.c=face.c
+					verts.key=ni/(y*y+z*z)
+					out[#out+1]=verts
+				end
 			end
-			-- transform to camera & draw			
-			-- polytex(cam:project(verts),face.lu,face.lv)
-			polyfill(cam:project(verts),face.c)
+			face.session=sessionid	
 		end
 	end
+end
+
+-- draw face
+-- handles clipping as needed
+function draw_face(v0,v1,v2,v3,col)
+	if v0.outcode&v1.outcode&v2.outcode&(v3 and v3.outcode or 0xffff)==0 then
+		local verts={v0,v1,v2,v3}
+		if(v0.clipcode+v1.clipcode+v2.clipcode+(v3 and v3.clipcode or 0)>0) verts=z_poly_clip(z_near,verts)
+		if(#verts>2) polyfill(verts,col)
+	end
+end
+
+function draw_faces(faces)
+	for i,d in ipairs(faces) do
+		polyfill(d,d.c)
+	end
+end
+
+-- clipping
+function z_poly_clip(znear,v)
+	local res,v0={},v[#v]
+	local d0=v0[3]-znear
+	for i=1,#v do
+		local v1=v[i]
+		local d1=v1[3]-znear
+		if d1>0 then
+			if d0<=0 then
+				local nv=v_lerp(v0,v1,d0/(d0-d1)) 
+				nv.x=(nv[1]/nv[3])<<6
+				nv.y=-(nv[2]/nv[3])<<6 
+				res[#res+1]=nv
+			end
+			res[#res+1]=v1
+		elseif d0>0 then
+			local nv=v_lerp(v0,v1,d0/(d0-d1)) 
+			nv.x=(nv[1]/nv[3])<<6
+			nv.y=-(nv[2]/nv[3])<<6 
+			res[#res+1]=nv
+		end
+		v0,d0=v1,d1
+	end
+	return res
 end
 
 -- textured edge renderer
@@ -209,20 +288,20 @@ end
 
 function _update()
 	-- update texture
-	cam:control(1.2)
+	cam:control(level.start)
 end
 
 function _draw()
+	sessionid+=1
 	cls()
 
-	local m={
-		0.1,0,0,0,
-		0,0.1,0,0,
-		0,0,0.1,0,
-		-0.5,-0.5,-0.5,1}
+	local v_cache=setmetatable({m=cam.m},v_cache_cls)
+	local out={}
+	
 	for _,r in pairs(level.rooms) do
-		draw_model(r,m,cam)
+		collect_faces(r.faces,cam.pos,v_cache,out)
 	end
+	draw_faces(out)
 
 	rectfill(0,0,127,6,8)
 	local cpu=tostr(flr(100*stat(1))).."%"
@@ -325,7 +404,7 @@ function unpack_level()
 			end
 			add(portals,portal)
 		end)
-		rooms[id]={f=faces,p=portals}
+		rooms[id]={faces=faces,portals=portals}
 	end)
 	return {rooms=rooms,start=start}
 end
@@ -404,11 +483,11 @@ function polyfill(p,col)
 		if(y0>y1) x0,y0,x1,y1=x1,y1,x0,y0
 		-- exact slope
 		local dx=(x1-x0)/(y1-y0)
-		if(y0<0) x0-=y0*dx y0=0
+		if(y0<-64) x0-=(y0+64)*dx y0=-64
 		-- subpixel shifting (after clipping)
 		local cy0=ceil(y0)
 		x0+=(cy0-y0)*dx
-		for y=cy0,min(ceil(y1)-1,127) do
+		for y=cy0,min(ceil(y1)-1,63) do
 			local x=nodes[y]
 			if x then
 				rectfill(x,y,x0,y)
@@ -420,16 +499,8 @@ function polyfill(p,col)
 		-- next vertex
 		x0,y0=_x1,_y1
 	end
-
-	--[[
-	p0=p[#p]
-	for i=1,#p do
-		local p1=p[i]
-		line(p0.x,p0.y,p1.x,p1.y,8)
-		p0=p1
-	end
-	]]
 end
+
 __gfx__
 f34004f20413c22408f3084408d308f308f308d308f308440824081400440824081400f308d3081400f308d30814004408f308f3084408f30804084408f308f3
 0854080408f30844080408040844080408f3085408040804085408e308f3084408e308f308f308d308f392f308d308f3924408e308f392f308e308f392440814
