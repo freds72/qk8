@@ -88,8 +88,8 @@ def export_face(obcontext, f):
     # default values
     color = 1
     verts = [l.vert for l in f.loops]
-    if len(verts)>4:
-        raise Exception('Face has too many vertices: {}'.format(len(verts)))
+    if len(verts)>4 or len(verts)<3:
+        raise Exception('Face: {} invalid number of vertices: {}'.format(f.index,len(verts)))
     if len(obcontext.material_slots)>0:
         slot = obcontext.material_slots[f.material_index]
         mat = slot.material
@@ -124,25 +124,24 @@ def export_level(obcontext):
     vertex_by_group = {k: v for k, v in vertex_by_group.items() if len(v)>0}
 
     # all vertices
-    lens = pack_variant(len(obdata.vertices))
-    s += lens
+    s += pack_variant(len(obdata.vertices))
     for v in obdata.vertices:
         s += "{}{}{}".format(pack_double(v.co.x), pack_double(v.co.z), pack_double(v.co.y))
 
     # export faces grouped by vertex groups
     # groups are linked by portals
-    lens = pack_variant(len(vgroup_names))
-    s += lens
+    s += pack_variant(len(vgroup_names))
     for vgi,vgname in vgroup_names.items():
         # room id (eg vertex group)
         s += pack_variant(vgi)
         # export faces
         faces = find_faces_by_group(bm, obcontext, vgi)
+        if len(faces)==0:
+            raise Exception('Empty vertex group: {}'.format(vgroup_names[vgi]))
         s += pack_variant(len(faces))
         for f in faces:
             s += export_face(obcontext, f)        
 
-        print("portal(s) for room: {}".format(vgroup_names[vgi]))
         # find all vertices with multiple vertex groups = portal
         # find unique set of groups (not equal to current group)    
         vg_portals=set()
@@ -151,12 +150,13 @@ def export_level(obcontext):
                 if g.group!=vgi:
                     vg_portals.add(g.group)
         # export connected portals (if any)
-        s += pack_variant(len(vg_portals))
+        ps = ""
+        plen = 0
         for gi in vg_portals:
-            print("to: {}".format(vgroup_names[gi]))
             # find vertex at boundary (eg. belongs to both groups)
             bm_verts_portal=[bm.verts[v.index] for v in vertex_by_group[vgi] if gi in vertex_by_group and v in vertex_by_group[gi]]
             if len(bm_verts_portal)>2:
+                plen += 1
                 # contains an ordered list of vertex
                 out=[]
                 # starting point
@@ -169,13 +169,19 @@ def export_level(obcontext):
                         if other in bm_verts_portal and other not in out:
                             v = other
                             break
-                print("portal vertices: {}".format([v.index for v in out]))
+                print("{}({}) -> {}({})".format(vgroup_names[vgi],vgi,vgroup_names[gi],gi))
                 # connecting room id
-                s += pack_variant(gi)
-                s += pack_variant(len(out))
+                ps += pack_variant(gi)
+                # portal vertices
+                if len(out)==0:
+                    raise Exception('Empty portal from: {} to: {}'.format(vgroup_names[vgi],vgroup_names[gi]))
+                ps += "{:02x}".format(len(out))
                 for v in out:
-                    s += pack_variant(v.index+1)
-
+                    ps += pack_variant(v.index+1)
+            else:
+                print("Not a portal: {}".format(gi))
+        s += pack_variant(plen)
+        s += ps
     return s
 
 # model data

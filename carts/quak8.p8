@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 19
+version 22
 __lua__
 -- textured 3d demo
 -- by freds72
@@ -235,7 +235,7 @@ function draw_faces(faces)
 	end
 end
 
-function collect_room(room,cam_pos,v_cache,out)
+function collect_room(room,cam_pos,v_cache,out,portals)
 	-- avoid looping
 	room.session=sessionid
 	-- collect portals
@@ -249,7 +249,10 @@ function collect_room(room,cam_pos,v_cache,out)
 			to=portal.ref.from
 		end
 		if to.session!=sessionid then
-			collect_room(to,cam_pos,v_cache,out)
+			-- debug
+			add(portals,portal)
+			-- go deeper
+			collect_room(to,cam_pos,v_cache,out,portals)
 		end
 	end
 	-- collect faces
@@ -283,6 +286,50 @@ function z_poly_clip(znear,v)
 	return res
 end
 
+-- collision handling
+function find_room(p)
+	local x,y,z=p[1],p[2],p[3]
+	-- todo: optimize with a hierarchical aabb
+	for _,r in pairs(level.rooms) do
+		-- get bounding box
+		local vmin,vmax=r.vmin,r.vmax
+		if x>=vmin[1] and x<=vmax[1] and
+			y>=vmin[2] and y<=vmax[2] and
+			z>=vmin[3] and z<=vmax[3] then
+			return r
+		end
+	end
+end
+
+-- http://www.peroxide.dk/download/tutorials/tut10/pxdtut10.html
+function find_intersection(p0,p1,r,cell)
+	local response,hit={0,0,0}
+	for _,face in pairs(cell.faces) do
+		local n,cp=face.n,face.cp
+		local cp0,cp1=v_dot(n,p0),v_dot(n,p1)
+		-- going through plane?
+		if (cp0>cp)!=(cp1>cp) then
+			-- is intersection in plane 
+			for _,v in pairs(face.v) do
+				
+			end
+			local v=make_v(p0,p1)
+			response=v_add(response,v_add(p1,n,cp1))
+			hit=true
+		end
+	end
+	return hit,response
+end
+
+function collide(p0,p1,r)
+	local r0,r1=find_room(p0),find_room(p1)
+	if r0==r1 then
+		-- check collision within cell
+		
+	else
+	end
+end
+
 -- textured edge renderer
 local dither_pat={0b1111111111111111,0b0111111111111111,0b0111111111011111,0b0101111111011111,0b0101111101011111,0b0101101101011111,0b0101101101011110,0b0101101001011110,0b0101101001011010,0b0001101001011010,0b0001101001001010,0b0000101001001010,0b0000101000001010,0b0000001000001010,0b0000001000001000,0b0000000000000000}
 
@@ -309,35 +356,44 @@ end
 local mousex,mousey
 local mouselb=false
 local roll=0
+local last_active_room
 
 function _update()
 	-- input
 	local mx,my,lmb=stat(32),stat(33),stat(34)==1
 
   local dx,dz=0,0
-  if(btn(0) or btn(0,1)) dx=-4
-  if(btn(1) or btn(1,1)) dx=4
+  if(btn(0) or btn(0,1)) dx=-2
+  if(btn(1) or btn(1,1)) dx=2
   if(btn(2) or btn(2,1)) dz=1
   if(btn(3) or btn(3,1)) dz=-1
 	roll+=dx
 	roll=lerp(roll,0,0.8)
 
-  if mousex then
+	if mousex then
+		local dh
    if abs(mousex-64)<32 then
-   	plyr.hdg+=(mx-mousex)/128
+   	dh=(mx-mousex)/128
    else
-   	plyr.hdg+=(mx-64)/2048
-   end
+   	dh=(mx-64)/2048
+	 end
+	 plyr.hdg=lerp(plyr.hdg,plyr.hdg+dh,0.3)
   end
-  if mousey then
-	  plyr.pitch+=(my-mousey)/128
+	if mousey then
+	  plyr.pitch=lerp(plyr.pitch,plyr.pitch+(my-mousey)/128,0.3)
 		plyr.pitch=mid(plyr.pitch,-0.25,0.25)
 	end
 	
+	local old_pos=v_clone(plyr.pos)
 	-- player: moves on a plane
   local m=make_m_from_euler(0,plyr.hdg,0)
   plyr.pos=v_add(plyr.pos,m_right(m),0.1*dx)
   plyr.pos=v_add(plyr.pos,m_fwd(m),0.1*dz)
+  
+	local face,response=collide(old_pos,plyr.pos)
+	if face then
+		plyr.pos=v_add(plyr.pos,response)
+	end
 
 	-- camera: follow head
 	cam:track(plyr.pos,make_m_from_euler(plyr.pitch,plyr.hdg,-roll/64))
@@ -351,36 +407,42 @@ function _draw()
 	cls()
 
 	local out,v_cache={},setmetatable({m=cam.m},v_cache_cls)
+	-- debug
+	local portals={}
 	local msg=""
 
-	-- find camera room
-	local cx,cy,cz,active_room=cam.pos[1],cam.pos[2],cam.pos[3]
-	-- todo: optimize
-	for _,r in pairs(level.rooms) do
-		local vmin,vmax=r.vmin,r.vmax
-		if cx>=vmin[1] and cx<vmax[1] and
-			cy>=vmin[2] and cy<vmax[2] and
-			cz>=vmin[3] and cz<vmax[3] then
-			active_room=r
-			break
+	-- find camera 'cell'
+	local active_room=find_room(cam.pos)
+	if(not active_room) active_room=last_active_room
+
+	assert(active_room,"no active room")
+	if active_room then
+		collect_room(active_room,cam_pos,v_cache,out,portals)
+		last_active_room=active_room
+	end
+
+	draw_faces(out)
+	-- debug: draw portals
+	for _,p in pairs(portals) do
+		local p0=p[#p]
+		for i=1,#p do
+			local p1=p[i]
+			line(p0.x,p0.y,p1.x,p1.y,14)
+			p0=p1
 		end
 	end
-	if active_room then
-		collect_room(active_room,cam_pos,v_cache,out)
-		msg=active_room.id
-	end
-	
-	draw_faces(out)
+	msg="portals:"..#portals
 
 	-- reticule
 	pset(0,0,7)
 
-	local cpu=tostr(stat(1).."%")
+	local cpu=tostr(flr(100*stat(1)).."%")
 	print(cpu.."\n"..msg,-61,-62,0)
 	print(cpu.."\n"..msg,-62,-63,7)
 end
 
 -->8
+-- 3d data unpacking
 local mem=0x0
 function mpeek()
 	local v=peek(mem)
@@ -428,13 +490,16 @@ function unpack_face(verts)
 	-- enable embedded fillp
 	local f={flags=unpack_int(),c=0x1000|unpack_int(),session=0xffff}
 
+	-- quad?
 	f.ni=band(f.flags,2)>0 and 4 or 3
 	-- vertex indices
-	-- quad?
 	-- using the face itself saves more than 500KB!
 	for i=1,f.ni do
 		-- direct reference to vertex
-		f[i]=verts[unpack_variant()]
+		local vi=unpack_variant()
+		local v=verts[vi]
+		assert(v,"missing vertex:"..(vi-1))
+		f[i]=v
 	end
 	return f
 end
@@ -455,6 +520,7 @@ function unpack_level()
 		local id,faces=unpack_variant(),{}
 		local vmin,vmax={32000,32000,32000},{-32000,-32000,-32000}	
 		-- faces
+		printh("cell:"..id)
 		unpack_array(function()
 			local f=unpack_face(verts)
 			-- normal
@@ -469,18 +535,24 @@ function unpack_level()
 
 			add(faces,f)
 		end)
-
+	  printh("#faces:"..#faces)
 		-- portals
 		local portals={}
 		unpack_array(function()
-			-- hardocde 'always visible' flag
-			local portal={from=id,to=unpack_variant(),flags=1,ni=unpack_variant()}
+			-- hardcode 'always visible' flag
+			local portal={from=id,to=unpack_variant(),flags=1,ni=unpack_int()}
+			printh("\tto:"..portal.to)
 			for i=1,portal.ni do
 				-- direct reference to vertex
-				portal[i]=verts[unpack_variant()]
+				local idx=unpack_variant()
+				local v=verts[idx]
+				assert(v,"missing vertice:"..(idx-1))
+				printh("\tportal vertex:"..idx-1)
+				portal[i]=v
 			end
 			add(portals,portal)
 		end)
+		printh("#portals:"..#portals)
 		rooms[id]={id=id,faces=faces,portals=portals,vmin=vmin,vmax=vmax}
 	end)
 	-- fix portal references
@@ -494,6 +566,7 @@ function unpack_level()
 end
 
 -->8
+-- polygon rasterization routines
 function polytex(v,lu,lv)
 	local p0,spans,dither_pat=v[#v],{},dither_pat
 	local x0,y0,w0,u0,v0=p0.x,p0.y,p0.w,p0.u,p0.v
@@ -583,15 +656,30 @@ function polyfill(p,col)
 		-- next vertex
 		x0,y0=_x1,_y1
 	end
+
+	local p0=p[#p]
+	for i=1,#p do
+		local p1=p[i]
+		line(p0.x,p0.y,p1.x,p1.y,1)
+		p0=p1
+	end
 end
 
 __gfx__
-f34004f20413c22408f3084408d308f308f308d308f308440824081400440824081400f308d3081400f308d30814004408f308f3084408f30804084408f308f3
+f34004f20413052408f3084408d308f308f308d308f308440824081400440824081400f308d3081400f308d30814004408f308f3084408f30804084408f308f3
 0854080408f30844080408040844080408f3085408040804085408e308f3084408e308f308f308d308f392f308d308f3924408e308f392f308e308f392440814
 08f30844081408f308f3081408f392f3081408f39244082408f308f3082408f392f3082408f39244081408140854081408f3085408e30814085408e308f30854
 08f308040854081408140894081408f3089408e30814089408e308f3089408048f24205408f38024205408048f24209408f38024209408045824035408f3b724
-035408045824039408f3b7240394085000112060f1a0d0d12060f14232e12060a0f1e1022060c1e002e12060d1d0e0c12060422212322060d12242f12060c112
-22d12040328262e1204062a292522040c15272122040e16252c12040127282322040a2c2b29220405292b272204072b2c282204082c2a262101040a0d0e00210
-40206080a002902060d0b0c0e02060a080b0d02060e0c09002200040a0d0e00220408090c0b02080206040506070206010915040206091206050206020307060
-20607090c0402060b01040c02060703080902050016151f03010408090c0b030402030f00140401091615130502060302141f020802111314120601120013120
-60413101f02060302011211020402030f001405020607181516120605181b11020609110b1a120808171a1b12060716191a110204010916151
+035408045824039408f3b7240394081408147084861408f39f84861408147084ea1408f39f84ea141c14708486141cf39f8486141c147084ea141cf39f84ea04
+f514bea400f31a14bea400041b142ca400f3f4142ca400e3def308a400e3de14d4a4001431f308a400143114d4a400f38c1432a400f38cf3afa40004831432a4
+000483f3afa400e308040664cde308f30864cde30804068442e308f3088442b320040664cdb320e37c64cdb32004068442b320e37c8442a320040664cda320e3
+7c64cda32004068442a320e37c8442b320d3e664cdb320d3e68442a320d3e664cda320d3e684429000222060f1a0d0d1206032e114342060a0f1e1022060c1e0
+02e12060d1d0e0c120408232a3832050d12242f12060d1c1d2e22040328262e1204062a292522040c15272122040e16252c120604222b3932040a2c2b2922040
+5292b2722040b2c26353204082c2a262206022d1e2032060122203f22060c112f2d2204072b253732060a393e3d32040c37383a320407353638320602212c3b3
+2040127273c32060324293a32040c282836320a0e304f3d3206093b304e32060b3c3f3042060c3a3d3f32060423234442060f12414e1301040a0d0e0025040d2
+e203f26040143444241040206080a002902060d0b0c0e02050a080b0d02060e0c09002200040a0d0e00220408090c0b020802060405060702060109150402060
+9120605020602030706020607090c0402060b01040c02060703080902050016151f03010408090c0b030402030f00140401091615130502060302141f0208021
+1131412060112001312060413101f02060302011211020402030f001405020607181516120605181b11020609110b1a120808171a1b12060716191a110204010
+91615150502040d2f2331320a0133343232060f2034333206003e223432060e2d21323100040d2e203f260402040341454742050244484642060844434742060
+645414242000401434442470405464847470402060a4c4b49420608474b4c42040745494b420605464a4942080406484c4a460405464847480502060a464d4f4
+2080d4e405f42060c4a4f40520506484e4d4206084c405e41070406484c4a4
