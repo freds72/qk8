@@ -198,7 +198,7 @@ local v_cache_cls={
 	end
 }
 
-function collect_faces(faces,cam_pos,v_cache,out)
+function collect_faces(faces,cam_pos,v_cache,out,level)
 	local sessionid=sessionid
 	for _,face in pairs(faces) do
 		-- avoid overdraw for shared faces
@@ -223,6 +223,7 @@ function collect_faces(faces,cam_pos,v_cache,out)
 					-- original object reference
 					verts.ref=face
 					verts.c=face.c
+					verts.level=level
 					out[#out+1]=verts
 				end
 			end
@@ -232,22 +233,24 @@ function collect_faces(faces,cam_pos,v_cache,out)
 end
 
 -- draw faces
-function draw_faces(faces)
+function draw_faces(faces,obuffer)
 	for i,d in ipairs(faces) do
 		if d.c==10 or d.c==8 then
 			polyfill(d,d.c)
+		elseif d.level==1 then
+			polytex2(d,d.c)
 		else
-			polytex(d,d.c)
+			polytex(d,d.c,obuffer)
 		end
 	end
 end
 
-function collect_room(room,cam_pos,v_cache,out,portals)
+function collect_room(room,cam_pos,v_cache,out,level)
 	-- avoid looping
 	room.session=sessionid
 	-- collect portals
 	local out_portals={}
-	collect_faces(room.portals,cam_pos,v_cache,out_portals)
+	collect_faces(room.portals,cam_pos,v_cache,out_portals,level)
 	-- collect visible portals
 	for _,portal in pairs(out_portals) do
 		-- 'direct' the graph
@@ -256,15 +259,15 @@ function collect_room(room,cam_pos,v_cache,out,portals)
 			to=portal.ref.from
 		end
 		if to.session!=sessionid then
-			-- debug
-			add(portals,portal)
 			-- go deeper
-			collect_room(to,cam_pos,v_cache,out,portals)
+			collect_room(to,cam_pos,v_cache,out,level+1)
 		end
 	end
 	-- collect faces
 	-- far faces = top of 'stack'
-	collect_faces(room.faces,cam.pos,v_cache,out)
+	collect_faces(room.faces,cam.pos,v_cache,out,level)
+
+	return out_portals
 end
 
 -- clipping
@@ -352,7 +355,7 @@ function _init()
 	poke(0x5f34, 1)
 
   poke(0x5f38,1)
-  poke(0x5f39,128)
+  poke(0x5f39,2)
   poke(0x5f3b,0)
 
 	for k,fp in pairs(dither_pat) do
@@ -385,7 +388,7 @@ function _update()
 	roll+=dx
 	roll=lerp(roll,0,0.8)
 
-
+	--[[
 	if mousex then
 		local dh
    if abs(mousex-64)<32 then
@@ -399,7 +402,7 @@ function _update()
 	  plyr.pitch=lerp(plyr.pitch,plyr.pitch+(my-mousey)/128,0.3)
 		plyr.pitch=mid(plyr.pitch,-0.25,0.25)
 	end
-	
+	]]
 
 	local old_pos=v_clone(plyr.pos)
 	-- player: moves on a plane
@@ -425,7 +428,6 @@ function _draw()
 
 	local out,v_cache={},setmetatable({m=cam.m},v_cache_cls)
 	-- debug
-	local portals={}
 	local msg=""
 
 	-- find camera 'cell'
@@ -434,11 +436,22 @@ function _draw()
 
 	assert(active_room,"no active room")
 	if active_room then
-		collect_room(active_room,cam_pos,v_cache,out,portals)
+		-- 1st level portals
+		local portals=collect_room(active_room,cam_pos,v_cache,out,1)
+
+		-- occlusion buffer
+		local obuffer={}
+		for _,p in pairs(portals) do
+			polypairs(p,obuffer)
+		end
+	
+		draw_faces(out,obuffer)
+
+		msg=msg.."\nportals:"..#portals
+
 		last_active_room=active_room
 	end
 
-	draw_faces(out)
 	-- debug: draw portals
 	--[[
 	for _,p in pairs(portals) do
@@ -450,7 +463,6 @@ function _draw()
 		end
 	end
 	]]
-	msg="portals:"..#portals
 
 	-- reticule
 	pset(0,0,7)
@@ -575,7 +587,105 @@ end
 
 -->8
 -- polygon rasterization routines
-function polytex(v,c)
+function polytex(v,c,obuffer)
+	palt(0,false)
+	poke(0x5f3a,c)
+
+	local p0,spans,dither_pat=v[#v],{},dither_pat
+	local x0,y0,w0=p0.x,p0.y,p0.w
+	for i=1,#v do
+		local p1=v[i]
+		local x1,y1,w1=p1.x,p1.y,p1.w
+		local _x1,_y1,_w1=x1,y1,w1
+		if(y0>y1) x0,y0,x1,y1,w0,w1=x1,y1,x0,y0,w1,w0
+		local dy=y1-y0
+		local dx,dw=(x1-x0)/dy,(w1-w0)/dy
+		if(y0<-64) x0-=(y0+64)*dx w0-=(y0+64)*dw y0=-64
+		local cy0=ceil(y0)
+		-- sub-pix shift
+		local sy=cy0-y0
+		x0+=sy*dx
+		w0+=sy*dw
+		for y=cy0,min(ceil(y1)-1,64) do
+			local ocb=obuffer[y]
+			if ocb then
+				local span=spans[y]
+				if span then
+					-- rectfill(x[1],y,x0,y,7)
+					-- backup current edge values
+					local a,aw,b,bw=span.x,span.w,x0,w0
+					if(a>b) a,aw,b,bw=b,bw,a,aw
+					local dab=b-a
+					local daw=(bw-aw)/dab
+					if(a<-64) aw-=(a+64)*daw a=-64
+					
+					for _,oc in pairs(ocb) do
+						local c0,c1=oc.x0,oc.x1
+						-- backup a
+						local _a,_aw=a,aw
+						if(_a<c0) _aw-=(a-c0)*daw _a=c0
+						if(b>c1) b=c1
+						-- remaining?
+						if(_a<b) then
+							local ca=ceil(_a)
+							-- sub-pix shift
+							_aw+=(ca-_a)*daw
+							local sa,sb=min(1/_aw,8)>>3,min(1/bw,8)>>3
+							-- affine mapping
+							tline(ca,y,min(ceil(b)-1,63),y,0,sa+((y&1)>>3),1/8,(sb-sa)/dab)
+						end
+					end
+				else
+					spans[y]={x=x0,w=w0}
+				end	
+				--rectfill(ca,y,cb,y,c|dither_pat[16-mid(((1/aw)\1),0,15)])
+
+				--[[
+				local x0,x1=ca+64,cb+64
+				-- odd boundary?
+				local m=0x6000|(y+64)<<6
+				local m0,m1,c=m|x0\2,m|((x1-(x1&3))\2),((1/aw)\1)*0x1111
+				if(x0&1==1) poke(m0,@m0&0xf|c<<4) m0+=1
+				-- shift to boundary
+				for i=m0,m1-1,2 do
+					--local d=dither_pat[]
+					poke2(i,shl(dither_pat[16-((1/aw)\1)],16))
+					--au+=du
+					--av+=dv
+					aw+=dw
+				end
+				-- remaining 0-4 pixels
+				-- adjust end
+				if m1-m0+1>0 then
+					local c0,mask=@@m1,0xf.ffff<<((x1&3)<<2)
+					poke2(m1,c0&~mask|(((1/aw)\1)*0x1111)&mask)
+				end
+				]]
+
+				--[[
+				while ca<cb-4 do
+					-- todo: pick lightmap array directly (saves lu+/lv+)
+					rectfill(ca,y,ca+3,y,c|dither_pat[16-mid(((1/aw)\1),0,15)]) --0x1087|(dither_pat[au/aw|(av/aw)>>16] or 0))
+					--poke2(0x5f31,0xa5a5)--dither_pat[16-mid(((1/aw)\1),0,15)])
+					--tline(ca,y,ca+3,y,au/aw,av/aw,dau/aw,dav/aw)
+					ca+=4
+					aw+=dw
+				end
+				-- left over from stride rendering
+				if ca<=cb then
+					rectfill(ca,y,cb,y,c|dither_pat[16-mid(((1/aw)\1),0,15)])
+					--tline(ca,y,cb,y,au/aw,av/aw,dau/aw,dav/aw)
+				end
+				]]
+			end
+			x0+=dx
+			w0+=dw
+		end
+		x0,y0,w0=_x1,_y1,_w1
+	end
+end
+
+function polytex2(v,c)
 	palt(0,false)
 	poke(0x5f3a,c)
 
@@ -601,16 +711,17 @@ function polytex(v,c)
 				-- backup current edge values
 				local a,aw,b,bw=span.x,span.w,x0,w0
 				if(a>b) a,aw,b,bw=b,bw,a,aw
-				local daw=(bw-aw)/(b-a)
+				local dab=b-a
+				local daw=(bw-aw)/dab
 				if(a<-64) aw-=(a+64)*daw a=-64
-				local ca,cb=ceil(a),min(ceil(b)-1,63)
+				local ca=ceil(a)
 				-- sub-pix shift
 				aw+=(ca-a)*daw
-
 				local sa,sb=min(1/aw,8)>>3,min(1/bw,8)>>3
 				-- affine mapping
-				tline(ca,y,cb,y,0,sa+((y&1)>>3),1/8,(sb-sa)/(b-a))
-				
+				tline(ca,y,min(ceil(b)-1,63),y,0,sa+((y&1)>>3),1/8,(sb-sa)/dab)
+				--pset(ca,y,c)
+				--pset(min(ceil(b)-1,63),y,c)
 				--rectfill(ca,y,cb,y,c|dither_pat[16-mid(((1/aw)\1),0,15)])
 
 				--[[
@@ -658,7 +769,6 @@ function polytex(v,c)
 		end
 		x0,y0,w0=_x1,_y1,_w1
 	end
-	fillp()
 end
 
 function polyfill(p,col)
@@ -682,6 +792,51 @@ function polyfill(p,col)
 			local x=nodes[y]
 			if x then
 				rectfill(x,y,x0,y)
+			else
+				nodes[y]=x0
+			end
+			x0+=dx
+		end
+		-- next vertex
+		x0,y0=_x1,_y1
+	end
+
+	--[[
+	local p0=p[#p]
+	for i=1,#p do
+		local p1=p[i]
+		line(p0.x,p0.y,p1.x,p1.y,1)
+		p0=p1
+	end
+	]]
+end
+
+function polypairs(p,buffer)
+	local p0,nodes=p[#p],{}
+	local x0,y0=p0.x,p0.y
+
+	for i=1,#p do
+		local p1=p[i]
+		local x1,y1=p1.x,p1.y
+		-- backup before any swap
+		local _x1,_y1=x1,y1
+		if(y0>y1) x0,y0,x1,y1=x1,y1,x0,y0
+		-- exact slope
+		local dx=(x1-x0)/(y1-y0)
+		if(y0<-64) x0-=(y0+64)*dx y0=-64
+		-- subpixel shifting (after clipping)
+		local cy0=ceil(y0)
+		x0+=(cy0-y0)*dx
+		for y=cy0,min(ceil(y1)-1,63) do
+			local x=nodes[y]
+			if x then
+				local oc=buffer[y] or {}
+				if x0>x then
+					oc[#oc+1]={x0=x,x1=x0}
+				else
+					oc[#oc+1]={x0=x0,x1=x}
+				end
+				buffer[y]=oc
 			else
 				nodes[y]=x0
 			end
@@ -766,22 +921,23 @@ e203f26040143444241040207080a002902070d0b0c0e02050a080b0d02060e0c09002200040a0d0
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000777777709000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-55555555111111117777777794949494eeeeeeee6666666600000000000000000000000000000000000000000000000000000000000000000000000000000000
-55555555111111117676767644444444eeeeeeee6666666600000000000000000000000000000000000000000000000000000000000000000000000000000000
-55555555111111116d6d6d6d42424242888888886666666600000000000000000000000000000000000000000000000000000000000000000000000000000000
-5555555511111111d5d5d5d52222222288888888dddddddd00000000000000000000000000000000000000000000000000000000000000000000000000000000
-5555555511111111515151512121212122222222dddddddd00000000000000000000000000000000000000000000000000000000000000000000000000000000
-5555555511111111111111111111111122222222dddddddd00000000000000000000000000000000000000000000000000000000000000000000000000000000
-55555555111111111010101010101010111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-55555555111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ddddddddcccccccc5555555566666666500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ddddddddcccccccc555555556d6d6d6d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ddddddddcccccccc55555555d5d5d5d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ddddddddcccccccc5151515151515151000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ddddddddcccccccc1111111110101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ddddddddcccccccc1111111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ddddddddcccccccc1010101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ddddddddcccccccc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+55555555111111117777777794949494eeeeeeee5555555500000000000000000000000000000000000000000000000000000000000000000000000000000000
+55555555111111117777777744444444eeeeeeee5555555500000000000000000000000000000000000000000000000000000000000000000000000000000000
+55555555111111117676767642424242888888885555555500000000000000000000000000000000000000000000000000000000000000000000000000000000
+55555555111111116666666622222222888888885151515100000000000000000000000000000000000000000000000000000000000000000000000000000000
+55555555111111116666666621212121222222221111111100000000000000000000000000000000000000000000000000000000000000000000000000000000
+55555555111111116d6d6d6d11111111222222221111111100000000000000000000000000000000000000000000000000000000000000000000000000000000
+5555555511111111dddddddd10101010111111111010101000000000000000000000000000000000000000000000000000000000000000000000000000000000
+5555555511111111dddddddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ddddddddccccccccd5d5d5d566666666777777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ddddddddcccccccc555555556d6d6d6d777777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ddddddddcccccccc51515151d5d5d5d5767676760000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ddddddddcccccccc1111111151515151666666660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ddddddddcccccccc1111111110101010666666660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ddddddddcccccccc10101010000000006d6d6d6d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ddddddddcccccccc0000000000000000dddddddd0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ddddddddcccccccc0000000000000000dddddddd0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 015d676d510000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 0000000083929382000000000000840000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000092000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
