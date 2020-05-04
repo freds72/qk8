@@ -388,7 +388,7 @@ function _update()
 	roll+=dx
 	roll=lerp(roll,0,0.8)
 
-	--[[
+	
 	if mousex then
 		local dh
    if abs(mousex-64)<32 then
@@ -402,8 +402,7 @@ function _update()
 	  plyr.pitch=lerp(plyr.pitch,plyr.pitch+(my-mousey)/128,0.3)
 		plyr.pitch=mid(plyr.pitch,-0.25,0.25)
 	end
-	]]
-
+	
 	local old_pos=v_clone(plyr.pos)
 	-- player: moves on a plane
   local m=make_m_from_euler(0,plyr.hdg,0)
@@ -618,26 +617,23 @@ function polytex(v,c,obuffer)
 					local dab=b-a
 					local daw=(bw-aw)/dab
 					if(a<-64) aw-=(a+64)*daw a=-64
-					
-					for _,oc in pairs(ocb) do
-						local c0,c1=oc.x0,oc.x1
-						-- backup a
-						local _a,_aw=a,aw
-						if(_a<c0) _aw-=(a-c0)*daw _a=c0
-						if(b>c1) b=c1
-						-- remaining?
-						if(_a<b) then
-							local ca=ceil(_a)
-							-- sub-pix shift
-							_aw+=(ca-_a)*daw
-							local sa,sb=min(1/_aw,8)>>3,min(1/bw,8)>>3
+					local ca,cb=ceil(a),min(ceil(b)-1,63)
+	
+					if(ca<=cb) then
+						-- sub-pix shift
+						aw+=(ca-a)*daw
+						local sa,sb=min(1/aw,8)>>3,min(1/bw,8)>>3
+						local v,dv=sa+((y&1)>>3),(sb-sa)/dab
+						for _,oc in pairs(ocb) do
+							-- occlusion buffer
+							clip(oc.x,y+64,oc.w,1)
 							-- affine mapping
-							tline(ca,y,min(ceil(b)-1,63),y,0,sa+((y&1)>>3),1/8,(sb-sa)/dab)
+							tline(ca,y,cb,y,0,v,1/8,dv)
 						end
 					end
 				else
 					spans[y]={x=x0,w=w0}
-				end	
+				end
 				--rectfill(ca,y,cb,y,c|dither_pat[16-mid(((1/aw)\1),0,15)])
 
 				--[[
@@ -683,6 +679,7 @@ function polytex(v,c,obuffer)
 		end
 		x0,y0,w0=_x1,_y1,_w1
 	end
+	clip()
 end
 
 function polytex2(v,c)
@@ -832,9 +829,9 @@ function polypairs(p,buffer)
 			if x then
 				local oc=buffer[y] or {}
 				if x0>x then
-					oc[#oc+1]={x0=x,x1=x0}
+					oc[#oc+1]={x=x+64,w=x0-x+1}
 				else
-					oc[#oc+1]={x0=x0,x1=x}
+					oc[#oc+1]={x=x0+64,w=x-x0+1}
 				end
 				buffer[y]=oc
 			else
