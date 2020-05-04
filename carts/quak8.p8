@@ -192,7 +192,7 @@ local v_cache_cls={
 		-- assert(bo==outcode,"outcode:"..outcode.." bits:"..bo)
 
 		-- assume vertex is visible, compute 2d coords
-		local a={ax,ay,az,outcode=outcode,clipcode=outcode&2,x=(ax/az)<<6,y=-(ay/az)<<6,w=1/az} 
+		local a={ax,ay,az,outcode=outcode,clipcode=outcode&2,x=(ax/az)<<6,y=-(ay/az)<<6,u=ax/az,v=ay/az,w=1/az} 
 		t[v]=a
 		return a
 	end
@@ -279,19 +279,25 @@ function z_poly_clip(znear,v)
 		local d1=v1[3]-znear
 		if d1>0 then
 			if d0<=0 then
-				local nv=v_lerp(v0,v1,d0/(d0-d1)) 
+				local t=d0/(d0-d1)
+				local nv=v_lerp(v0,v1,t) 
 				local z=nv[3]
 				nv.x=(nv[1]/z)<<6
 				nv.y=-(nv[2]/z)<<6
+				nv.u=lerp(v0.u,v1.u,t)
+				nv.v=lerp(v0.v,v1.v,t)
 				nv.w=1/z
 				res[#res+1]=nv
 			end
 			res[#res+1]=v1
 		elseif d0>0 then
-			local nv=v_lerp(v0,v1,d0/(d0-d1)) 
+			local t=d0/(d0-d1)
+			local nv=v_lerp(v0,v1,t) 
 			local z=nv[3]
 			nv.x=(nv[1]/z)<<6
 			nv.y=-(nv[2]/z)<<6 
+			nv.u=lerp(v0.u,v1.u,t)
+			nv.v=lerp(v0.v,v1.v,t)
 			nv.w=1/z
 		res[#res+1]=nv
 		end
@@ -388,7 +394,6 @@ function _update()
 	roll+=dx
 	roll=lerp(roll,0,0.8)
 
-	--[[
 	if mousex then
 		local dh
    if abs(mousex-64)<32 then
@@ -402,7 +407,6 @@ function _update()
 	  plyr.pitch=lerp(plyr.pitch,plyr.pitch+(my-mousey)/128,0.3)
 		plyr.pitch=mid(plyr.pitch,-0.25,0.25)
 	end
-	]]
 
 	local old_pos=v_clone(plyr.pos)
 	-- player: moves on a plane
@@ -592,32 +596,38 @@ function polytex(v,c,obuffer)
 	poke(0x5f3a,c)
 
 	local p0,spans,dither_pat=v[#v],{},dither_pat
-	local x0,y0,w0=p0.x,p0.y,p0.w
+	local x0,y0,w0,u0,v0=p0.x,p0.y,p0.w,p0.u,p0.v
 	for i=1,#v do
 		local p1=v[i]
-		local x1,y1,w1=p1.x,p1.y,p1.w
-		local _x1,_y1,_w1=x1,y1,w1
-		if(y0>y1) x0,y0,x1,y1,w0,w1=x1,y1,x0,y0,w1,w0
+		local x1,y1,w1,u1,v1=p1.x,p1.y,p1.w,p1.u,p1.v
+		local _x1,_y1,_u1,_v1,_w1=x1,y1,u1,v1,w1
+		if(y0>y1) x0,y0,x1,y1,w0,w1,u0,v0,u1,v1=x1,y1,x0,y0,w1,w0,u1,v1,u0,v0
 		local dy=y1-y0
-		local dx,dw=(x1-x0)/dy,(w1-w0)/dy
-		if(y0<-64) x0-=(y0+64)*dx w0-=(y0+64)*dw y0=-64
+		local dx,dw,du,dv=(x1-x0)/dy,(w1-w0)/dy,(u1-u0)/dy,(v1-v0)/dy
+		if(y0<-64) y0+=64 x0-=y0*dx u0-=y0*du v0-=y0*dv w0-=y0*dw y0=-64
 		local cy0=ceil(y0)
 		-- sub-pix shift
 		local sy=cy0-y0
 		x0+=sy*dx
+		u0+=sy*du
+		v0+=sy*dv
 		w0+=sy*dw
-		for y=cy0,min(ceil(y1)-1,64) do
+		for y=cy0,min(ceil(y1)-1,63) do
 			local ocb=obuffer[y]
 			if ocb then
 				local span=spans[y]
 				if span then
-					-- rectfill(x[1],y,x0,y,7)
-					-- backup current edge values
-					local a,aw,b,bw=span.x,span.w,x0,w0
-					if(a>b) a,aw,b,bw=b,bw,a,aw
+					local a,aw,au,av,b,bw,bu,bv=span.x,span.w,span.u,span.v,x0,w0,u0,v0
+					if(a>b) a,aw,au,av,b,bw,bu,bv=b,bw,bu,bv,a,aw,au,av
 					local dab=b-a
-					local daw=(bw-aw)/dab
-					if(a<-64) aw-=(a+64)*daw a=-64
+					local daw,dau,dav=(bw-aw)/dab,(bu-au)/dab,(bv-av)/dab
+					if(a<-64) a+=64 au-=a*dau av-=a*dav aw-=a*daw a=-64
+					local ca=ceil(a)
+					-- sub-pix shift
+					local sa=ca-a
+					au+=sa*dau
+					av+=sa*dav
+					aw+=sa*daw
 					
 					for _,oc in pairs(ocb) do
 						local c0,c1=oc.x0,oc.x1
@@ -627,16 +637,30 @@ function polytex(v,c,obuffer)
 						if(b>c1) b=c1
 						-- remaining?
 						if(_a<b) then
-							local ca=ceil(_a)
-							-- sub-pix shift
-							_aw+=(ca-_a)*daw
-							local sa,sb=min(1/_aw,8)>>3,min(1/bw,8)>>3
-							-- affine mapping
-							tline(ca,y,min(ceil(b)-1,63),y,0,sa+((y&1)>>3),1/8,(sb-sa)/dab)
+							
+							local x0,x1=ceil(_a)+64,min(ceil(b)-1,63)+64
+							-- odd boundary?
+							local m=0x6000|(y+64)<<6
+							local m0,m1,c=m|x0\2,m|((x1-(x1&3))\2),((1/aw)\1)*0x1111
+							if(x0&1==1) poke(m0,@m0&0xf|c<<4) m0+=1
+							-- shift to boundary
+							for i=m0,m1-1,2 do
+								--local d=dither_pat[]
+								poke2(i,dither_pat[au/aw|(av/aw)])
+								au+=du
+								av+=dv
+								aw+=dw
+							end
+							-- remaining 0-4 pixels
+							-- adjust end
+							if m1-m0+1>0 then
+								local c0,mask=@@m1,0xf.ffff<<((x1&3)<<2)
+								poke2(m1,c0&~mask|(((1/aw)\1)*0x1111)&mask)
+							end
 						end
 					end
 				else
-					spans[y]={x=x0,w=w0}
+					spans[y]={x=x0,w=w0,u=u0,v=v0}
 				end	
 				--rectfill(ca,y,cb,y,c|dither_pat[16-mid(((1/aw)\1),0,15)])
 
@@ -679,9 +703,11 @@ function polytex(v,c,obuffer)
 				]]
 			end
 			x0+=dx
+			u0+=du
+			v0+=dv
 			w0+=dw
 		end
-		x0,y0,w0=_x1,_y1,_w1
+		x0,y0,w0,u0,v0=_x1,_y1,_w1,_u1,_v1
 	end
 end
 
@@ -690,41 +716,52 @@ function polytex2(v,c)
 	poke(0x5f3a,c)
 
 	local p0,spans,dither_pat=v[#v],{},dither_pat
-	local x0,y0,w0=p0.x,p0.y,p0.w
+	local x0,y0,w0,u0,v0=p0.x,p0.y,p0.w,p0.u,p0.v
 	for i=1,#v do
 		local p1=v[i]
-		local x1,y1,w1=p1.x,p1.y,p1.w
-		local _x1,_y1,_w1=x1,y1,w1
-		if(y0>y1) x0,y0,x1,y1,w0,w1=x1,y1,x0,y0,w1,w0
+		local x1,y1,w1,u1,v1=p1.x,p1.y,p1.w,p1.u,p1.v
+		local _x1,_y1,_u1,_v1,_w1=x1,y1,u1,v1,w1
+		if(y0>y1) x0,y0,x1,y1,w0,w1,u0,v0,u1,v1=x1,y1,x0,y0,w1,w0,u1,v1,u0,v0
 		local dy=y1-y0
-		local dx,dw=(x1-x0)/dy,(w1-w0)/dy
-		if(y0<-64) x0-=(y0+64)*dx w0-=(y0+64)*dw y0=-64
+		local dx,dw,du,dv=(x1-x0)/dy,(w1-w0)/dy,(u1-u0)/dy,(v1-v0)/dy
+		if(y0<-64) y0+=64 x0-=y0*dx u0-=y0*du v0-=y0*dv w0-=y0*dw y0=-64
 		local cy0=ceil(y0)
 		-- sub-pix shift
 		local sy=cy0-y0
 		x0+=sy*dx
+		u0+=sy*du
+		v0+=sy*dv
 		w0+=sy*dw
 		for y=cy0,min(ceil(y1)-1,64) do
 			local span=spans[y]
 			if span then
-				-- rectfill(x[1],y,x0,y,7)
-				-- backup current edge values
-				local a,aw,b,bw=span.x,span.w,x0,w0
-				if(a>b) a,aw,b,bw=b,bw,a,aw
+				local a,aw,au,av,b,bw,bu,bv=span.x,span.w,span.u,span.v,x0,w0,u0,v0
+				if(a>b) a,aw,au,av,b,bw,bu,bv=b,bw,bu,bv,a,aw,au,av
 				local dab=b-a
-				local daw=(bw-aw)/dab
-				if(a<-64) aw-=(a+64)*daw a=-64
-				local ca=ceil(a)
+				local daw,dau,dav=(bw-aw)/dab,(bu-au)/dab,(bv-av)/dab
+				if(a<-64) a+=64 au-=a*dau av-=a*dav aw-=a*daw a=-64
+				local ca,cb=ceil(a),min(ceil(b)-1,64)
 				-- sub-pix shift
-				aw+=(ca-a)*daw
-				local sa,sb=min(1/aw,8)>>3,min(1/bw,8)>>3
-				-- affine mapping
-				tline(ca,y,min(ceil(b)-1,63),y,0,sa+((y&1)>>3),1/8,(sb-sa)/dab)
-				--pset(ca,y,c)
-				--pset(min(ceil(b)-1,63),y,c)
-				--rectfill(ca,y,cb,y,c|dither_pat[16-mid(((1/aw)\1),0,15)])
+				local sa=ca-a
+				au+=sa*dau
+				av+=sa*dav
+				aw+=sa*daw
+
+				local dw,du,dv=daw<<3,dau<<3,dav<<3
 
 				--[[
+				while ca<cb-8 do
+					tline(ca,y,ca+7,y,au/aw,av/aw,dau/aw,dav/aw)
+					ca+=8
+					au+=du
+					av+=dv
+					aw+=dw
+				end
+				-- left over from stride rendering
+				if ca<=cb then
+					tline(ca,y,cb,y,au/aw,av/aw,dau/aw,dav/aw)
+				end
+				]]
 				local x0,x1=ca+64,cb+64
 				-- odd boundary?
 				local m=0x6000|(y+64)<<6
@@ -733,9 +770,9 @@ function polytex2(v,c)
 				-- shift to boundary
 				for i=m0,m1-1,2 do
 					--local d=dither_pat[]
-					poke2(i,shl(dither_pat[16-((1/aw)\1)],16))
-					--au+=du
-					--av+=dv
+					poke2(i,dither_pat[au/aw|(av/aw)])
+					au+=du
+					av+=dv
 					aw+=dw
 				end
 				-- remaining 0-4 pixels
@@ -744,30 +781,15 @@ function polytex2(v,c)
 					local c0,mask=@@m1,0xf.ffff<<((x1&3)<<2)
 					poke2(m1,c0&~mask|(((1/aw)\1)*0x1111)&mask)
 				end
-				]]
-
-				--[[
-				while ca<cb-4 do
-					-- todo: pick lightmap array directly (saves lu+/lv+)
-					rectfill(ca,y,ca+3,y,c|dither_pat[16-mid(((1/aw)\1),0,15)]) --0x1087|(dither_pat[au/aw|(av/aw)>>16] or 0))
-					--poke2(0x5f31,0xa5a5)--dither_pat[16-mid(((1/aw)\1),0,15)])
-					--tline(ca,y,ca+3,y,au/aw,av/aw,dau/aw,dav/aw)
-					ca+=4
-					aw+=dw
-				end
-				-- left over from stride rendering
-				if ca<=cb then
-					rectfill(ca,y,cb,y,c|dither_pat[16-mid(((1/aw)\1),0,15)])
-					--tline(ca,y,cb,y,au/aw,av/aw,dau/aw,dav/aw)
-				end
-				]]
 			else
-				spans[y]={x=x0,w=w0}
+				spans[y]={x=x0,w=w0,u=u0,v=v0}
 			end
 			x0+=dx
+			u0+=du
+			v0+=dv
 			w0+=dw
 		end
-		x0,y0,w0=_x1,_y1,_w1
+		x0,y0,w0,u0,v0=_x1,_y1,_w1,_u1,_v1
 	end
 end
 
