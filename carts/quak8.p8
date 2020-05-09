@@ -141,8 +141,6 @@ end
 
 -- camera
 function make_cam(x0,y0,focal)
-	-- shift
-	camera(-64,-64)
 	return {
 		pos={0,0,0},
 		track=function(self,pos,m)
@@ -192,7 +190,7 @@ local v_cache_cls={
 		-- assert(bo==outcode,"outcode:"..outcode.." bits:"..bo)
 
 		-- assume vertex is visible, compute 2d coords
-		local a={ax,ay,az,outcode=outcode,clipcode=outcode&2,x=(ax/az)<<6,y=-(ay/az)<<6,w=1/az} 
+		local a={ax,ay,az,outcode=outcode,clipcode=outcode&2,x=64+((ax/az)<<6),y=64-((ay/az)<<6),w=1/az} 
 		t[v]=a
 		return a
 	end
@@ -281,8 +279,8 @@ function z_poly_clip(znear,v)
 			if d0<=0 then
 				local nv=v_lerp(v0,v1,d0/(d0-d1)) 
 				local z=nv[3]
-				nv.x=(nv[1]/z)<<6
-				nv.y=-(nv[2]/z)<<6
+				nv.x=64+((nv[1]/z)<<6)
+				nv.y=64-((nv[2]/z)<<6)
 				nv.w=1/z
 				res[#res+1]=nv
 			end
@@ -290,8 +288,8 @@ function z_poly_clip(znear,v)
 		elseif d0>0 then
 			local nv=v_lerp(v0,v1,d0/(d0-d1)) 
 			local z=nv[3]
-			nv.x=(nv[1]/z)<<6
-			nv.y=-(nv[2]/z)<<6 
+			nv.x=64+((nv[1]/z)<<6)
+			nv.y=64-((nv[2]/z)<<6)
 			nv.w=1/z
 		res[#res+1]=nv
 		end
@@ -388,7 +386,7 @@ function _update()
 	roll+=dx
 	roll=lerp(roll,0,0.8)
 
-	--[[
+	
 	if mousex then
 		local dh
    if abs(mousex-64)<32 then
@@ -402,8 +400,7 @@ function _update()
 	  plyr.pitch=lerp(plyr.pitch,plyr.pitch+(my-mousey)/128,0.3)
 		plyr.pitch=mid(plyr.pitch,-0.25,0.25)
 	end
-	]]
-
+	
 	local old_pos=v_clone(plyr.pos)
 	-- player: moves on a plane
   local m=make_m_from_euler(0,plyr.hdg,0)
@@ -465,11 +462,11 @@ function _draw()
 	]]
 
 	-- reticule
-	pset(0,0,7)
+	pset(64,64,7)
 
 	local cpu=tostr(flr(100*stat(1)).."%")
-	print(cpu.."\n"..msg,-61,-62,0)
-	print(cpu.."\n"..msg,-62,-63,7)
+	print(cpu.."\n"..msg,2,3,0)
+	print(cpu.."\n"..msg,2,2,7)
 end
 
 -->8
@@ -600,13 +597,13 @@ function polytex(v,c,obuffer)
 		if(y0>y1) x0,y0,x1,y1,w0,w1=x1,y1,x0,y0,w1,w0
 		local dy=y1-y0
 		local dx,dw=(x1-x0)/dy,(w1-w0)/dy
-		if(y0<-64) x0-=(y0+64)*dx w0-=(y0+64)*dw y0=-64
+		if(y0<0) x0-=y0*dx w0-=y0*dw y0=0
 		local cy0=ceil(y0)
 		-- sub-pix shift
 		local sy=cy0-y0
 		x0+=sy*dx
 		w0+=sy*dw
-		for y=cy0,min(ceil(y1)-1,64) do
+		for y=cy0,min(ceil(y1)-1,127) do
 			local ocb=obuffer[y]
 			if ocb then
 				local span=spans[y]
@@ -617,22 +614,18 @@ function polytex(v,c,obuffer)
 					if(a>b) a,aw,b,bw=b,bw,a,aw
 					local dab=b-a
 					local daw=(bw-aw)/dab
-					if(a<-64) aw-=(a+64)*daw a=-64
-					
-					for _,oc in pairs(ocb) do
-						local c0,c1=oc.x0,oc.x1
-						-- backup a
-						local _a,_aw=a,aw
-						if(_a<c0) _aw-=(a-c0)*daw _a=c0
-						if(b>c1) b=c1
-						-- remaining?
-						if(_a<b) then
-							local ca=ceil(_a)
-							-- sub-pix shift
-							_aw+=(ca-_a)*daw
-							local sa,sb=min(1/_aw,8)>>3,min(1/bw,8)>>3
+					if(a<0) aw-=a*daw a=0
+					local ca,cb=ceil(a),min(ceil(b)-1,127)
+					if ca<=cb then
+						-- sub-pix shift
+						aw+=(ca-a)*daw
+						local sa,sb=min(1/aw,8)>>3,min(1/bw,8)>>3
+						local v,dv=sa+((y&1)>>3),(sb-sa)/dab
+						for _,oc in pairs(ocb) do
+							-- clipping
+							poke4(0x5f20,oc)
 							-- affine mapping
-							tline(ca,y,min(ceil(b)-1,63),y,0,sa+((y&1)>>3),1/8,(sb-sa)/dab)
+							tline(ca,y,cb,y,0,v,1/8,dv)
 						end
 					end
 				else
@@ -683,6 +676,7 @@ function polytex(v,c,obuffer)
 		end
 		x0,y0,w0=_x1,_y1,_w1
 	end
+	clip()
 end
 
 function polytex2(v,c)
@@ -698,13 +692,13 @@ function polytex2(v,c)
 		if(y0>y1) x0,y0,x1,y1,w0,w1=x1,y1,x0,y0,w1,w0
 		local dy=y1-y0
 		local dx,dw=(x1-x0)/dy,(w1-w0)/dy
-		if(y0<-64) x0-=(y0+64)*dx w0-=(y0+64)*dw y0=-64
+		if(y0<0) x0-=y0*dx w0-=y0*dw y0=0
 		local cy0=ceil(y0)
 		-- sub-pix shift
 		local sy=cy0-y0
 		x0+=sy*dx
 		w0+=sy*dw
-		for y=cy0,min(ceil(y1)-1,64) do
+		for y=cy0,min(ceil(y1)-1,127) do
 			local span=spans[y]
 			if span then
 				-- rectfill(x[1],y,x0,y,7)
@@ -713,15 +707,15 @@ function polytex2(v,c)
 				if(a>b) a,aw,b,bw=b,bw,a,aw
 				local dab=b-a
 				local daw=(bw-aw)/dab
-				if(a<-64) aw-=(a+64)*daw a=-64
+				if(a<0) aw-=a*daw a=0
 				local ca=ceil(a)
 				-- sub-pix shift
 				aw+=(ca-a)*daw
 				local sa,sb=min(1/aw,8)>>3,min(1/bw,8)>>3
 				-- affine mapping
-				tline(ca,y,min(ceil(b)-1,63),y,0,sa+((y&1)>>3),1/8,(sb-sa)/dab)
+				tline(ca,y,min(ceil(b)-1,127),y,0,sa+((y&1)>>3),1/8,(sb-sa)/dab)
 				--pset(ca,y,c)
-				--pset(min(ceil(b)-1,63),y,c)
+				--pset(min(ceil(b)-1,127),y,c)
 				--rectfill(ca,y,cb,y,c|dither_pat[16-mid(((1/aw)\1),0,15)])
 
 				--[[
@@ -784,11 +778,11 @@ function polyfill(p,col)
 		if(y0>y1) x0,y0,x1,y1=x1,y1,x0,y0
 		-- exact slope
 		local dx=(x1-x0)/(y1-y0)
-		if(y0<-64) x0-=(y0+64)*dx y0=-64
+		if(y0<0) x0-=y0*dx y0=0
 		-- subpixel shifting (after clipping)
 		local cy0=ceil(y0)
 		x0+=(cy0-y0)*dx
-		for y=cy0,min(ceil(y1)-1,63) do
+		for y=cy0,min(ceil(y1)-1,127) do
 			local x=nodes[y]
 			if x then
 				rectfill(x,y,x0,y)
@@ -814,7 +808,6 @@ end
 function polypairs(p,buffer)
 	local p0,nodes=p[#p],{}
 	local x0,y0=p0.x,p0.y
-
 	for i=1,#p do
 		local p1=p[i]
 		local x1,y1=p1.x,p1.y
@@ -823,19 +816,19 @@ function polypairs(p,buffer)
 		if(y0>y1) x0,y0,x1,y1=x1,y1,x0,y0
 		-- exact slope
 		local dx=(x1-x0)/(y1-y0)
-		if(y0<-64) x0-=(y0+64)*dx y0=-64
+		if(y0<0) x0-=y0*dx y0=0
 		-- subpixel shifting (after clipping)
 		local cy0=ceil(y0)
 		x0+=(cy0-y0)*dx
-		for y=cy0,min(ceil(y1)-1,63) do
+		for y=cy0,min(ceil(y1)-1,127) do
 			local x=nodes[y]
 			if x then
 				local oc=buffer[y] or {}
-				if x0>x then
-					oc[#oc+1]={x0=x,x1=x0}
-				else
-					oc[#oc+1]={x0=x0,x1=x}
-				end
+				local x0,x1=x0,x
+				if(x0>x1) x0,x1=x1,x0
+				if(x0<0) x0=0
+				if(x1>127) x1=127
+				if(x0<x1) oc[#oc+1]=(y+1)<<8|ceil(x1)|y>>8|ceil(x0)>>16
 				buffer[y]=oc
 			else
 				nodes[y]=x0

@@ -28,7 +28,7 @@ foreground_sleep_ms 2 // number of milliseconds to sleep each frame. Try 10 to c
 
 background_sleep_ms 10 // number of milliseconds to sleep each frame when running in the background
 
-sessions 101 // number of times program has been run
+sessions 120 // number of times program has been run
 
 // (scancode) hold this key down and left-click to simulate right-click
 rmb_key 0 // 0 for none  226 for LALT
@@ -51,7 +51,7 @@ mix_buffer_size 1024
 
 // :: 
 
-version 0.2.0
+version 0.2.0e
 
 // audio volume: 0..256 
 volume 256
@@ -78,16 +78,18 @@ live_notes 0
 // iff 1: when using keyboard cursor, snap to closest pixel / map cel
 cursor_snap 0
 
-// default length of gif in seconds when the starting point is not specified
-// 0 to disable recording until ctrl-8 is pressed
-gif_len 8
-
 // 0 default  1 dark blue background in code editor  2 black background in code editor   3 gray background in code editor   
 gui_theme 0
 
 // scale of screenshots and gifs // 2 means 256x256
 screenshot_scale 3
 gif_scale 3
+
+// maximum gif length in seconds (0..120; 0 means no gif recording)
+gif_len 8
+
+// when 1, reset the recording when pressing ctrl-9 (useful for creating a non-overlapping sequence)
+gif_reset_mode 0
 
 // 0 for off. 1 to allow control of a cart's framerate due to host machine's cpu capacity (recommended)
 host_framerate_control 1
