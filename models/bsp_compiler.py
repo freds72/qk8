@@ -183,7 +183,7 @@ def draw_bsp_tree(tree, dwg, parent, color):
   parent.add(level)
 
 def lua_vector(pair):
-  return "{{{},{}}}".format(pair[0],pair[1])
+  return "{{{},{}}}".format(round(pair[0],3),round(pair[1],3))
 
 def export_bsp_tree(tree, depth):
   if tree is None: return "nil"
@@ -191,7 +191,7 @@ def export_bsp_tree(tree, depth):
     lua_vector(tree.root.v0),
     lua_vector(tree.root.v1),
     lua_vector(tree.root.n),
-    tree.root.d,
+    round(tree.root.d,3),
     export_bsp_tree(tree.front,depth + 1),
     export_bsp_tree(tree.back, depth + 1))
 
@@ -202,16 +202,26 @@ dwg = svgwrite.Drawing(filename='bsp.svg', size=(256, 256))
 # tests
 polygons = {
   # room
-  Polygon((0,0), (15,0)), 
-  Polygon((15,0), (15,15)), 
-  Polygon((15,15), (4,15)), 
+  Polygon((0,0), (16,-10)), 
+  Polygon((16,-10), (16,-30)), 
+  Polygon((16,-30), (20,-30)), 
+  Polygon((20,-30), (20,-10)), 
+  Polygon((20,-10), (30,0)), 
+  Polygon((30,0), (30,15)), 
+  Polygon((30,15), (4,15)), 
   Polygon((4,15), (4,10)), 
   Polygon((4,10), (0,10)),
   Polygon((0,10), (0,0)),
-  # pillar
-  Polygon((12,3), (6,3)),
-  Polygon((6,3), (12,10)), 
-  Polygon((12,10), (12,3)) 
+  # pillar 1
+  Polygon((6,5), (5,5)),
+  Polygon((5,5), (5,6)), 
+  Polygon((5,6), (6,6)), 
+  Polygon((6,6), (6,5)),
+  # pillar 2
+  Polygon((16,5), (15,5)),
+  Polygon((15,5), (15,6)), 
+  Polygon((15,6), (16,6)), 
+  Polygon((16,6), (16,5)) 
   }
 
 for poly in polygons:

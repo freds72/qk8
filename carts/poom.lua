@@ -2,7 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 23
 __lua__
 
-bsp={v0={0,0},v1={15,0},n={0.0,1.0},d=0.0,front={v0={0,10},v1={0,0},n={1.0,0.0},d=0.0,front={v0={12,3},v1={6,3},n={0.0,-1.0},d=-3.0,front={v0={15,0},v1={15.0,3.0},n={-1.0,0.0},d=-15.0,front=nil,back=nil},back={v0={6,3},v1={12,10},n={-0.7592566023652966,0.6507913734559685},d=-2.603165493823874,front={v0={15.0,13.500000000000002},v1={15,15},n={-1.0,0.0},d=-15.0,front={v0={4,15},v1={4,10},n={1.0,0.0},d=4.0,front={v0={15,15},v1={4,15},n={0.0,-1.0},d=-15.0,front=nil,back=nil},back={v0={4,10},v1={0,10},n={0.0,-1.0},d=-10.0,front=nil,back=nil}},back=nil},back={v0={15.0,3.0},v1={15.0,13.500000000000002},n={-1.0,0.0},d=-15.0,front={v0={12,10},v1={12,3},n={1.0,0.0},d=12.0,front=nil,back=nil},back=nil}}},back=nil},back=nil}
+bsp={v0={6,6},v1={6,5},n={1.0,0.0},d=6.0,front={v0={20,-10},v1={30,0},n={-0.707,0.707},d=-21.213,front={v0={16,5},v1={15,5},n={0.0,-1.0},d=-5.0,front={v0={30,0},v1={30.0,5.0},n={-1.0,0.0},d=-30.0,front={v0={6.0,-3.75},v1={16,-10},n={0.53,0.848},d=0.0,front=nil,back={v0={16,-10},v1={16.0,-14.0},n={1.0,0.0},d=16.0,front=nil,back=nil}},back=nil},back={v0={15,5},v1={15,6},n={-1.0,0.0},d=-15.0,front={v0={15.0,15.0},v1={6.0,15.0},n={-0.0,-1.0},d=-15.0,front=nil,back=nil},back={v0={30,15},v1={15.0,15.0},n={-0.0,-1.0},d=-15.0,front={v0={30.0,5.0},v1={30,15},n={-1.0,-0.0},d=-30.0,front={v0={15,6},v1={16,6},n={0.0,1.0},d=6.0,front=nil,back={v0={16,6},v1={16,5},n={1.0,0.0},d=16.0,front=nil,back=nil}},back=nil},back=nil}}},back={v0={16,-30},v1={20,-30},n={0.0,1.0},d=-30.0,front={v0={20,-30},v1={20,-10},n={-1.0,0.0},d=-20.0,front={v0={16.0,-14.0},v1={16,-30},n={1.0,0.0},d=16.0,front=nil,back=nil},back=nil},back=nil}},back={v0={0,0},v1={6.0,-3.75},n={0.53,0.848},d=0.0,front={v0={4,15},v1={4,10},n={1.0,0.0},d=4.0,front={v0={6.0,15.0},v1={4,15},n={-0.0,-1.0},d=-15.0,front={v0={5,5},v1={5,6},n={-1.0,0.0},d=-5.0,front=nil,back={v0={5,6},v1={6,6},n={0.0,1.0},d=6.0,front=nil,back={v0={6,5},v1={5,5},n={0.0,-1.0},d=-5.0,front=nil,back=nil}}},back=nil},back={v0={4,10},v1={0,10},n={0.0,-1.0},d=-10.0,front={v0={0,10},v1={0,0},n={1.0,0.0},d=0.0,front=nil,back=nil},back=nil}},back=nil}}
 
 local plyr={0,0,angle=0,av=0,v=0}
 
@@ -44,9 +44,18 @@ end
 _c=0
 function cull_bsp(root,pos)
   if(not root) return
-  if v_dot(root.n,pos)>root.d then
-    cull_bsp(root.back,pos)
-    -- todo: clip v0/v1
+  
+  local is_front=v_dot(root.n,pos)>root.d
+  local far,near
+  if is_front then
+    far,near=root.back,root.front
+  else 
+    far,near=root.front,root.back
+  end
+
+  cull_bsp(far,pos)
+  if is_front then
+    -- clip
     local v0,v1=world_to_cam(root.v0),world_to_cam(root.v1)
     local z0,z1=v0[3],v1[3]
     if(z0>z1) v0,z0,v1,z1=v1,z1,v0,z0
@@ -76,19 +85,10 @@ function cull_bsp(root,pos)
         w0+=dw
       end
     end
-
-    --print(_c,(x0+x1)/2,(y0+y1)/2,6)
-    _c+=1
-    cull_bsp(root.front,pos)    
-  else
-    cull_bsp(root.front,pos)
-    --[[
-    local x0,y0=project(root.v0)
-    local x1,y1=project(root.v1)
-    line(x0,y0,x1,y1,8)
-    ]]
-    cull_bsp(root.back,pos)    
   end
+  --print(_c,(x0+x1)/2,(y0+y1)/2,6)
+  _c+=1
+  cull_bsp(near,pos)    
 end
 
 function _update()
