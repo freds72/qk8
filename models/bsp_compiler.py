@@ -182,6 +182,19 @@ def draw_bsp_tree(tree, dwg, parent, color):
   level.add(g)
   parent.add(level)
 
+def lua_vector(pair):
+  return "{{{},{}}}".format(pair[0],pair[1])
+
+def export_bsp_tree(tree, depth):
+  if tree is None: return "nil"
+  return "{{v0={},v1={},n={},d={},front={},back={}}}".format(
+    lua_vector(tree.root.v0),
+    lua_vector(tree.root.v1),
+    lua_vector(tree.root.n),
+    tree.root.d,
+    export_bsp_tree(tree.front,depth + 1),
+    export_bsp_tree(tree.back, depth + 1))
+
 # debug output
 # https://stackoverflow.com/questions/17127083/python-svgwrite-and-font-styles-sizes
 dwg = svgwrite.Drawing(filename='bsp.svg', size=(256, 256))
@@ -191,12 +204,15 @@ polygons = {
   # room
   Polygon((0,0), (15,0)), 
   Polygon((15,0), (15,15)), 
-  Polygon((15,15), (0,15)), 
-  Polygon((0,15), (0,0)),
+  Polygon((15,15), (4,15)), 
+  Polygon((4,15), (4,10)), 
+  Polygon((4,10), (0,10)),
+  Polygon((0,10), (0,0)),
   # pillar
-  Polygon((12,6), (6,6)), 
-  Polygon((12,10), (12,6)), 
-  Polygon((6,6), (12,10) )}
+  Polygon((12,3), (6,3)),
+  Polygon((6,3), (12,10)), 
+  Polygon((12,10), (12,3)) 
+  }
 
 for poly in polygons:
   dwg.add(dwg.line(poly.v0, poly.v1, stroke='green'))
@@ -215,4 +231,7 @@ dwg.add(root)
 dwg.save()
 
 print_bsp_tree(tree, 0)
+print("remaining polygons: {}".format(len(polygons)))
+
+print(export_bsp_tree(tree, 0))
 
