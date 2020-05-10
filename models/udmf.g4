@@ -3,6 +3,7 @@ grammar udmf;
 
 // parser
 udmf:
+  'namespace' '=' QUOTED_STRING ';' 
   block* EOF
   ;
 
@@ -16,6 +17,7 @@ pair:
 
 value:
   number
+  | BOOLEAN_VALUE
   | QUOTED_STRING
   ;
 
@@ -34,7 +36,11 @@ HEX_NUMBER
   ;
 
 INTEGER_NUMBER
-  : DIGIT+
+  : '-'? DIGIT+ ('.' DIGIT+)?
+  ;
+
+BOOLEAN_VALUE
+  : BOOLEAN
   ;
 
 QUOTED_STRING:
@@ -55,6 +61,10 @@ fragment HEX_DIGIT
 
 fragment DIGIT
   : ('0'..'9')
+  ;
+
+fragment BOOLEAN
+  : ('true' | 'false')
   ;
 
 BLOCKCOMMENT
