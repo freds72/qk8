@@ -1,14 +1,15 @@
 pico-8 cartridge // http://www.pico-8.com
-version 23
+version 27
 __lua__
 
-local sectors={{ceil=88.0,floor=0},{ceil=128.0,floor=0},{ceil=128.0,floor=0},{ceil=128.0,floor=0},{ceil=128.0,floor=16.0},{ceil=128.0,floor=0},{ceil=128.0,floor=32.0},{ceil=128.0,floor=64.0}}
+local sectors={{ceil=88.0,floor=0},{ceil=128.0,floor=0},{ceil=128.0,floor=0},{ceil=112.0,floor=-56.0},{ceil=128.0,floor=16.0},{ceil=128.0,floor=0},{ceil=144.0,floor=32.0},{ceil=176.0,floor=64.0},{ceil=232.0,floor=-200.0},{ceil=176.0,floor=64.0},{ceil=152.0,floor=80.0},{ceil=152.0,floor=80.0},{ceil=80.0,floor=32.0},{ceil=80.0,floor=32.0},{ceil=112.0,floor=8.0}}
 
-local sides={{sector=3},{sector=3},{sector=3},{sector=3},{sector=3},{sector=3},{sector=1},{sector=1},{sector=1},{sector=3},{sector=1},{sector=1},{sector=2},{sector=1},{sector=1},{sector=2},{sector=2},{sector=2},{sector=2},{sector=2},{sector=2},{sector=2},{sector=3},{sector=1},{sector=1},{sector=1},{sector=1},{sector=1},{sector=2},{sector=2},{sector=2},{sector=2},{sector=2},{sector=4},{sector=4},{sector=4},{sector=4},{sector=4},{sector=3},{sector=3},{sector=6},{sector=8},{sector=8},{sector=6},{sector=6},{sector=5},{sector=7},{sector=5},{sector=5},{sector=5},{sector=6},{sector=7},{sector=8},{sector=7},{sector=7},{sector=8}}
+local sides={{sector=3},{sector=3},{sector=3},{sector=3},{sector=3},{sector=3},{sector=1},{sector=1},{sector=1},{sector=3},{sector=1},{sector=1},{sector=2},{sector=1},{sector=1},{sector=2},{sector=2},{sector=2},{sector=2},{sector=2},{sector=2},{sector=2},{sector=3},{sector=1},{sector=1},{sector=1},{sector=1},{sector=1},{sector=2},{sector=2},{sector=2},{sector=2},{sector=2},{sector=4},{sector=4},{sector=4},{sector=4},{sector=4},{sector=3},{sector=3},{sector=6},{sector=8},{sector=8},{sector=6},{sector=6},{sector=5},{sector=7},{sector=5},{sector=5},{sector=5},{sector=6},{sector=7},{sector=8},{sector=7},{sector=7},{sector=8},{sector=10},{sector=10},{sector=10},{sector=10},{sector=9},{sector=10},{sector=9},{sector=10},{sector=9},{sector=9},{sector=9},{sector=9},{sector=10},{sector=10},{sector=10},{sector=9},{sector=9},{sector=10},{sector=9},{sector=9},{sector=9},{sector=9},{sector=10},{sector=9},{sector=11},{sector=11},{sector=11},{sector=11},{sector=12},{sector=12},{sector=12},{sector=12},{sector=13},{sector=13},{sector=13},{sector=13},{sector=3},{sector=3},{sector=3},{sector=3},{sector=14},{sector=14},{sector=14},{sector=14},{sector=3},{sector=3},{sector=3},{sector=3},{sector=15},{sector=15},{sector=15},{sector=15}}
 
-local vertices={{-8.0,-20.0},{-8.0,2.0},{24.0,2.0},{24.0,-26.0},{-14.0,-10.0},{8.0,8.0},{-38.0,-42.0},{-14.0,-48.0},{2.0,-42.0},{6.0,-36.0},{-46.0,-26.0},{-36.0,14.0},{-30.0,0.0},{-28.0,-18.0},{2.0,-22.0},{14.0,-26.0},{14.0,-38.0},{6.0,-50.0},{-12.0,-56.0},{-42.0,-48.0},{-54.0,-28.0},{-70.0,-28.0},{-74.0,-12.0},{-66.0,10.0},{-58.0,-12.0},{-46.0,-12.0},{-40.0,-4.0},{-52.0,4.0},{-62.0,-2.0},{24.0,-20.0},{24.0,-2.0},{46.0,-2.0},{46.0,-20.0},{28.0,-20.0},{28.0,-2.0},{32.0,-2.0},{32.0,-20.0},{36.0,-2.0},{36.0,-20.0},{-70.5,-26.0},{3.143,-26.0},{-6.0,-54.0}}
+local vertices={{-8.0,-20.0},{-14.0,-10.0},{-8.0,2.0},{8.0,8.0},{24.0,2.0},{24.0,-2.0},{2.0,-22.0},{2.0,-42.0},{6.0,-36.0},{-50.0,-38.0},{-42.0,-36.0},{14.0,-26.0},{-14.0,-48.0},{-24.0,-28.0},{-38.0,-42.0},{24.0,-26.0},{14.0,-38.0},{6.0,-50.0},{-12.0,-56.0},{-42.0,-48.0},{-66.0,-38.0},{-70.0,-22.0},{-62.0,0.0},{-32.0,4.0},{-26.0,-10.0},{-54.0,-22.0},{-42.0,-22.0},{-36.0,-14.0},{-48.0,-6.0},{-58.0,-12.0},{24.0,-20.0},{28.0,-2.0},{46.0,-2.0},{46.0,-20.0},{36.0,-20.0},{28.0,-20.0},{32.0,-2.0},{36.0,-2.0},{32.0,-20.0},{46.0,-32.0},{46.0,8.0},{72.0,8.0},{96.0,36.0},{136.0,26.0},{72.0,-32.0},{74.0,-32.0},{74.0,-24.0},{72.0,-12.0},{72.0,-16.0},{72.0,0.0},{72.0,-8.0},{138.0,-68.0},{86.0,-74.0},{72.0,-24.0},{74.0,-12.0},{74.0,-10.0},{74.0,8.0},{158.0,-20.0},{74.0,-16.0},{74.0,-8.0},{74.0,0.0},{14.0,-6.0},{14.0,-2.0},{18.0,-2.0},{18.0,-6.0},{14.0,-22.0},{14.0,-18.0},{18.0,-18.0},{18.0,-22.0},{22.0,-26.0},{-65.119,-8.576},{-25.273,-16.545},{-36.261,-14.348},{-55.5,-10.5},{46.0,-30.8},{52.0,-32.0},{75.333,-36.667},{145.231,-50.646},{14.0,5.75},{-21.895,3.158},{-27.514,3.626},{72.0,-2.0},{-47.818,-37.455},{-45.2,-44.0},{2.8,-24.8},{7.143,-23.714},{8.8,-45.8},{-32.27,-50.595},{0.857,-51.714}}
 
-local bsp={v0=4,v1=16,n={0.0,1.0},d=-26.0,dual=false,sidefront=23,sideback=0,front={v0=23,v1=24,n={0.94,-0.342},d=-65.444,dual=false,sidefront=21,sideback=0,front={v0=24,v1=12,n={0.132,-0.991},d=-18.635,dual=false,sidefront=17,sideback=0,front={v0=12,v1=13,n={-0.919,-0.394},d=27.574,dual=false,sidefront=20,sideback=0,front={v0=13,v1=14,n={-0.994,-0.11},d=29.817,dual=false,sidefront=18,sideback=0,front={v0=40,v1=23,n={0.97,0.243},d=-74.701,dual=false,sidefront=16,sideback=0,front={v0=25,v1=26,n={0.0,-1.0},d=12.0,dual=true,sidefront=29,sideback=34,front={v0=14,v1=11,n={-0.406,0.914},d=-5.077,dual=false,sidefront=19,sideback=0,front=nil,back=nil},back={v0=28,v1=29,n={-0.514,0.857},d=30.184,dual=true,sidefront=32,sideback=36,front=nil,back={v0=26,v1=27,n={0.8,-0.6},d=-29.6,dual=true,sidefront=30,sideback=38,front=nil,back={v0=29,v1=25,n={-0.928,-0.371},d=58.308,dual=true,sidefront=33,sideback=35,front=nil,back={v0=27,v1=28,n={0.555,0.832},d=-25.516,dual=true,sidefront=31,sideback=37,front=nil,back=nil}}}}},back=nil},back=nil},back={v0=30,v1=4,n={-1.0,-0.0},d=-24.0,dual=false,sidefront=39,sideback=0,front={v0=6,v1=3,n={-0.351,-0.936},d=-10.3,dual=false,sidefront=6,sideback=0,front={v0=31,v1=30,n={-1.0,-0.0},d=-24.0,dual=true,sidefront=40,sideback=44,front={v0=1,v1=5,n={0.857,0.514},d=-17.15,dual=false,sidefront=1,sideback=0,front={v0=15,v1=16,n={-0.316,-0.949},d=20.239,dual=true,sidefront=12,sideback=10,front={v0=15,v1=1,n={0.196,0.981},d=-21.181,dual=false,sidefront=4,sideback=0,front=nil,back={v0=41,v1=15,n={0.962,0.275},d=-4.121,dual=false,sidefront=8,sideback=0,front=nil,back=nil}},back={v0=2,v1=6,n={0.351,-0.936},d=-4.682,dual=false,sidefront=2,sideback=0,front={v0=5,v1=2,n={0.894,-0.447},d=-8.05,dual=false,sidefront=5,sideback=0,front={v0=3,v1=31,n={-1.0,-0.0},d=-24.0,dual=false,sidefront=3,sideback=0,front=nil,back=nil},back=nil},back=nil}},back=nil},back=nil},back=nil},back={v0=36,v1=37,n={-1.0,-0.0},d=-32.0,dual=true,sidefront=50,sideback=52,front={v0=31,v1=35,n={0.0,-1.0},d=2.0,dual=false,sidefront=41,sideback=0,front={v0=34,v1=30,n={0.0,1.0},d=-20.0,dual=false,sidefront=45,sideback=0,front={v0=37,v1=34,n={0.0,1.0},d=-20.0,dual=false,sidefront=48,sideback=0,front={v0=35,v1=36,n={0.0,-1.0},d=2.0,dual=false,sidefront=46,sideback=0,front={v0=34,v1=35,n={1.0,-0.0},d=28.0,dual=true,sidefront=49,sideback=51,front=nil,back=nil},back=nil},back=nil},back=nil},back=nil},back={v0=38,v1=32,n={0.0,-1.0},d=2.0,dual=false,sidefront=53,sideback=0,front={v0=32,v1=33,n={-1.0,-0.0},d=-46.0,dual=false,sidefront=42,sideback=0,front={v0=36,v1=38,n={0.0,-1.0},d=2.0,dual=false,sidefront=47,sideback=0,front={v0=39,v1=37,n={0.0,1.0},d=-20.0,dual=false,sidefront=54,sideback=0,front={v0=38,v1=39,n={-1.0,-0.0},d=-36.0,dual=true,sidefront=55,sideback=56,front=nil,back={v0=33,v1=39,n={0.0,1.0},d=-20.0,dual=false,sidefront=43,sideback=0,front=nil,back=nil}},back=nil},back=nil},back=nil},back=nil}}}},back=nil},back=nil},back={v0=9,v1=10,n={0.832,-0.555},d=24.962,dual=false,sidefront=14,sideback=0,front={v0=16,v1=17,n={-1.0,-0.0},d=-14.0,dual=false,sidefront=24,sideback=0,front={v0=17,v1=18,n={-0.832,0.555},d=-32.727,dual=false,sidefront=25,sideback=0,front={v0=18,v1=42,n={-0.316,0.949},d=-49.332,dual=false,sidefront=26,sideback=0,front=nil,back=nil},back=nil},back=nil},back={v0=21,v1=11,n={0.243,-0.97},d=14.067,dual=true,sidefront=9,sideback=13,front={v0=19,v1=20,n={0.258,0.966},d=-57.201,dual=false,sidefront=27,sideback=0,front={v0=8,v1=9,n={0.351,-0.936},d=40.028,dual=false,sidefront=7,sideback=0,front={v0=42,v1=19,n={-0.316,0.949},d=-49.332,dual=false,sidefront=26,sideback=0,front=nil,back=nil},back={v0=10,v1=41,n={0.962,0.275},d=-4.121,dual=false,sidefront=8,sideback=0,front=nil,back={v0=11,v1=7,n={-0.894,-0.447},d=52.771,dual=false,sidefront=15,sideback=0,front={v0=20,v1=21,n={0.857,0.514},d=-60.71,dual=false,sidefront=28,sideback=0,front=nil,back=nil},back={v0=7,v1=8,n={-0.243,-0.97},d=49.962,dual=false,sidefront=11,sideback=0,front=nil,back=nil}}}},back=nil},back={v0=22,v1=40,n={0.97,0.243},d=-74.701,dual=false,sidefront=16,sideback=0,front={v0=21,v1=22,n={0.0,1.0},d=-28.0,dual=false,sidefront=22,sideback=0,front=nil,back=nil},back=nil}}}}
+local bsp={v0=7,v1=1,n={0.196,0.981},d=-21.181,dual=false,sidefront=4,sideback=0,front={v0=59,v1=55,n={1.0,-0.0},d=74.0,dual=false,sidefront=76,sideback=0,front={v0=55,v1=56,n={1.0,-0.0},d=74.0,dual=false,sidefront=67,sideback=0,front={v0=57,v1=43,n={0.786,-0.618},d=53.245,dual=false,sidefront=73,sideback=0,front={v0=43,v1=44,n={-0.243,-0.97},d=-58.209,dual=false,sidefront=66,sideback=0,front={v0=60,v1=61,n={1.0,-0.0},d=74.0,dual=true,sidefront=80,sideback=82,front={v0=77,v1=46,n={0.962,0.275},d=62.362,dual=false,sidefront=75,sideback=0,front={v0=44,v1=58,n={-0.902,-0.431},d=-133.908,dual=false,sidefront=61,sideback=0,front={v0=46,v1=47,n={1.0,-0.0},d=74.0,dual=false,sidefront=63,sideback=0,front={v0=56,v1=60,n={1.0,-0.0},d=74.0,dual=false,sidefront=65,sideback=0,front={v0=58,v1=78,n={-0.923,0.385},d=-153.538,dual=false,sidefront=78,sideback=0,front={v0=47,v1=59,n={1.0,-0.0},d=74.0,dual=true,sidefront=68,sideback=86,front={v0=61,v1=57,n={1.0,-0.0},d=74.0,dual=false,sidefront=72,sideback=0,front=nil,back=nil},back=nil},back=nil},back=nil},back=nil},back=nil},back=nil},back=nil},back=nil},back=nil},back=nil},back={v0=51,v1=48,n={-1.0,-0.0},d=-72.0,dual=false,sidefront=79,sideback=0,front={v0=31,v1=16,n={-1.0,-0.0},d=-24.0,dual=false,sidefront=39,sideback=0,front={v0=6,v1=31,n={-1.0,-0.0},d=-24.0,dual=true,sidefront=40,sideback=44,front={v0=62,v1=63,n={1.0,-0.0},d=14.0,dual=true,sidefront=89,sideback=93,front={v0=79,v1=5,n={-0.351,-0.936},d=-10.3,dual=false,sidefront=6,sideback=0,front={v0=64,v1=65,n={-1.0,-0.0},d=-18.0,dual=true,sidefront=91,sideback=95,front={v0=65,v1=62,n={0.0,1.0},d=-6.0,dual=true,sidefront=92,sideback=94,front={v0=63,v1=64,n={0.0,-1.0},d=2.0,dual=true,sidefront=90,sideback=96,front=nil,back=nil},back={v0=68,v1=69,n={-1.0,-0.0},d=-18.0,dual=true,sidefront=99,sideback=103,front={v0=66,v1=67,n={1.0,-0.0},d=14.0,dual=true,sidefront=97,sideback=101,front={v0=69,v1=66,n={0.0,1.0},d=-22.0,dual=true,sidefront=100,sideback=102,front={v0=67,v1=68,n={0.0,-1.0},d=18.0,dual=true,sidefront=98,sideback=104,front=nil,back=nil},back=nil},back=nil},back=nil}},back={v0=16,v1=70,n={0.0,1.0},d=-26.0,dual=false,sidefront=23,sideback=0,front={v0=5,v1=6,n={-1.0,-0.0},d=-24.0,dual=false,sidefront=3,sideback=0,front=nil,back=nil},back=nil}},back=nil},back={v0=1,v1=2,n={0.857,0.514},d=-17.15,dual=false,sidefront=1,sideback=0,front={v0=2,v1=3,n={0.894,-0.447},d=-8.05,dual=true,sidefront=5,sideback=106,front={v0=3,v1=4,n={0.351,-0.936},d=-4.682,dual=false,sidefront=2,sideback=0,front={v0=4,v1=79,n={-0.351,-0.936},d=-10.3,dual=false,sidefront=6,sideback=0,front=nil,back=nil},back=nil},back={v0=80,v1=3,n={-0.083,-0.997},d=-1.329,dual=false,sidefront=105,sideback=0,front=nil,back=nil}},back={v0=71,v1=23,n={0.94,-0.342},d=-58.267,dual=false,sidefront=21,sideback=0,front={v0=25,v1=72,n={-0.994,-0.11},d=26.945,dual=false,sidefront=18,sideback=0,front={v0=24,v1=81,n={-0.083,-0.997},d=-1.329,dual=false,sidefront=105,sideback=0,front={v0=23,v1=24,n={0.132,-0.991},d=-8.194,dual=false,sidefront=17,sideback=0,front={v0=24,v1=25,n={-0.919,-0.394},d=27.837,dual=true,sidefront=20,sideback=108,front={v0=28,v1=29,n={0.555,0.832},d=-31.618,dual=true,sidefront=31,sideback=37,front=nil,back={v0=29,v1=74,n={-0.514,0.857},d=19.551,dual=true,sidefront=32,sideback=36,front=nil,back={v0=73,v1=28,n={0.8,-0.6},d=-20.4,dual=true,sidefront=30,sideback=38,front=nil,back=nil}}},back=nil},back=nil},back=nil},back={v0=2,v1=25,n={0.0,1.0},d=-10.0,dual=false,sidefront=107,sideback=0,front={v0=81,v1=80,n={-0.083,-0.997},d=-1.329,dual=false,sidefront=105,sideback=0,front=nil,back=nil},back=nil}},back=nil}}},back=nil},back={v0=6,v1=32,n={0.0,-1.0},d=2.0,dual=false,sidefront=41,sideback=0,front={v0=32,v1=37,n={0.0,-1.0},d=2.0,dual=false,sidefront=46,sideback=0,front={v0=45,v1=76,n={0.0,1.0},d=-32.0,dual=false,sidefront=62,sideback=0,front={v0=37,v1=38,n={0.0,-1.0},d=2.0,dual=false,sidefront=47,sideback=0,front={v0=49,v1=54,n={-1.0,-0.0},d=-72.0,dual=true,sidefront=69,sideback=88,front={v0=39,v1=36,n={0.0,1.0},d=-20.0,dual=false,sidefront=48,sideback=0,front={v0=36,v1=32,n={1.0,-0.0},d=28.0,dual=true,sidefront=49,sideback=51,front={v0=37,v1=39,n={-1.0,-0.0},d=-32.0,dual=true,sidefront=50,sideback=52,front=nil,back={v0=48,v1=49,n={-1.0,-0.0},d=-72.0,dual=false,sidefront=70,sideback=0,front={v0=38,v1=33,n={0.0,-1.0},d=2.0,dual=false,sidefront=53,sideback=0,front={v0=82,v1=51,n={-1.0,-0.0},d=-72.0,dual=true,sidefront=74,sideback=84,front={v0=34,v1=35,n={0.0,1.0},d=-20.0,dual=false,sidefront=43,sideback=0,front={v0=38,v1=35,n={-1.0,-0.0},d=-36.0,dual=true,sidefront=55,sideback=56,front={v0=35,v1=39,n={0.0,1.0},d=-20.0,dual=false,sidefront=54,sideback=0,front=nil,back=nil},back={v0=33,v1=34,n={-1.0,-0.0},d=-46.0,dual=true,sidefront=42,sideback=58,front=nil,back=nil}},back=nil},back=nil},back=nil},back=nil}},back={v0=36,v1=31,n={0.0,1.0},d=-20.0,dual=false,sidefront=45,sideback=0,front=nil,back=nil}},back={v0=75,v1=34,n={1.0,-0.0},d=46.0,dual=false,sidefront=57,sideback=0,front={v0=54,v1=45,n={-1.0,-0.0},d=-72.0,dual=false,sidefront=71,sideback=0,front=nil,back=nil},back=nil}},back=nil},back=nil},back=nil},back=nil},back={v0=33,v1=41,n={1.0,-0.0},d=46.0,dual=false,sidefront=59,sideback=0,front={v0=41,v1=42,n={0.0,-1.0},d=-8.0,dual=false,sidefront=60,sideback=0,front={v0=42,v1=50,n={-1.0,-0.0},d=-72.0,dual=false,sidefront=64,sideback=0,front={v0=50,v1=82,n={-1.0,-0.0},d=-72.0,dual=true,sidefront=74,sideback=84,front=nil,back=nil},back=nil},back=nil},back=nil}}},back={v0=60,v1=51,n={0.0,1.0},d=-8.0,dual=false,sidefront=83,sideback=0,front={v0=50,v1=61,n={0.0,-1.0},d=0.0,dual=false,sidefront=81,sideback=0,front=nil,back=nil},back={v0=49,v1=59,n={0.0,-1.0},d=16.0,dual=false,sidefront=85,sideback=0,front={v0=47,v1=54,n={0.0,1.0},d=-24.0,dual=false,sidefront=87,sideback=0,front=nil,back=nil},back=nil}}}},back={v0=30,v1=26,n={-0.928,-0.371},d=58.308,dual=true,sidefront=33,sideback=35,front={v0=10,v1=21,n={0.0,1.0},d=-38.0,dual=false,sidefront=22,sideback=0,front={v0=22,v1=71,n={0.94,-0.342},d=-58.267,dual=false,sidefront=21,sideback=0,front={v0=21,v1=22,n={0.97,0.243},d=-73.246,dual=false,sidefront=16,sideback=0,front={v0=10,v1=83,n={0.243,-0.97},d=24.739,dual=true,sidefront=9,sideback=13,front=nil,back=nil},back=nil},back=nil},back={v0=84,v1=10,n={0.781,0.625},d=-62.782,dual=false,sidefront=28,sideback=0,front=nil,back=nil}},back={v0=83,v1=11,n={0.243,-0.97},d=24.739,dual=true,sidefront=9,sideback=13,front={v0=40,v1=75,n={1.0,-0.0},d=46.0,dual=false,sidefront=57,sideback=0,front={v0=76,v1=40,n={0.0,1.0},d=-32.0,dual=false,sidefront=62,sideback=0,front=nil,back={v0=52,v1=53,n={-0.115,0.993},d=-83.37,dual=false,sidefront=77,sideback=0,front={v0=78,v1=52,n={-0.923,0.385},d=-153.538,dual=false,sidefront=78,sideback=0,front={v0=53,v1=77,n={0.962,0.275},d=62.362,dual=false,sidefront=75,sideback=0,front=nil,back=nil},back=nil},back=nil}},back={v0=9,v1=85,n={0.962,0.275},d=-4.121,dual=false,sidefront=8,sideback=0,front={v0=17,v1=87,n={-0.832,0.555},d=-32.727,dual=false,sidefront=25,sideback=0,front={v0=86,v1=12,n={-0.316,-0.949},d=20.239,dual=true,sidefront=12,sideback=10,front={v0=12,v1=17,n={-1.0,-0.0},d=-14.0,dual=false,sidefront=24,sideback=0,front=nil,back=nil},back={v0=70,v1=12,n={0.0,1.0},d=-26.0,dual=false,sidefront=23,sideback=0,front=nil,back=nil}},back=nil},back={v0=87,v1=18,n={-0.832,0.555},d=-32.727,dual=false,sidefront=25,sideback=0,front={v0=11,v1=15,n={-0.832,-0.555},d=54.915,dual=false,sidefront=15,sideback=0,front={v0=88,v1=20,n={0.258,0.966},d=-57.201,dual=false,sidefront=27,sideback=0,front={v0=20,v1=84,n={0.781,0.625},d=-62.782,dual=false,sidefront=28,sideback=0,front=nil,back=nil},back=nil},back={v0=15,v1=13,n={-0.243,-0.97},d=49.962,dual=false,sidefront=11,sideback=0,front={v0=19,v1=88,n={0.258,0.966},d=-57.201,dual=false,sidefront=27,sideback=0,front={v0=89,v1=19,n={-0.316,0.949},d=-49.332,dual=false,sidefront=26,sideback=0,front=nil,back=nil},back=nil},back={v0=8,v1=9,n={0.832,-0.555},d=24.962,dual=false,sidefront=14,sideback=0,front={v0=18,v1=89,n={-0.316,0.949},d=-49.332,dual=false,sidefront=26,sideback=0,front=nil,back=nil},back={v0=13,v1=8,n={0.351,-0.936},d=40.028,dual=false,sidefront=7,sideback=0,front=nil,back=nil}}}},back=nil}}},back={v0=14,v1=11,n={-0.406,0.914},d=-15.839,dual=false,sidefront=19,sideback=0,front={v0=74,v1=30,n={-0.514,0.857},d=19.551,dual=true,sidefront=32,sideback=36,front=nil,back={v0=27,v1=73,n={0.8,-0.6},d=-20.4,dual=true,sidefront=30,sideback=38,front={v0=72,v1=14,n={-0.994,-0.11},d=26.945,dual=false,sidefront=18,sideback=0,front=nil,back=nil},back={v0=26,v1=27,n={0.0,-1.0},d=22.0,dual=true,sidefront=29,sideback=34,front=nil,back=nil}}},back={v0=7,v1=86,n={-0.316,-0.949},d=20.239,dual=true,sidefront=12,sideback=10,front={v0=85,v1=7,n={0.962,0.275},d=-4.121,dual=false,sidefront=8,sideback=0,front=nil,back=nil},back=nil}}}}}
+
 function attach(root)
   if(not root) return
   root.v0=vertices[root.v0]
@@ -163,6 +164,10 @@ function cull_bsp(root,pos)
         local othersector=is_front and root.sideback.sector or root.sidefront.sector
         local othert,otherb=othersector.ceil,othersector.floor
 
+        local id=frontsector.id%16
+        local wall_c=sget(0,id)
+        local ceil_c,floor_c=sget(1,id),sget(2,id)
+
         for x=cx,min(ceil(x1)-1,127) do
           local maxt,minb=_yceil[x],_yfloor[x]
           local t,b=max(y0-top*w0,maxt),min(y0-bottom*w0,minb)
@@ -170,23 +175,23 @@ function cull_bsp(root,pos)
           
           if t>maxt then
             -- ceiling
-            rectfill(x,maxt,x,t,frontsector.id+1)
+            rectfill(x,maxt,x,t,ceil_c)
           end
           -- floor
           if b<minb then
-            rectfill(x,minb,x,b,6)
+            rectfill(x,minb,x,b,floor_c)
           end
 
           -- wall
           -- top wall side between current sector and back sector
           if t<ot then
-            rectfill(x,t,x,ot,11)
+            rectfill(x,t,x,ot,wall_c)
             -- new window top
             t=ot
           end
           -- bottom wall side between current sector and back sector     
           if b>ob then
-            rectfill(x,ob,x,b,8)
+            rectfill(x,ob,x,b,wall_c)
             -- new window bottom
             b=ob
           end
@@ -196,21 +201,25 @@ function cull_bsp(root,pos)
           w0+=dw
         end
       else
+        local id=frontsector.id%16
+        local wall_c=sget(0,id)
+        local ceil_c,floor_c=sget(1,id),sget(2,id)
+
         for x=cx,min(ceil(x1)-1,127) do
           local maxt,minb=_yceil[x],_yfloor[x]
           local t,b=max(y0-top*w0,maxt),min(y0-bottom*w0,minb)
           if t>maxt then
             -- ceiling
-            rectfill(x,maxt,x,t,frontsector.id+1)
+            rectfill(x,maxt,x,t,ceil_c)
           end
           -- floor
           if b<minb then
-            rectfill(x,minb,x,b,6)
+            rectfill(x,minb,x,b,floor_c)
           end
 
           -- wall
           if t<=b then
-            rectfill(x,t,x,b,_c%15+1)
+            rectfill(x,t,x,b,wall_c)
           end
 
           -- kill this row
@@ -272,3 +281,20 @@ function _draw()
   ]]
   print(stat(1),2,2,7)
 end
+__gfx__
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+41600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d1600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+41600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d1600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+41600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d1600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+41600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d1600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
