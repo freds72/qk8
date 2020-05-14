@@ -28,14 +28,6 @@ def normal(v0):
     dy /= d
   return (dx, dy)
 
-class Polygon:
-  def __init__(self, v0, v1):
-    self.v0 = v0
-    self.v1 = v1
-    # plane equation
-    self.n = normal(ortho(v0,v1))
-    self.d = dot(self.n, v0)
-
 # constants
 COPLANAR=0
 FRONT=1
@@ -44,6 +36,77 @@ STRADDLING=3
 CLASSIFY_ON=4
 
 PLANE_THICKNESS=0.001
+
+# linedef
+class Polygon():
+  def __init__(self, v0, v1, extra=None, vertices=None):
+    self.v0 = v0
+    self.v1 = v1
+    self.vertices = vertices
+    # copy constructor
+    if isinstance(extra, Polygon):
+      self.properties = extra.properties
+      self.vertices = extra.vertices
+      self.n = extra.n
+      self.d = extra.d
+    else:
+      self.properties = extra
+      if vertices is None:
+        raise Exception("Missing vertices parameter for Polygon")
+      self.vertices = vertices
+      v0 = vertices[v0]
+      v1 = vertices[v1]
+      # plane equation
+      self.n = normal(ortho(v0,v1))
+      self.d = dot(self.n, v0)
+  def split(self, hyperplane):
+    # polygons are 2d segments
+    # de-reference vertices
+    v0 = self.vertices[self.v0]
+    v1 = self.vertices[self.v1]
+    t0, d0 = classify_point(v0, hyperplane)
+    t1, d1 = classify_point(v1, hyperplane)
+    if t0 == FRONT:
+      if t1 == FRONT or t1 == CLASSIFY_ON:
+        return (self, None)
+      elif t1 == BACK: 
+        v2idx = len(self.vertices)
+        self.vertices.append(lerp(v0, v1, d0 / (d0-d1)))
+        return (Polygon(self.v0, v2idx, self), Polygon(v2idx, self.v1, self))
+    elif t0 == CLASSIFY_ON:
+      if t1 == FRONT or t1 == CLASSIFY_ON:
+        return (self, None)
+      elif t1 == BACK:
+        return (None, self)
+    # BACK
+    if t1 == FRONT:
+      v2idx = len(self.vertices)
+      self.vertices.append(lerp(v0, v1, d0 / (d0-d1)))
+      return (Polygon(v2idx, self.v1, self), Polygon(self.v0, v2idx, self))
+    elif t1 == BACK or t1 == CLASSIFY_ON:
+      return (None, self)
+
+    raise Exception('Unhandled case: {} - {}'.format(t0, t1))
+  def classify(self, hyperplane):
+    num_front = 0
+    num_back = 0
+    v0 = self.vertices[self.v0]
+    v1 = self.vertices[self.v1]
+    for p in (v0, v1):
+      t, d = classify_point(p, hyperplane)
+      if t == FRONT:
+        num_front += 1
+      elif t == BACK:
+        num_back += 1
+    # decide
+    if num_back !=0 and num_front != 0:
+      return STRADDLING
+    if num_front != 0:
+      return FRONT
+    if num_back != 0:
+      return BACK
+    
+    return COPLANAR
 
 def pick_splitting_plane(polygons):
   K = 0.8
@@ -56,7 +119,7 @@ def pick_splitting_plane(polygons):
     num_straddling = 0
     for poly in polygons:
       if hyperplane!=poly:
-        poly_type = classify_polygon(poly, hyperplane)
+        poly_type = poly.classify(hyperplane)
         if poly_type==COPLANAR or poly_type==FRONT:
           num_front += 1
         elif poly_type==BACK:
@@ -78,51 +141,6 @@ def classify_point(p, plane):
     return (BACK, d)
   return (CLASSIFY_ON, d)
 
-def classify_polygon(poly, hyperplane):
-  num_front = 0
-  num_back = 0
-  for p in (poly.v0, poly.v1):
-    t, d = classify_point(p, hyperplane)
-    if t == FRONT:
-      num_front += 1
-    elif t == BACK:
-      num_back += 1
-  # decide
-  if num_back !=0 and num_front != 0:
-    return STRADDLING
-  if num_front != 0:
-    return FRONT
-  if num_back != 0:
-    return BACK
-  
-  return COPLANAR
-
-def split_polygon(poly, hyperplane):
-  # polygons are 2d segments
-  v0 = poly.v0
-  v1 = poly.v1
-  t0, d0 = classify_point(v0, hyperplane)
-  t1, d1 = classify_point(v1, hyperplane)
-  if t0 == FRONT:
-    if t1 == FRONT or t1 == CLASSIFY_ON:
-      return (poly, None)
-    elif t1 == BACK:
-      v2 = lerp(v0, v1, d0 / (d0-d1))
-      return (Polygon(v0, v2), Polygon(v2, v1))
-  elif t0 == CLASSIFY_ON:
-    if t1 == FRONT or t1 == CLASSIFY_ON:
-      return (poly, None)
-    elif t1 == BACK:
-      return (None, poly)
-  # BACK
-  if t1 == FRONT:
-    v2 = lerp(v0, v1, d0 / (d0-d1))
-    return (Polygon(v2, v1), Polygon(v0, v2))
-  elif t1 == BACK or t1 == CLASSIFY_ON:
-    return (None, poly)
-
-  raise Exception('Unhandled case: {} - {}'.format(t0, t1))  
-
 def build_bsp_tree(polygons, depth):
   if len(polygons)==0: return None
   if len(polygons)==1: return BSP_Tree(None, polygons.pop(), None)
@@ -136,13 +154,13 @@ def build_bsp_tree(polygons, depth):
 
   # iterate over polygons, triage or split them
   for poly in polygons:
-    poly_type = classify_polygon(poly,split_plane)
+    poly_type = poly.classify(split_plane)
     if poly_type==COPLANAR or poly_type==FRONT:
       front_list.add(poly)
     elif poly_type==BACK:
       back_list.add(poly)
     elif poly_type==STRADDLING:
-      front,back = split_polygon(poly, split_plane)
+      front,back = poly.split(split_plane)
       front_list.add(front)
       back_list.add(back)
   
@@ -187,76 +205,44 @@ def lua_vector(pair):
 
 def export_bsp_tree(tree, depth):
   if tree is None: return "nil"
-  return "{{v0={},v1={},n={},d={},front={},back={}}}".format(
-    lua_vector(tree.root.v0),
-    lua_vector(tree.root.v1),
-    lua_vector(tree.root.n),
-    round(tree.root.d,3),
-    export_bsp_tree(tree.front,depth + 1),
+  root = tree.root
+  properties = root.properties
+  return "{{v0={},v1={},n={},d={},dual={},sidefront={},sideback={},front={},back={}}}".format(
+    root.v0+1,
+    root.v1+1,
+    lua_vector(root.n),
+    round(root.d,3),
+    properties.twosided and 'true' or 'false',
+    properties.sidefront+1,
+    properties.sideback+1,
+    export_bsp_tree(tree.front, depth + 1),
     export_bsp_tree(tree.back, depth + 1))
 
-# debug output
-# https://stackoverflow.com/questions/17127083/python-svgwrite-and-font-styles-sizes
-dwg = svgwrite.Drawing(filename='bsp.svg', size=(256, 256))
+class BSP_Compiler():
+  def __init__(self, vertices, lines, sides, sectors):
+    polygons = set()
+    for line in lines:
+      polygons.add(Polygon(line.v1, line.v2, line, vertices))
+    tree = build_bsp_tree(polygons, 0)
+    print_bsp_tree(tree, 0)
 
-# tests
-polygons = {
-Polygon((-8.0,-20.0), (-14.0,-10.0)),
-Polygon((-8.0,2.0), (8.0,8.0)),
-Polygon((24.0,2.0), (24.0,-26.0)),
-Polygon((2.0,-22.0), (-8.0,-20.0)),
-Polygon((-14.0,-10.0), (-8.0,2.0)),
-Polygon((8.0,8.0), (24.0,2.0)),
-Polygon((-2.0,-12.0), (2.0,-12.0)),
-Polygon((2.0,-12.0), (2.0,-6.0)),
-Polygon((2.0,-6.0), (-4.0,-4.0)),
-Polygon((-4.0,-4.0), (-2.0,-12.0)),
-Polygon((12.0,-10.0), (16.0,-16.0)),
-Polygon((16.0,-16.0), (20.0,-12.0)),
-Polygon((20.0,-12.0), (20.0,-4.0)),
-Polygon((20.0,-4.0), (12.0,-10.0)),
-Polygon((24.0,-26.0), (14.0,-26.0)),
-Polygon((14.0,-26.0), (14.0,-38.0)),
-Polygon((14.0,-38.0), (6.0,-50.0)),
-Polygon((6.0,-50.0), (-12.0,-56.0)),
-Polygon((-12.0,-56.0), (-42.0,-48.0)),
-Polygon((-42.0,-48.0), (-54.0,-28.0)),
-Polygon((-54.0,-28.0), (-70.0,-28.0)),
-Polygon((-70.0,-28.0), (-74.0,-12.0)),
-Polygon((-74.0,-12.0), (-66.0,10.0)),
-Polygon((-66.0,10.0), (-36.0,14.0)),
-Polygon((-36.0,14.0), (-30.0,0.0)),
-Polygon((-30.0,0.0), (-28.0,-18.0)),
-Polygon((-28.0,-18.0), (-46.0,-26.0)),
-Polygon((-46.0,-26.0), (-38.0,-42.0)),
-Polygon((-38.0,-42.0), (-14.0,-48.0)),
-Polygon((-14.0,-48.0), (2.0,-42.0)),
-Polygon((2.0,-42.0), (6.0,-36.0)),
-Polygon((6.0,-36.0), (2.0,-22.0)),
-Polygon((-58.0,-2.0), (-52.0,-12.0)),
-Polygon((-52.0,-12.0), (-38.0,-8.0)),
-Polygon((-38.0,-8.0), (-42.0,6.0)),
-Polygon((-42.0,6.0), (-58.0,-2.0))
-}
+    s = ""
+    for sector in sectors:
+      if len(s)!=0: s += ","
+      s += "{{ceil={},floor={}}}".format(sector.heightceiling, sector.heightfloor)
+    print("local sectors={{{}}}\n".format(s))
 
-for poly in polygons:
-  dwg.add(dwg.line(poly.v0, poly.v1, stroke='green'))
-  dwg.add(dwg.circle(poly.v0, 0.5, stroke='green'))
-  dwg.add(dwg.circle(poly.v1, 0.5, stroke='green'))
-  # normal
-  n0 = lerp(poly.v0, poly.v1, 0.5)
-  dwg.add(dwg.line(n0, (n0[0] + 2*poly.n[0], n0[1] + 2*poly.n[1]), stroke='grey'))
+    s = ""
+    for side in sides:
+      if len(s)!=0: s += ","
+      s += "{{sector={}}}".format(side.sector+1)
+    print("local sides={{{}}}\n".format(s))
 
-tree = build_bsp_tree(polygons, 0)
+    s = ""
+    for v in vertices:
+      if len(s)!=0: s += ","
+      s += lua_vector(v)
+    print("local vertices={{{}}}\n".format(s))
 
-root = dwg.g()
-root.translate(128,0)
-draw_bsp_tree(tree, dwg, root, 'blue')
-dwg.add(root)
-dwg.save()
-
-print_bsp_tree(tree, 0)
-print("remaining polygons: {}".format(len(polygons)))
-
-print(export_bsp_tree(tree, 0))
+    print("local bsp={}".format(export_bsp_tree(tree, 0)))
 

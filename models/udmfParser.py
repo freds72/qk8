@@ -11,22 +11,23 @@ else:
 
 def serializedATN():
     with StringIO() as buf:
-        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\20")
-        buf.write("/\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\3\2\3\2\3\2")
-        buf.write("\3\2\3\2\7\2\22\n\2\f\2\16\2\25\13\2\3\2\3\2\3\3\3\3\3")
-        buf.write("\3\7\3\34\n\3\f\3\16\3\37\13\3\3\3\3\3\3\4\3\4\3\4\3\4")
-        buf.write("\3\4\3\5\3\5\3\5\5\5+\n\5\3\6\3\6\3\6\2\2\7\2\4\6\b\n")
-        buf.write("\2\3\3\2\t\n\2-\2\f\3\2\2\2\4\30\3\2\2\2\6\"\3\2\2\2\b")
-        buf.write("*\3\2\2\2\n,\3\2\2\2\f\r\7\3\2\2\r\16\7\4\2\2\16\17\7")
-        buf.write("\f\2\2\17\23\7\5\2\2\20\22\5\4\3\2\21\20\3\2\2\2\22\25")
-        buf.write("\3\2\2\2\23\21\3\2\2\2\23\24\3\2\2\2\24\26\3\2\2\2\25")
-        buf.write("\23\3\2\2\2\26\27\7\2\2\3\27\3\3\2\2\2\30\31\7\b\2\2\31")
-        buf.write("\35\7\6\2\2\32\34\5\6\4\2\33\32\3\2\2\2\34\37\3\2\2\2")
-        buf.write("\35\33\3\2\2\2\35\36\3\2\2\2\36 \3\2\2\2\37\35\3\2\2\2")
-        buf.write(" !\7\7\2\2!\5\3\2\2\2\"#\7\r\2\2#$\7\4\2\2$%\5\b\5\2%")
-        buf.write("&\7\5\2\2&\7\3\2\2\2\'+\5\n\6\2(+\7\13\2\2)+\7\f\2\2*")
-        buf.write("\'\3\2\2\2*(\3\2\2\2*)\3\2\2\2+\t\3\2\2\2,-\t\2\2\2-\13")
-        buf.write("\3\2\2\2\5\23\35*")
+        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\17")
+        buf.write("\63\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7\3")
+        buf.write("\2\3\2\3\2\3\2\3\2\7\2\24\n\2\f\2\16\2\27\13\2\3\2\3\2")
+        buf.write("\3\3\3\3\3\3\7\3\36\n\3\f\3\16\3!\13\3\3\3\3\3\3\4\3\4")
+        buf.write("\3\4\3\4\3\4\3\5\3\5\3\6\3\6\3\6\5\6/\n\6\3\7\3\7\3\7")
+        buf.write("\2\2\b\2\4\6\b\n\f\2\3\3\2\b\t\2\60\2\16\3\2\2\2\4\32")
+        buf.write("\3\2\2\2\6$\3\2\2\2\b)\3\2\2\2\n.\3\2\2\2\f\60\3\2\2\2")
+        buf.write("\16\17\7\3\2\2\17\20\7\4\2\2\20\21\7\f\2\2\21\25\7\5\2")
+        buf.write("\2\22\24\5\4\3\2\23\22\3\2\2\2\24\27\3\2\2\2\25\23\3\2")
+        buf.write("\2\2\25\26\3\2\2\2\26\30\3\2\2\2\27\25\3\2\2\2\30\31\7")
+        buf.write("\2\2\3\31\3\3\2\2\2\32\33\5\b\5\2\33\37\7\6\2\2\34\36")
+        buf.write("\5\6\4\2\35\34\3\2\2\2\36!\3\2\2\2\37\35\3\2\2\2\37 \3")
+        buf.write("\2\2\2 \"\3\2\2\2!\37\3\2\2\2\"#\7\7\2\2#\5\3\2\2\2$%")
+        buf.write("\5\b\5\2%&\7\4\2\2&\'\5\n\6\2\'(\7\5\2\2(\7\3\2\2\2)*")
+        buf.write("\7\13\2\2*\t\3\2\2\2+/\5\f\7\2,/\7\n\2\2-/\7\f\2\2.+\3")
+        buf.write("\2\2\2.,\3\2\2\2.-\3\2\2\2/\13\3\2\2\2\60\61\t\2\2\2\61")
+        buf.write("\r\3\2\2\2\5\25\37.")
         return buf.getvalue()
 
 
@@ -43,17 +44,18 @@ class udmfParser ( Parser ):
     literalNames = [ "<INVALID>", "'namespace'", "'='", "';'", "'{'", "'}'" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                      "<INVALID>", "<INVALID>", "KEYWORD", "HEX_NUMBER", 
-                      "INTEGER_NUMBER", "BOOLEAN_VALUE", "QUOTED_STRING", 
-                      "ATTRIBUTE", "BLOCKCOMMENT", "LINECOMMENT", "WS" ]
+                      "<INVALID>", "<INVALID>", "HEX_NUMBER", "INTEGER_NUMBER", 
+                      "BOOLEAN_VALUE", "STRING", "QUOTED_STRING", "BLOCKCOMMENT", 
+                      "LINECOMMENT", "WS" ]
 
     RULE_udmf = 0
     RULE_block = 1
     RULE_pair = 2
-    RULE_value = 3
-    RULE_number = 4
+    RULE_keyword = 3
+    RULE_value = 4
+    RULE_number = 5
 
-    ruleNames =  [ "udmf", "block", "pair", "value", "number" ]
+    ruleNames =  [ "udmf", "block", "pair", "keyword", "value", "number" ]
 
     EOF = Token.EOF
     T__0=1
@@ -61,15 +63,14 @@ class udmfParser ( Parser ):
     T__2=3
     T__3=4
     T__4=5
-    KEYWORD=6
-    HEX_NUMBER=7
-    INTEGER_NUMBER=8
-    BOOLEAN_VALUE=9
+    HEX_NUMBER=6
+    INTEGER_NUMBER=7
+    BOOLEAN_VALUE=8
+    STRING=9
     QUOTED_STRING=10
-    ATTRIBUTE=11
-    BLOCKCOMMENT=12
-    LINECOMMENT=13
-    WS=14
+    BLOCKCOMMENT=11
+    LINECOMMENT=12
+    WS=13
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -126,25 +127,25 @@ class udmfParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 10
-            self.match(udmfParser.T__0)
-            self.state = 11
-            self.match(udmfParser.T__1)
             self.state = 12
-            self.match(udmfParser.QUOTED_STRING)
+            self.match(udmfParser.T__0)
             self.state = 13
+            self.match(udmfParser.T__1)
+            self.state = 14
+            self.match(udmfParser.QUOTED_STRING)
+            self.state = 15
             self.match(udmfParser.T__2)
-            self.state = 17
+            self.state = 19
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            while _la==udmfParser.KEYWORD:
-                self.state = 14
+            while _la==udmfParser.STRING:
+                self.state = 16
                 self.block()
-                self.state = 19
+                self.state = 21
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
-            self.state = 20
+            self.state = 22
             self.match(udmfParser.EOF)
         except RecognitionException as re:
             localctx.exception = re
@@ -161,8 +162,9 @@ class udmfParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def KEYWORD(self):
-            return self.getToken(udmfParser.KEYWORD, 0)
+        def keyword(self):
+            return self.getTypedRuleContext(udmfParser.KeywordContext,0)
+
 
         def pair(self, i:int=None):
             if i is None:
@@ -198,21 +200,21 @@ class udmfParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 22
-            self.match(udmfParser.KEYWORD)
-            self.state = 23
+            self.state = 24
+            self.keyword()
+            self.state = 25
             self.match(udmfParser.T__3)
-            self.state = 27
+            self.state = 29
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            while _la==udmfParser.ATTRIBUTE:
-                self.state = 24
+            while _la==udmfParser.STRING:
+                self.state = 26
                 self.pair()
-                self.state = 29
+                self.state = 31
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
-            self.state = 30
+            self.state = 32
             self.match(udmfParser.T__4)
         except RecognitionException as re:
             localctx.exception = re
@@ -229,8 +231,9 @@ class udmfParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
 
-        def ATTRIBUTE(self):
-            return self.getToken(udmfParser.ATTRIBUTE, 0)
+        def keyword(self):
+            return self.getTypedRuleContext(udmfParser.KeywordContext,0)
+
 
         def value(self):
             return self.getTypedRuleContext(udmfParser.ValueContext,0)
@@ -262,14 +265,60 @@ class udmfParser ( Parser ):
         self.enterRule(localctx, 4, self.RULE_pair)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 32
-            self.match(udmfParser.ATTRIBUTE)
-            self.state = 33
-            self.match(udmfParser.T__1)
             self.state = 34
-            self.value()
+            self.keyword()
             self.state = 35
+            self.match(udmfParser.T__1)
+            self.state = 36
+            self.value()
+            self.state = 37
             self.match(udmfParser.T__2)
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class KeywordContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+
+        def STRING(self):
+            return self.getToken(udmfParser.STRING, 0)
+
+        def getRuleIndex(self):
+            return udmfParser.RULE_keyword
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterKeyword" ):
+                listener.enterKeyword(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitKeyword" ):
+                listener.exitKeyword(self)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitKeyword" ):
+                return visitor.visitKeyword(self)
+            else:
+                return visitor.visitChildren(self)
+
+
+
+
+    def keyword(self):
+
+        localctx = udmfParser.KeywordContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 6, self.RULE_keyword)
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 39
+            self.match(udmfParser.STRING)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -318,24 +367,24 @@ class udmfParser ( Parser ):
     def value(self):
 
         localctx = udmfParser.ValueContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 6, self.RULE_value)
+        self.enterRule(localctx, 8, self.RULE_value)
         try:
-            self.state = 40
+            self.state = 44
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [udmfParser.HEX_NUMBER, udmfParser.INTEGER_NUMBER]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 37
+                self.state = 41
                 self.number()
                 pass
             elif token in [udmfParser.BOOLEAN_VALUE]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 38
+                self.state = 42
                 self.match(udmfParser.BOOLEAN_VALUE)
                 pass
             elif token in [udmfParser.QUOTED_STRING]:
                 self.enterOuterAlt(localctx, 3)
-                self.state = 39
+                self.state = 43
                 self.match(udmfParser.QUOTED_STRING)
                 pass
             else:
@@ -385,11 +434,11 @@ class udmfParser ( Parser ):
     def number(self):
 
         localctx = udmfParser.NumberContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 8, self.RULE_number)
+        self.enterRule(localctx, 10, self.RULE_number)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 42
+            self.state = 46
             _la = self._input.LA(1)
             if not(_la==udmfParser.HEX_NUMBER or _la==udmfParser.INTEGER_NUMBER):
                 self._errHandler.recoverInline(self)

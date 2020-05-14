@@ -35,6 +35,15 @@ class udmfListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by udmfParser#keyword.
+    def enterKeyword(self, ctx:udmfParser.KeywordContext):
+        pass
+
+    # Exit a parse tree produced by udmfParser#keyword.
+    def exitKeyword(self, ctx:udmfParser.KeywordContext):
+        pass
+
+
     # Enter a parse tree produced by udmfParser#value.
     def enterValue(self, ctx:udmfParser.ValueContext):
         pass

@@ -8,11 +8,15 @@ udmf:
   ;
 
 block:
-  KEYWORD '{' pair* '}' 
+  keyword '{' pair* '}' 
   ;
 
 pair:
-  ATTRIBUTE '=' value ';'
+  keyword '=' value ';'
+  ;
+
+keyword:
+  STRING
   ;
 
 value:
@@ -27,12 +31,8 @@ number
   ;
 
 // lexer
-KEYWORD:
-  'linedef' | 'sidedef' | 'vertex' | 'sector' | 'thing'
-  ;
-
 HEX_NUMBER
-  :   '0' 'x' HEX_DIGIT+
+  : '0x' HEX_DIGIT+
   ;
 
 INTEGER_NUMBER
@@ -43,17 +43,13 @@ BOOLEAN_VALUE
   : BOOLEAN
   ;
 
+STRING:
+  ('a'..'z'|'A'..'Z'|'0'..'9'|'_')+
+  ;
+
 QUOTED_STRING:
   '"' (~('"' | '\\' | '\r' | '\n') | '\\' ('"' | '\\'))* '"'
   ; 
-
-ATTRIBUTE:
-  (NUM_LETTER|'_')+
-  ;
-
-fragment NUM_LETTER
-  : ('a'..'z'|'A'..'Z'|'0'..'9')
-  ;
 
 fragment HEX_DIGIT
   : ('0'..'9'|'a'..'f'|'A'..'F')

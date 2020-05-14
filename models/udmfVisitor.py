@@ -24,6 +24,11 @@ class udmfVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by udmfParser#keyword.
+    def visitKeyword(self, ctx:udmfParser.KeywordContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by udmfParser#value.
     def visitValue(self, ctx:udmfParser.ValueContext):
         return self.visitChildren(ctx)

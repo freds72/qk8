@@ -20,7 +20,7 @@ blocking=true;
 linedef//#2
 {
 v1=2;
-v2=3;
+v2=30;
 sidefront=2;
 blocking=true;
 }
@@ -51,26 +51,24 @@ blocking=true;
 
 linedef//#6
 {
-v1=6;
-v2=7;
-sidefront=6;
-sideback=10;
-twosided=true;
+v1=8;
+v2=9;
+sidefront=13;
+blocking=true;
 }
 
 linedef//#7
 {
-v1=7;
-v2=8;
+v1=9;
+v2=14;
 sidefront=7;
-sideback=13;
-twosided=true;
+blocking=true;
 }
 
 linedef//#8
 {
-v1=8;
-v2=9;
+v1=20;
+v2=10;
 sidefront=8;
 sideback=12;
 twosided=true;
@@ -78,47 +76,43 @@ twosided=true;
 
 linedef//#9
 {
-v1=9;
-v2=6;
-sidefront=9;
-sideback=11;
+v1=14;
+v2=15;
+sidefront=11;
+sideback=9;
 twosided=true;
 }
 
 linedef//#10
 {
-v1=10;
-v2=11;
-sidefront=14;
-sideback=18;
-twosided=true;
+v1=7;
+v2=8;
+sidefront=6;
+blocking=true;
 }
 
 linedef//#11
 {
-v1=11;
-v2=12;
-sidefront=15;
-sideback=21;
-twosided=true;
+v1=13;
+v2=10;
+sidefront=18;
+blocking=true;
 }
 
 linedef//#12
 {
-v1=12;
-v2=13;
-sidefront=16;
-sideback=20;
-twosided=true;
+v1=10;
+v2=6;
+sidefront=14;
+blocking=true;
 }
 
 linedef//#13
 {
-v1=13;
-v2=10;
-sidefront=17;
-sideback=19;
-twosided=true;
+v1=6;
+v2=7;
+sidefront=10;
+blocking=true;
 }
 
 linedef//#14
@@ -173,7 +167,7 @@ linedef//#20
 {
 v1=20;
 v2=21;
-sidefront=28;
+sidefront=21;
 blocking=true;
 }
 
@@ -181,7 +175,7 @@ linedef//#21
 {
 v1=21;
 v2=22;
-sidefront=29;
+sidefront=15;
 blocking=true;
 }
 
@@ -189,153 +183,230 @@ linedef//#22
 {
 v1=22;
 v2=23;
-sidefront=30;
+sidefront=20;
 blocking=true;
 }
 
 linedef//#23
 {
 v1=23;
-v2=24;
-sidefront=31;
+v2=11;
+sidefront=16;
 blocking=true;
 }
 
 linedef//#24
 {
-v1=24;
-v2=25;
-sidefront=32;
+v1=11;
+v2=12;
+sidefront=19;
 blocking=true;
 }
 
 linedef//#25
 {
-v1=25;
-v2=26;
-sidefront=33;
+v1=12;
+v2=13;
+sidefront=17;
 blocking=true;
 }
 
 linedef//#26
 {
-v1=26;
-v2=27;
-sidefront=34;
-blocking=true;
+v1=24;
+v2=25;
+sidefront=28;
+sideback=33;
+twosided=true;
 }
 
 linedef//#27
 {
-v1=27;
-v2=28;
-sidefront=35;
-blocking=true;
+v1=25;
+v2=26;
+sidefront=29;
+sideback=37;
+twosided=true;
 }
 
 linedef//#28
 {
-v1=28;
-v2=29;
-sidefront=36;
-blocking=true;
+v1=26;
+v2=27;
+sidefront=30;
+sideback=36;
+twosided=true;
 }
 
 linedef//#29
 {
-v1=29;
-v2=30;
-sidefront=37;
-blocking=true;
+v1=27;
+v2=28;
+sidefront=31;
+sideback=35;
+twosided=true;
 }
 
 linedef//#30
 {
-v1=30;
-v2=31;
-sidefront=38;
-blocking=true;
+v1=28;
+v2=24;
+sidefront=32;
+sideback=34;
+twosided=true;
 }
 
 linedef//#31
 {
-v1=31;
-v2=14;
-sidefront=39;
+v1=29;
+v2=3;
+sidefront=38;
 blocking=true;
 }
 
 linedef//#32
 {
-v1=32;
-v2=33;
-sidefront=40;
-sideback=44;
+v1=30;
+v2=29;
+sidefront=39;
+sideback=43;
 twosided=true;
 }
 
 linedef//#33
 {
-v1=33;
+v1=30;
 v2=34;
-sidefront=41;
-sideback=47;
-twosided=true;
+sidefront=40;
+blocking=true;
 }
 
 linedef//#34
 {
-v1=34;
-v2=35;
-sidefront=42;
-sideback=46;
-twosided=true;
+v1=31;
+v2=32;
+sidefront=41;
+blocking=true;
 }
 
 linedef//#35
 {
+v1=32;
+v2=38;
+sidefront=42;
+blocking=true;
+}
+
+linedef//#36
+{
+v1=33;
+v2=29;
+sidefront=44;
+blocking=true;
+}
+
+linedef//#37
+{
+v1=34;
+v2=35;
+sidefront=45;
+blocking=true;
+}
+
+linedef//#38
+{
 v1=35;
-v2=32;
-sidefront=43;
-sideback=45;
+v2=37;
+sidefront=46;
+blocking=true;
+}
+
+linedef//#39
+{
+v1=36;
+v2=33;
+sidefront=47;
+blocking=true;
+}
+
+linedef//#40
+{
+v1=33;
+v2=34;
+sidefront=48;
+sideback=50;
+twosided=true;
+}
+
+linedef//#41
+{
+v1=35;
+v2=36;
+sidefront=49;
+sideback=51;
+twosided=true;
+}
+
+linedef//#42
+{
+v1=37;
+v2=31;
+sidefront=52;
+blocking=true;
+}
+
+linedef//#43
+{
+v1=38;
+v2=36;
+sidefront=53;
+blocking=true;
+}
+
+linedef//#44
+{
+v1=37;
+v2=38;
+sidefront=54;
+sideback=55;
 twosided=true;
 }
 
 sidedef//#0
 {
-sector=0;
+sector=2;
 texturemiddle="STONE2";
 }
 
 sidedef//#1
 {
-sector=0;
+sector=2;
 texturemiddle="STONE2";
 }
 
 sidedef//#2
 {
-sector=0;
+sector=2;
 texturemiddle="STONE2";
 }
 
 sidedef//#3
 {
-sector=0;
+sector=2;
 texturemiddle="STONE2";
 offsetx=357;
 }
 
 sidedef//#4
 {
-sector=0;
+sector=2;
 texturemiddle="STONE2";
 offsetx=192;
 }
 
 sidedef//#5
 {
-sector=0;
+sector=2;
 texturemiddle="STONE2";
 offsetx=256;
 }
@@ -343,11 +414,13 @@ offsetx=256;
 sidedef//#6
 {
 sector=0;
+texturemiddle="STONE2";
 }
 
 sidedef//#7
 {
 sector=0;
+texturemiddle="STONE2";
 }
 
 sidedef//#8
@@ -357,17 +430,18 @@ sector=0;
 
 sidedef//#9
 {
-sector=0;
+sector=2;
 }
 
 sidedef//#10
 {
-sector=1;
+sector=0;
+texturemiddle="STONE2";
 }
 
 sidedef//#11
 {
-sector=1;
+sector=0;
 }
 
 sidedef//#12
@@ -377,59 +451,67 @@ sector=1;
 
 sidedef//#13
 {
-sector=1;
+sector=0;
+texturemiddle="STONE2";
 }
 
 sidedef//#14
 {
 sector=0;
+texturemiddle="STONE2";
 }
 
 sidedef//#15
 {
-sector=0;
+sector=1;
+texturemiddle="STONE2";
 }
 
 sidedef//#16
 {
-sector=0;
+sector=1;
+texturemiddle="STONE2";
 }
 
 sidedef//#17
 {
-sector=0;
+sector=1;
+texturemiddle="STONE2";
 }
 
 sidedef//#18
 {
-sector=2;
+sector=1;
+texturemiddle="STONE2";
 }
 
 sidedef//#19
 {
-sector=2;
+sector=1;
+texturemiddle="STONE2";
 }
 
 sidedef//#20
 {
-sector=2;
+sector=1;
+texturemiddle="STONE2";
 }
 
 sidedef//#21
 {
-sector=2;
+sector=1;
+texturemiddle="STONE2";
 }
 
 sidedef//#22
 {
-sector=0;
+sector=2;
 texturemiddle="STONE2";
 }
 
 sidedef//#23
 {
 sector=0;
-texturemiddle="STONE2";
 }
 
 sidedef//#24
@@ -458,114 +540,160 @@ texturemiddle="STONE2";
 
 sidedef//#28
 {
-sector=0;
-texturemiddle="STONE2";
+sector=1;
 }
 
 sidedef//#29
 {
-sector=0;
-texturemiddle="STONE2";
+sector=1;
 }
 
 sidedef//#30
 {
-sector=0;
-texturemiddle="STONE2";
+sector=1;
 }
 
 sidedef//#31
 {
-sector=0;
-texturemiddle="STONE2";
+sector=1;
 }
 
 sidedef//#32
 {
-sector=0;
-texturemiddle="STONE2";
+sector=1;
 }
 
 sidedef//#33
 {
-sector=0;
-texturemiddle="STONE2";
+sector=3;
 }
 
 sidedef//#34
 {
-sector=0;
-texturemiddle="STONE2";
+sector=3;
 }
 
 sidedef//#35
 {
-sector=0;
-texturemiddle="STONE2";
+sector=3;
 }
 
 sidedef//#36
 {
-sector=0;
-texturemiddle="STONE2";
+sector=3;
 }
 
 sidedef//#37
 {
-sector=0;
-texturemiddle="STONE2";
+sector=3;
 }
 
 sidedef//#38
 {
-sector=0;
+sector=2;
 texturemiddle="STONE2";
+offsetx=352;
 }
 
 sidedef//#39
 {
-sector=0;
-texturemiddle="STONE2";
+sector=2;
+offsetx=64;
 }
 
 sidedef//#40
 {
-sector=0;
+sector=5;
+texturemiddle="STONE2";
 }
 
 sidedef//#41
 {
-sector=0;
+sector=7;
+texturemiddle="STONE2";
 }
 
 sidedef//#42
 {
-sector=0;
+sector=7;
+texturemiddle="STONE2";
 }
 
 sidedef//#43
 {
-sector=0;
+sector=5;
 }
 
 sidedef//#44
 {
-sector=3;
+sector=5;
+texturemiddle="STONE2";
+offsetx=288;
 }
 
 sidedef//#45
 {
-sector=3;
+sector=4;
+texturemiddle="STONE2";
+offsetx=64;
 }
 
 sidedef//#46
 {
-sector=3;
+sector=6;
+texturemiddle="STONE2";
+offsetx=128;
 }
 
 sidedef//#47
 {
-sector=3;
+sector=4;
+texturemiddle="STONE2";
+offsetx=224;
+}
+
+sidedef//#48
+{
+sector=4;
+}
+
+sidedef//#49
+{
+sector=4;
+}
+
+sidedef//#50
+{
+sector=5;
+}
+
+sidedef//#51
+{
+sector=6;
+}
+
+sidedef//#52
+{
+sector=7;
+texturemiddle="STONE2";
+offsetx=192;
+}
+
+sidedef//#53
+{
+sector=6;
+texturemiddle="STONE2";
+offsetx=160;
+}
+
+sidedef//#54
+{
+sector=6;
+}
+
+sidedef//#55
+{
+sector=7;
 }
 
 vertex//#0
@@ -606,50 +734,50 @@ y=128.000;
 
 vertex//#6
 {
-x=-32.000;
-y=-192.000;
+x=-608.000;
+y=-672.000;
 }
 
 vertex//#7
 {
-x=32.000;
-y=-192.000;
+x=-224.000;
+y=-768.000;
 }
 
 vertex//#8
 {
 x=32.000;
-y=-96.000;
+y=-672.000;
 }
 
 vertex//#9
 {
-x=-64.000;
-y=-64.000;
+x=96.000;
+y=-576.000;
 }
 
 vertex//#10
 {
-x=192.000;
-y=-160.000;
+x=-736.000;
+y=-416.000;
 }
 
 vertex//#11
 {
-x=256.000;
-y=-256.000;
+x=-576.000;
+y=224.000;
 }
 
 vertex//#12
 {
-x=320.000;
-y=-192.000;
+x=-480.000;
+y=0.000;
 }
 
 vertex//#13
 {
-x=320.000;
-y=-64.000;
+x=-448.000;
+y=-288.000;
 }
 
 vertex//#14
@@ -714,101 +842,150 @@ y=160.000;
 
 vertex//#24
 {
-x=-576.000;
-y=224.000;
+x=-928.000;
+y=-192.000;
 }
 
 vertex//#25
 {
-x=-480.000;
-y=0.000;
+x=-736.000;
+y=-192.000;
 }
 
 vertex//#26
 {
-x=-448.000;
-y=-288.000;
+x=-640.000;
+y=-64.000;
 }
 
 vertex//#27
 {
-x=-736.000;
-y=-416.000;
+x=-832.000;
+y=64.000;
 }
 
 vertex//#28
 {
-x=-608.000;
-y=-672.000;
+x=-992.000;
+y=-32.000;
 }
 
 vertex//#29
 {
-x=-224.000;
-y=-768.000;
+x=384.000;
+y=-320.000;
 }
 
 vertex//#30
 {
-x=32.000;
-y=-672.000;
+x=384.000;
+y=-32.000;
 }
 
 vertex//#31
 {
-x=96.000;
-y=-576.000;
+x=736.000;
+y=-32.000;
 }
 
 vertex//#32
 {
-x=-928.000;
-y=-32.000;
+x=736.000;
+y=-320.000;
 }
 
 vertex//#33
 {
-x=-832.000;
-y=-192.000;
+x=448.000;
+y=-320.000;
 }
 
 vertex//#34
 {
-x=-608.000;
-y=-128.000;
+x=448.000;
+y=-32.000;
 }
 
 vertex//#35
 {
-x=-672.000;
-y=96.000;
+x=512.000;
+y=-32.000;
+}
+
+vertex//#36
+{
+x=512.000;
+y=-320.000;
+}
+
+vertex//#37
+{
+x=576.000;
+y=-32.000;
+}
+
+vertex//#38
+{
+x=576.000;
+y=-320.000;
 }
 
 sector//#0
 {
-texturefloor="MFLR8_1";
-textureceiling="MFLR8_1";
-heightceiling=128;
+texturefloor="-";
+textureceiling="-";
+heightceiling=88;
 }
 
 sector//#1
 {
-texturefloor="MFLR8_1";
-textureceiling="MFLR8_1";
+texturefloor="-";
+textureceiling="-";
 heightceiling=128;
 }
 
 sector//#2
 {
-texturefloor="MFLR8_1";
-textureceiling="MFLR8_1";
+texturefloor="-";
+textureceiling="-";
 heightceiling=128;
 }
 
 sector//#3
 {
-texturefloor="MFLR8_1";
-textureceiling="MFLR8_1";
+texturefloor="-";
+textureceiling="-";
+heightceiling=128;
+}
+
+sector//#4
+{
+texturefloor="-";
+textureceiling="-";
+heightfloor=16;
+heightceiling=128;
+}
+
+sector//#5
+{
+texturefloor="-";
+textureceiling="-";
+heightceiling=128;
+}
+
+sector//#6
+{
+texturefloor="-";
+textureceiling="-";
+heightfloor=32;
+heightceiling=128;
+}
+
+sector//#7
+{
+texturefloor="-";
+textureceiling="-";
+heightfloor=64;
 heightceiling=128;
 }
 
