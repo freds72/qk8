@@ -98,6 +98,7 @@ def main(argv):
       'sides':SideWalker(),
       'sectors':SectorWalker()
     })
+    print("map stats before compiling:")
     for k,w in walkers.items(): 
       walker.walk(w, tree)
       print("{}: #{}".format(k,len(walkers[k].result)))
