@@ -1,5 +1,64 @@
+import os
+from subprocess import Popen, PIPE
+import re
+import tempfile
+import random
 import math
-import svgwrite
+import socket
+
+# pack helpers
+def tohex(val, nbits):
+    return (hex((int(round(val,0)) + (1<<nbits)) % (1<<nbits))[2:]).zfill(nbits>>2)
+
+# variable length packing (1 or 2 bytes)
+def pack_variant(x):
+    if x>0x7fff:
+      raise Exception('Unable to convert: {} into a 1 or 2 bytes'.format(x))
+    # 2 bytes
+    if x>127:
+        h = "{:04x}".format(x + 0x8000)
+        if len(h)!=4:
+            raise Exception('Unable to convert: {} into a word: {}'.format(x,h))
+        return h
+    # 1 byte
+    h = "{:02x}".format(x)
+    if len(h)!=2:
+        raise Exception('Unable to convert: {} into a byte: {}'.format(x,h))
+    return h
+
+# short must be between -32000/32000
+def pack_int(x):
+    h = tohex(x,16)
+    if len(h)!=4:
+        raise Exception('Unable to convert: {} into a word: {}'.format(x,h))
+    return h
+
+# 16:16 fixed point value
+def pack_fixed(x):
+    h = tohex(int(x*(1<<16)),32)
+    if len(h)!=8:
+        raise Exception('Unable to convert: {} into a dword: {}'.format(x,h))
+    return h
+
+# short must be between -127/127
+def pack_short(x):
+    h = "{:02x}".format(int(round(x+128,0)))
+    if len(h)!=2:
+        raise Exception('Unable to convert: {} into a byte: {}'.format(x,h))
+    return h
+
+# float must be between -4/+3.968 resolution: 0.03125
+def pack_float(x):
+    h = "{:02x}".format(int(round(32*x+128,0)))
+    if len(h)!=2:
+        raise Exception('Unable to convert: {} into a byte: {}'.format(x,h))
+    return h
+# double must be between -128/+127 resolution: 0.0078
+def pack_double(x):
+    h = "{}".format(tohex(128*x+16384,16))
+    if len(h)!=4:
+        raise Exception('Unable to convert: {} into a word: {}'.format(x,h))
+    return h
 
 # helper classes
 class BSP_Tree:
@@ -201,22 +260,32 @@ def draw_bsp_tree(tree, dwg, parent, color):
   parent.add(level)
 
 def lua_vector(pair):
-  return "{{{},{}}}".format(round(pair[0],3),round(pair[1],3))
+  return "{}{}".format(pack_fixed(pair[0]),pack_fixed(pair[1]))
 
 def export_bsp_tree(tree, depth):
-  if tree is None: return "nil"
   root = tree.root
   properties = root.properties
-  return "{{v0={},v1={},n={},d={},dual={},sidefront={},sideback={},front={},back={}}}".format(
-    root.v0+1,
-    root.v1+1,
+  s = '{}{}{}{}{}{}'.format(
+    pack_variant(root.v0+1),
+    pack_variant(root.v1+1),
     lua_vector(root.n),
-    round(root.d,3),
-    properties.twosided and 'true' or 'false',
-    properties.sidefront+1,
-    properties.sideback+1,
-    export_bsp_tree(tree.front, depth + 1),
-    export_bsp_tree(tree.back, depth + 1))
+    pack_fixed(root.d),
+    pack_variant(properties.sidefront+1),
+    pack_variant(properties.sideback+1))
+
+  flags = 0
+  if properties.twosided==True:
+    flags |= 1
+  subtree = ""
+  if tree.front is not None:
+    flags |= 2
+    subtree += export_bsp_tree(tree.front, depth + 1)
+  if tree.back is not None:
+    flags |= 4
+    subtree += export_bsp_tree(tree.back, depth + 1)
+
+  s += "{:02X}{}".format(flags, subtree)
+  return s
 
 class BSP_Compiler():
   def __init__(self, vertices, lines, sides, sectors):
@@ -224,25 +293,37 @@ class BSP_Compiler():
     for line in lines:
       polygons.add(Polygon(line.v1, line.v2, line, vertices))
     tree = build_bsp_tree(polygons, 0)
-    print_bsp_tree(tree, 0)
+    # print_bsp_tree(tree, 0)
 
-    s = ""
+    # export data
+    s = pack_variant(len(sectors))
     for sector in sectors:
-      if len(s)!=0: s += ","
-      s += "{{ceil={},floor={}}}".format(sector.heightceiling, sector.heightfloor)
-    print("local sectors={{{}}}\n".format(s))
+      s += pack_int(sector.heightceiling)
+      s += pack_int(sector.heightfloor)
 
-    s = ""
+    s += pack_variant(len(sides))
     for side in sides:
-      if len(s)!=0: s += ","
-      s += "{{sector={}}}".format(side.sector+1)
-    print("local sides={{{}}}\n".format(s))
+      s += pack_variant(side.sector+1)
 
-    s = ""
+    s += pack_variant(len(vertices))
     for v in vertices:
-      if len(s)!=0: s += ","
       s += lua_vector(v)
-    print("local vertices={{{}}}\n".format(s))
 
-    print("local bsp={}".format(export_bsp_tree(tree, 0)))
+    s += export_bsp_tree(tree, 0)
 
+    # convert to pico binary format
+    cart = ""
+    tmp=s[:2*0x2000]
+    # swap bytes
+    gfx_data = ""
+    for i in range(0,len(tmp),2):
+        gfx_data = gfx_data + tmp[i+1:i+2] + tmp[i:i+1]
+    cart += "__gfx__\n"
+    cart += re.sub("(.{128})", "\\1\n", gfx_data, 0, re.DOTALL)
+
+    map_data=s[2*0x2000:2*0x3000]
+    if len(map_data)>0:
+        cart += "__map__\n"
+        cart += re.sub("(.{256})", "\\1\n", map_data, 0, re.DOTALL)
+    
+    print(cart)

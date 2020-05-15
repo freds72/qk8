@@ -2,44 +2,10 @@ pico-8 cartridge // http://www.pico-8.com
 version 27
 __lua__
 
-local sectors={{ceil=88.0,floor=0},{ceil=128.0,floor=0},{ceil=128.0,floor=0},{ceil=112.0,floor=-56.0},{ceil=128.0,floor=16.0},{ceil=128.0,floor=0},{ceil=144.0,floor=32.0},{ceil=176.0,floor=64.0},{ceil=232.0,floor=-200.0},{ceil=176.0,floor=64.0},{ceil=152.0,floor=80.0},{ceil=152.0,floor=80.0},{ceil=80.0,floor=32.0},{ceil=80.0,floor=32.0},{ceil=112.0,floor=8.0}}
-
-local sides={{sector=3},{sector=3},{sector=3},{sector=3},{sector=3},{sector=3},{sector=1},{sector=1},{sector=1},{sector=3},{sector=1},{sector=1},{sector=2},{sector=1},{sector=1},{sector=2},{sector=2},{sector=2},{sector=2},{sector=2},{sector=2},{sector=2},{sector=3},{sector=1},{sector=1},{sector=1},{sector=1},{sector=1},{sector=2},{sector=2},{sector=2},{sector=2},{sector=2},{sector=4},{sector=4},{sector=4},{sector=4},{sector=4},{sector=3},{sector=3},{sector=6},{sector=8},{sector=8},{sector=6},{sector=6},{sector=5},{sector=7},{sector=5},{sector=5},{sector=5},{sector=6},{sector=7},{sector=8},{sector=7},{sector=7},{sector=8},{sector=10},{sector=10},{sector=10},{sector=10},{sector=9},{sector=10},{sector=9},{sector=10},{sector=9},{sector=9},{sector=9},{sector=9},{sector=10},{sector=10},{sector=10},{sector=9},{sector=9},{sector=10},{sector=9},{sector=9},{sector=9},{sector=9},{sector=10},{sector=9},{sector=11},{sector=11},{sector=11},{sector=11},{sector=12},{sector=12},{sector=12},{sector=12},{sector=13},{sector=13},{sector=13},{sector=13},{sector=3},{sector=3},{sector=3},{sector=3},{sector=14},{sector=14},{sector=14},{sector=14},{sector=3},{sector=3},{sector=3},{sector=3},{sector=15},{sector=15},{sector=15},{sector=15}}
-
-local vertices={{-8.0,-20.0},{-14.0,-10.0},{-8.0,2.0},{8.0,8.0},{24.0,2.0},{24.0,-2.0},{2.0,-22.0},{2.0,-42.0},{6.0,-36.0},{-50.0,-38.0},{-42.0,-36.0},{14.0,-26.0},{-14.0,-48.0},{-24.0,-28.0},{-38.0,-42.0},{24.0,-26.0},{14.0,-38.0},{6.0,-50.0},{-12.0,-56.0},{-42.0,-48.0},{-66.0,-38.0},{-70.0,-22.0},{-62.0,0.0},{-32.0,4.0},{-26.0,-10.0},{-54.0,-22.0},{-42.0,-22.0},{-36.0,-14.0},{-48.0,-6.0},{-58.0,-12.0},{24.0,-20.0},{28.0,-2.0},{46.0,-2.0},{46.0,-20.0},{36.0,-20.0},{28.0,-20.0},{32.0,-2.0},{36.0,-2.0},{32.0,-20.0},{46.0,-32.0},{46.0,8.0},{72.0,8.0},{96.0,36.0},{136.0,26.0},{72.0,-32.0},{74.0,-32.0},{74.0,-24.0},{72.0,-12.0},{72.0,-16.0},{72.0,0.0},{72.0,-8.0},{138.0,-68.0},{86.0,-74.0},{72.0,-24.0},{74.0,-12.0},{74.0,-10.0},{74.0,8.0},{158.0,-20.0},{74.0,-16.0},{74.0,-8.0},{74.0,0.0},{14.0,-6.0},{14.0,-2.0},{18.0,-2.0},{18.0,-6.0},{14.0,-22.0},{14.0,-18.0},{18.0,-18.0},{18.0,-22.0},{22.0,-26.0},{-65.119,-8.576},{-25.273,-16.545},{-36.261,-14.348},{-55.5,-10.5},{46.0,-30.8},{52.0,-32.0},{75.333,-36.667},{145.231,-50.646},{14.0,5.75},{-21.895,3.158},{-27.514,3.626},{72.0,-2.0},{-47.818,-37.455},{-45.2,-44.0},{2.8,-24.8},{7.143,-23.714},{8.8,-45.8},{-32.27,-50.595},{0.857,-51.714}}
-
-local bsp={v0=7,v1=1,n={0.196,0.981},d=-21.181,dual=false,sidefront=4,sideback=0,front={v0=59,v1=55,n={1.0,-0.0},d=74.0,dual=false,sidefront=76,sideback=0,front={v0=55,v1=56,n={1.0,-0.0},d=74.0,dual=false,sidefront=67,sideback=0,front={v0=57,v1=43,n={0.786,-0.618},d=53.245,dual=false,sidefront=73,sideback=0,front={v0=43,v1=44,n={-0.243,-0.97},d=-58.209,dual=false,sidefront=66,sideback=0,front={v0=60,v1=61,n={1.0,-0.0},d=74.0,dual=true,sidefront=80,sideback=82,front={v0=77,v1=46,n={0.962,0.275},d=62.362,dual=false,sidefront=75,sideback=0,front={v0=44,v1=58,n={-0.902,-0.431},d=-133.908,dual=false,sidefront=61,sideback=0,front={v0=46,v1=47,n={1.0,-0.0},d=74.0,dual=false,sidefront=63,sideback=0,front={v0=56,v1=60,n={1.0,-0.0},d=74.0,dual=false,sidefront=65,sideback=0,front={v0=58,v1=78,n={-0.923,0.385},d=-153.538,dual=false,sidefront=78,sideback=0,front={v0=47,v1=59,n={1.0,-0.0},d=74.0,dual=true,sidefront=68,sideback=86,front={v0=61,v1=57,n={1.0,-0.0},d=74.0,dual=false,sidefront=72,sideback=0,front=nil,back=nil},back=nil},back=nil},back=nil},back=nil},back=nil},back=nil},back=nil},back=nil},back=nil},back=nil},back={v0=51,v1=48,n={-1.0,-0.0},d=-72.0,dual=false,sidefront=79,sideback=0,front={v0=31,v1=16,n={-1.0,-0.0},d=-24.0,dual=false,sidefront=39,sideback=0,front={v0=6,v1=31,n={-1.0,-0.0},d=-24.0,dual=true,sidefront=40,sideback=44,front={v0=62,v1=63,n={1.0,-0.0},d=14.0,dual=true,sidefront=89,sideback=93,front={v0=79,v1=5,n={-0.351,-0.936},d=-10.3,dual=false,sidefront=6,sideback=0,front={v0=64,v1=65,n={-1.0,-0.0},d=-18.0,dual=true,sidefront=91,sideback=95,front={v0=65,v1=62,n={0.0,1.0},d=-6.0,dual=true,sidefront=92,sideback=94,front={v0=63,v1=64,n={0.0,-1.0},d=2.0,dual=true,sidefront=90,sideback=96,front=nil,back=nil},back={v0=68,v1=69,n={-1.0,-0.0},d=-18.0,dual=true,sidefront=99,sideback=103,front={v0=66,v1=67,n={1.0,-0.0},d=14.0,dual=true,sidefront=97,sideback=101,front={v0=69,v1=66,n={0.0,1.0},d=-22.0,dual=true,sidefront=100,sideback=102,front={v0=67,v1=68,n={0.0,-1.0},d=18.0,dual=true,sidefront=98,sideback=104,front=nil,back=nil},back=nil},back=nil},back=nil}},back={v0=16,v1=70,n={0.0,1.0},d=-26.0,dual=false,sidefront=23,sideback=0,front={v0=5,v1=6,n={-1.0,-0.0},d=-24.0,dual=false,sidefront=3,sideback=0,front=nil,back=nil},back=nil}},back=nil},back={v0=1,v1=2,n={0.857,0.514},d=-17.15,dual=false,sidefront=1,sideback=0,front={v0=2,v1=3,n={0.894,-0.447},d=-8.05,dual=true,sidefront=5,sideback=106,front={v0=3,v1=4,n={0.351,-0.936},d=-4.682,dual=false,sidefront=2,sideback=0,front={v0=4,v1=79,n={-0.351,-0.936},d=-10.3,dual=false,sidefront=6,sideback=0,front=nil,back=nil},back=nil},back={v0=80,v1=3,n={-0.083,-0.997},d=-1.329,dual=false,sidefront=105,sideback=0,front=nil,back=nil}},back={v0=71,v1=23,n={0.94,-0.342},d=-58.267,dual=false,sidefront=21,sideback=0,front={v0=25,v1=72,n={-0.994,-0.11},d=26.945,dual=false,sidefront=18,sideback=0,front={v0=24,v1=81,n={-0.083,-0.997},d=-1.329,dual=false,sidefront=105,sideback=0,front={v0=23,v1=24,n={0.132,-0.991},d=-8.194,dual=false,sidefront=17,sideback=0,front={v0=24,v1=25,n={-0.919,-0.394},d=27.837,dual=true,sidefront=20,sideback=108,front={v0=28,v1=29,n={0.555,0.832},d=-31.618,dual=true,sidefront=31,sideback=37,front=nil,back={v0=29,v1=74,n={-0.514,0.857},d=19.551,dual=true,sidefront=32,sideback=36,front=nil,back={v0=73,v1=28,n={0.8,-0.6},d=-20.4,dual=true,sidefront=30,sideback=38,front=nil,back=nil}}},back=nil},back=nil},back=nil},back={v0=2,v1=25,n={0.0,1.0},d=-10.0,dual=false,sidefront=107,sideback=0,front={v0=81,v1=80,n={-0.083,-0.997},d=-1.329,dual=false,sidefront=105,sideback=0,front=nil,back=nil},back=nil}},back=nil}}},back=nil},back={v0=6,v1=32,n={0.0,-1.0},d=2.0,dual=false,sidefront=41,sideback=0,front={v0=32,v1=37,n={0.0,-1.0},d=2.0,dual=false,sidefront=46,sideback=0,front={v0=45,v1=76,n={0.0,1.0},d=-32.0,dual=false,sidefront=62,sideback=0,front={v0=37,v1=38,n={0.0,-1.0},d=2.0,dual=false,sidefront=47,sideback=0,front={v0=49,v1=54,n={-1.0,-0.0},d=-72.0,dual=true,sidefront=69,sideback=88,front={v0=39,v1=36,n={0.0,1.0},d=-20.0,dual=false,sidefront=48,sideback=0,front={v0=36,v1=32,n={1.0,-0.0},d=28.0,dual=true,sidefront=49,sideback=51,front={v0=37,v1=39,n={-1.0,-0.0},d=-32.0,dual=true,sidefront=50,sideback=52,front=nil,back={v0=48,v1=49,n={-1.0,-0.0},d=-72.0,dual=false,sidefront=70,sideback=0,front={v0=38,v1=33,n={0.0,-1.0},d=2.0,dual=false,sidefront=53,sideback=0,front={v0=82,v1=51,n={-1.0,-0.0},d=-72.0,dual=true,sidefront=74,sideback=84,front={v0=34,v1=35,n={0.0,1.0},d=-20.0,dual=false,sidefront=43,sideback=0,front={v0=38,v1=35,n={-1.0,-0.0},d=-36.0,dual=true,sidefront=55,sideback=56,front={v0=35,v1=39,n={0.0,1.0},d=-20.0,dual=false,sidefront=54,sideback=0,front=nil,back=nil},back={v0=33,v1=34,n={-1.0,-0.0},d=-46.0,dual=true,sidefront=42,sideback=58,front=nil,back=nil}},back=nil},back=nil},back=nil},back=nil}},back={v0=36,v1=31,n={0.0,1.0},d=-20.0,dual=false,sidefront=45,sideback=0,front=nil,back=nil}},back={v0=75,v1=34,n={1.0,-0.0},d=46.0,dual=false,sidefront=57,sideback=0,front={v0=54,v1=45,n={-1.0,-0.0},d=-72.0,dual=false,sidefront=71,sideback=0,front=nil,back=nil},back=nil}},back=nil},back=nil},back=nil},back=nil},back={v0=33,v1=41,n={1.0,-0.0},d=46.0,dual=false,sidefront=59,sideback=0,front={v0=41,v1=42,n={0.0,-1.0},d=-8.0,dual=false,sidefront=60,sideback=0,front={v0=42,v1=50,n={-1.0,-0.0},d=-72.0,dual=false,sidefront=64,sideback=0,front={v0=50,v1=82,n={-1.0,-0.0},d=-72.0,dual=true,sidefront=74,sideback=84,front=nil,back=nil},back=nil},back=nil},back=nil}}},back={v0=60,v1=51,n={0.0,1.0},d=-8.0,dual=false,sidefront=83,sideback=0,front={v0=50,v1=61,n={0.0,-1.0},d=0.0,dual=false,sidefront=81,sideback=0,front=nil,back=nil},back={v0=49,v1=59,n={0.0,-1.0},d=16.0,dual=false,sidefront=85,sideback=0,front={v0=47,v1=54,n={0.0,1.0},d=-24.0,dual=false,sidefront=87,sideback=0,front=nil,back=nil},back=nil}}}},back={v0=30,v1=26,n={-0.928,-0.371},d=58.308,dual=true,sidefront=33,sideback=35,front={v0=10,v1=21,n={0.0,1.0},d=-38.0,dual=false,sidefront=22,sideback=0,front={v0=22,v1=71,n={0.94,-0.342},d=-58.267,dual=false,sidefront=21,sideback=0,front={v0=21,v1=22,n={0.97,0.243},d=-73.246,dual=false,sidefront=16,sideback=0,front={v0=10,v1=83,n={0.243,-0.97},d=24.739,dual=true,sidefront=9,sideback=13,front=nil,back=nil},back=nil},back=nil},back={v0=84,v1=10,n={0.781,0.625},d=-62.782,dual=false,sidefront=28,sideback=0,front=nil,back=nil}},back={v0=83,v1=11,n={0.243,-0.97},d=24.739,dual=true,sidefront=9,sideback=13,front={v0=40,v1=75,n={1.0,-0.0},d=46.0,dual=false,sidefront=57,sideback=0,front={v0=76,v1=40,n={0.0,1.0},d=-32.0,dual=false,sidefront=62,sideback=0,front=nil,back={v0=52,v1=53,n={-0.115,0.993},d=-83.37,dual=false,sidefront=77,sideback=0,front={v0=78,v1=52,n={-0.923,0.385},d=-153.538,dual=false,sidefront=78,sideback=0,front={v0=53,v1=77,n={0.962,0.275},d=62.362,dual=false,sidefront=75,sideback=0,front=nil,back=nil},back=nil},back=nil}},back={v0=9,v1=85,n={0.962,0.275},d=-4.121,dual=false,sidefront=8,sideback=0,front={v0=17,v1=87,n={-0.832,0.555},d=-32.727,dual=false,sidefront=25,sideback=0,front={v0=86,v1=12,n={-0.316,-0.949},d=20.239,dual=true,sidefront=12,sideback=10,front={v0=12,v1=17,n={-1.0,-0.0},d=-14.0,dual=false,sidefront=24,sideback=0,front=nil,back=nil},back={v0=70,v1=12,n={0.0,1.0},d=-26.0,dual=false,sidefront=23,sideback=0,front=nil,back=nil}},back=nil},back={v0=87,v1=18,n={-0.832,0.555},d=-32.727,dual=false,sidefront=25,sideback=0,front={v0=11,v1=15,n={-0.832,-0.555},d=54.915,dual=false,sidefront=15,sideback=0,front={v0=88,v1=20,n={0.258,0.966},d=-57.201,dual=false,sidefront=27,sideback=0,front={v0=20,v1=84,n={0.781,0.625},d=-62.782,dual=false,sidefront=28,sideback=0,front=nil,back=nil},back=nil},back={v0=15,v1=13,n={-0.243,-0.97},d=49.962,dual=false,sidefront=11,sideback=0,front={v0=19,v1=88,n={0.258,0.966},d=-57.201,dual=false,sidefront=27,sideback=0,front={v0=89,v1=19,n={-0.316,0.949},d=-49.332,dual=false,sidefront=26,sideback=0,front=nil,back=nil},back=nil},back={v0=8,v1=9,n={0.832,-0.555},d=24.962,dual=false,sidefront=14,sideback=0,front={v0=18,v1=89,n={-0.316,0.949},d=-49.332,dual=false,sidefront=26,sideback=0,front=nil,back=nil},back={v0=13,v1=8,n={0.351,-0.936},d=40.028,dual=false,sidefront=7,sideback=0,front=nil,back=nil}}}},back=nil}}},back={v0=14,v1=11,n={-0.406,0.914},d=-15.839,dual=false,sidefront=19,sideback=0,front={v0=74,v1=30,n={-0.514,0.857},d=19.551,dual=true,sidefront=32,sideback=36,front=nil,back={v0=27,v1=73,n={0.8,-0.6},d=-20.4,dual=true,sidefront=30,sideback=38,front={v0=72,v1=14,n={-0.994,-0.11},d=26.945,dual=false,sidefront=18,sideback=0,front=nil,back=nil},back={v0=26,v1=27,n={0.0,-1.0},d=22.0,dual=true,sidefront=29,sideback=34,front=nil,back=nil}}},back={v0=7,v1=86,n={-0.316,-0.949},d=20.239,dual=true,sidefront=12,sideback=10,front={v0=85,v1=7,n={0.962,0.275},d=-4.121,dual=false,sidefront=8,sideback=0,front=nil,back=nil},back=nil}}}}}
-
-function attach(root)
-  if(not root) return
-  root.v0=vertices[root.v0]
-  root.v1=vertices[root.v1]
-  root.sidefront=sides[root.sidefront]
-  root.sideback=sides[root.sideback]
-  attach(root.front)
-  attach(root.back)
-end
-
+_bsp,_verts=nil
 function _init()
-  -- sector id
-  for k,s in pairs(sectors) do
-    s.id=k
-    s.ceil/=16
-    s.floor/=16
-  end
-  -- sides to sector
-  for _,s in pairs(sides) do
-    s.sector=sectors[s.sector]
-  end
-  -- lines to sides + vertices
-  attach(bsp)
+  _bsp,_verts=unpack_map()
 end
-
--- 2 rooms
---{v0={-66.0,10.0},v1={-36.0,14.0},n={0.132,-0.991},d=-18.635,front={v0={-8.0,-20.0},v1={-14.0,-10.0},n={0.857,0.514},d=-17.15,front={v0={-14.0,-10.0},v1={-8.0,2.0},n={0.894,-0.447},d=-8.05,front={v0={6.0,-36.0},v1={2.0,-22.0},n={0.962,0.275},d=-4.121,front={v0={-5.161,3.065},v1={8.0,8.0},n={0.351,-0.936},d=-4.682,front={v0={24.0,-26.0},v1={14.0,-26.0},n={0.0,1.0},d=-26.0,front={v0={24.0,2.0},v1={24.0,-26.0},n={-1.0,-0.0},d=-24.0,front={v0={8.0,8.0},v1={24.0,2.0},n={-0.351,-0.936},d=-10.3,front={v0={2.0,-12.0},v1={2.0,-6.0},n={1.0,-0.0},d=2.0,front={v0={20.0,-12.0},v1={20.0,-4.0},n={1.0,-0.0},d=20.0,front=nil,back={v0={12.0,-10.0},v1={16.0,-16.0},n={-0.832,-0.555},d=-4.438,front=nil,back={v0={20.0,-4.0},v1={12.0,-10.0},n={-0.6,0.8},d=-15.2,front=nil,back={v0={16.0,-16.0},v1={20.0,-12.0},n={0.707,-0.707},d=22.627,front=nil,back=nil}}}},back={v0={2.0,-6.0},v1={-3.053,-4.316},n={0.316,0.949},d=-5.06,front=nil,back={v0={-0.857,-12.0},v1={2.0,-12.0},n={0.0,-1.0},d=12.0,front=nil,back=nil}}},back=nil},back=nil},back={v0={14.0,-38.0},v1={8.8,-45.8},n={-0.832,0.555},d=-32.727,front={v0={14.0,-26.0},v1={14.0,-38.0},n={-1.0,-0.0},d=-14.0,front=nil,back=nil},back=nil}},back=nil},back={v0={-8.0,2.0},v1={-5.161,3.065},n={0.351,-0.936},d=-4.682,front={v0={-2.0,-12.0},v1={-0.857,-12.0},n={0.0,-1.0},d=12.0,front={v0={3.684,-39.474},v1={6.0,-36.0},n={0.832,-0.555},d=24.962,front={v0={8.8,-45.8},v1={8.105,-46.842},n={-0.832,0.555},d=-32.727,front=nil,back=nil},back={v0={2.0,-22.0},v1={-8.0,-20.0},n={0.196,0.981},d=-21.181,front=nil,back=nil}},back={v0={-3.053,-4.316},v1={-4.0,-4.0},n={0.316,0.949},d=-5.06,front=nil,back={v0={-4.0,-4.0},v1={-2.0,-12.0},n={-0.97,-0.243},d=4.851,front=nil,back=nil}}},back=nil}},back=nil},back={v0={-74.0,-12.0},v1={-66.0,10.0},n={0.94,-0.342},d=-65.444,front={v0={-58.0,-2.0},v1={-52.0,-12.0},n={-0.857,-0.514},d=50.764,front={v0={-38.0,-42.0},v1={-33.294,-43.176},n={-0.243,-0.97},d=49.962,front={v0={-42.0,-48.0},v1={-46.941,-39.765},n={0.857,0.514},d=-60.71,front={v0={-28.19,-51.683},v1={-42.0,-48.0},n={0.258,0.966},d=-57.201,front=nil,back=nil},back=nil},back={v0={-46.941,-39.765},v1={-54.0,-28.0},n={0.857,0.514},d=-60.71,front={v0={-46.0,-26.0},v1={-38.0,-42.0},n={-0.894,-0.447},d=52.771,front=nil,back={v0={-44.105,-25.158},v1={-46.0,-26.0},n={-0.406,0.914},d=-5.077,front=nil,back=nil}},back={v0={-70.0,-28.0},v1={-74.0,-12.0},n={0.97,0.243},d=-74.701,front={v0={-54.0,-28.0},v1={-70.0,-28.0},n={0.0,1.0},d=-28.0,front=nil,back=nil},back=nil}}},back={v0={-33.294,-43.176},v1={-14.0,-48.0},n={-0.243,-0.97},d=49.962,front={v0={0.857,-51.714},v1={-12.0,-56.0},n={-0.316,0.949},d=-49.332,front={v0={-12.0,-56.0},v1={-28.19,-51.683},n={0.258,0.966},d=-57.201,front=nil,back=nil},back=nil},back={v0={-52.0,-12.0},v1={-38.0,-8.0},n={0.275,-0.962},d=-2.747,front={v0={8.105,-46.842},v1={6.0,-50.0},n={-0.832,0.555},d=-32.727,front={v0={6.0,-50.0},v1={0.857,-51.714},n={-0.316,0.949},d=-49.332,front={v0={-28.0,-18.0},v1={-44.105,-25.158},n={-0.406,0.914},d=-5.077,front={v0={-29.385,-5.538},v1={-28.0,-18.0},n={-0.994,-0.11},d=29.817,front=nil,back=nil},back={v0={-14.0,-48.0},v1={2.0,-42.0},n={0.351,-0.936},d=40.028,front=nil,back={v0={2.0,-42.0},v1={3.684,-39.474},n={0.832,-0.555},d=24.962,front=nil,back=nil}}},back=nil},back=nil},back={v0={-36.0,14.0},v1={-30.0,0.0},n={-0.919,-0.394},d=27.574,front={v0={-38.0,-8.0},v1={-42.0,6.0},n={0.962,0.275},d=-38.736,front={v0={-30.0,0.0},v1={-29.385,-5.538},n={-0.994,-0.11},d=29.817,front=nil,back=nil},back={v0={-42.0,6.0},v1={-58.0,-2.0},n={-0.447,0.894},d=24.15,front=nil,back=nil}},back=nil}}}},back=nil}},back=nil}
--- from slade!
---{v0={19.2,-16.0},v1={25.6,-25.6},n={-0.832,-0.555},d=-7.1,front={v0={-12.8,3.2},v1={2.56,8.96},n={0.351,-0.936},d=-7.491,front={v0={-12.8,-32.0},v1={-22.4,-16.0},n={0.857,0.514},d=-27.44,front={v0={-22.4,-16.0},v1={-12.8,3.2},n={0.894,-0.447},d=-12.88,front={v0={35.962,-41.143},v1={-12.8,-32.0},n={0.184,0.983},d=-33.811,front={v0={-3.2,-19.2},v1={3.2,-19.2},n={0.0,-1.0},d=19.2,front=nil,back={v0={3.2,-9.6},v1={-6.4,-6.4},n={0.316,0.949},d=-8.095,front=nil,back={v0={-6.4,-6.4},v1={-3.2,-19.2},n={-0.97,-0.243},d=7.761,front=nil,back={v0={3.2,-19.2},v1={3.2,-9.6},n={1.0,-0.0},d=3.2,front=nil,back=nil}}}},back=nil},back=nil},back=nil},back=nil},back={v0={25.6,-25.6},v1={32.0,-19.2},n={0.707,-0.707},d=36.204,front={v0={38.4,-41.6},v1={35.962,-41.143},n={0.184,0.983},d=-33.811,front={v0={38.4,-12.8},v1={38.4,-41.6},n={-1.0,-0.0},d=-38.4,front=nil,back=nil},back=nil},back={v0={2.56,8.96},v1={12.8,12.8},n={0.351,-0.936},d=-7.491,front={v0={32.0,-19.2},v1={32.0,-6.4},n={1.0,-0.0},d=32.0,front={v0={38.4,3.2},v1={38.4,-12.8},n={-1.0,-0.0},d=-38.4,front={v0={32.0,5.6},v1={38.4,3.2},n={-0.351,-0.936},d=-16.479,front=nil,back=nil},back=nil},back={v0={12.8,12.8},v1={32.0,5.6},n={-0.351,-0.936},d=-16.479,front={v0={32.0,-6.4},v1={19.2,-16.0},n={-0.6,0.8},d=-24.32,front=nil,back=nil},back=nil}},back=nil}}}
---{v0={6,6},v1={6,5},n={1.0,0.0},d=6.0,front={v0={20,-10},v1={30,0},n={-0.707,0.707},d=-21.213,front={v0={16,5},v1={15,5},n={0.0,-1.0},d=-5.0,front={v0={30,0},v1={30.0,5.0},n={-1.0,0.0},d=-30.0,front={v0={6.0,-3.75},v1={16,-10},n={0.53,0.848},d=0.0,front=nil,back={v0={16,-10},v1={16.0,-14.0},n={1.0,0.0},d=16.0,front=nil,back=nil}},back=nil},back={v0={15,5},v1={15,6},n={-1.0,0.0},d=-15.0,front={v0={15.0,15.0},v1={6.0,15.0},n={-0.0,-1.0},d=-15.0,front=nil,back=nil},back={v0={30,15},v1={15.0,15.0},n={-0.0,-1.0},d=-15.0,front={v0={30.0,5.0},v1={30,15},n={-1.0,-0.0},d=-30.0,front={v0={15,6},v1={16,6},n={0.0,1.0},d=6.0,front=nil,back={v0={16,6},v1={16,5},n={1.0,0.0},d=16.0,front=nil,back=nil}},back=nil},back=nil}}},back={v0={16,-30},v1={20,-30},n={0.0,1.0},d=-30.0,front={v0={20,-30},v1={20,-10},n={-1.0,0.0},d=-20.0,front={v0={16.0,-14.0},v1={16,-30},n={1.0,0.0},d=16.0,front=nil,back=nil},back=nil},back=nil}},back={v0={0,0},v1={6.0,-3.75},n={0.53,0.848},d=0.0,front={v0={4,15},v1={4,10},n={1.0,0.0},d=4.0,front={v0={6.0,15.0},v1={4,15},n={-0.0,-1.0},d=-15.0,front={v0={5,5},v1={5,6},n={-1.0,0.0},d=-5.0,front=nil,back={v0={5,6},v1={6,6},n={0.0,1.0},d=6.0,front=nil,back={v0={6,5},v1={5,5},n={0.0,-1.0},d=-5.0,front=nil,back=nil}}},back=nil},back={v0={4,10},v1={0,10},n={0.0,-1.0},d=-10.0,front={v0={0,10},v1={0,0},n={1.0,0.0},d=0.0,front=nil,back=nil},back=nil}},back=nil}}
 
 local plyr={0,0,height=0,angle=0,av=0,v=0}
 
@@ -53,7 +19,7 @@ function world_to_cam(v)
 end
 
 function cam_to_screen(v)
-  local w=64/v[3]
+  local w=128/v[3]
   return 64+v[1]*w,64-v[2]*w,w
 end
 
@@ -69,11 +35,16 @@ function v_lerp(a,b,t)
   }
 end
 
+function project(v)
+  return 64+v[1]/16,64-v[2]/16
+end
+
 function draw_bsp(root)
   if(not root) return
   local x0,y0=project(root.v0)
   local x1,y1=project(root.v1)
-  line(x0,y0,x1,y1,1)
+  line(x0,y0,x1,y1,_c%15+1)
+  _c+=1
   draw_bsp(root.front)
   draw_bsp(root.back)
 end
@@ -106,6 +77,7 @@ bottom_cls={
 
 _c=0
 _yfloor,_yceil=nil
+_znear=16
 
 function cull_bsp(root,pos)
   if(not root) return
@@ -139,10 +111,10 @@ function cull_bsp(root,pos)
     local z0,z1=v0[3],v1[3]
     if(z0>z1) v0,z0,v1,z1=v1,z1,v0,z0
     -- further tip behond camera plane
-    if z1>0.25 then
-      if z0<0.25 then
+    if z1>_znear then
+      if z0<_znear then
         -- clip?
-        v0=v_lerp(v0,v1,(z0-0.25)/(z0-z1))
+        v0=v_lerp(v0,v1,(z0-_znear)/(z0-z1))
       end
     
       -- span rasterization
@@ -165,8 +137,8 @@ function cull_bsp(root,pos)
         local othert,otherb=othersector.ceil,othersector.floor
 
         local id=frontsector.id%16
-        local wall_c=sget(0,id)
-        local ceil_c,floor_c=sget(1,id),sget(2,id)
+        local wall_c=5--sget(0,id)
+        local ceil_c,floor_c=1,2--sget(1,id),sget(2,id)
 
         for x=cx,min(ceil(x1)-1,127) do
           local maxt,minb=_yceil[x],_yfloor[x]
@@ -202,8 +174,8 @@ function cull_bsp(root,pos)
         end
       else
         local id=frontsector.id%16
-        local wall_c=sget(0,id)
-        local ceil_c,floor_c=sget(1,id),sget(2,id)
+        local wall_c=6--sget(0,id)
+        local ceil_c,floor_c=2,3--sget(1,id),sget(2,id)
 
         for x=cx,min(ceil(x1)-1,127) do
           local maxt,minb=_yceil[x],_yfloor[x]
@@ -244,7 +216,7 @@ function _update()
   if(btn(3)) dv-=1
   plyr.av+=da/128
   plyr.angle+=plyr.av
-  plyr.v+=dv/8
+  plyr.v+=dv*4
   local ca,sa=cos(plyr.angle),sin(plyr.angle)
   plyr[1]+=plyr.v*ca
   plyr[2]+=plyr.v*sa
@@ -252,10 +224,10 @@ function _update()
   plyr.v*=0.8
   plyr.av*=0.8
 
-  local r,s=find_sector(bsp,plyr)
+  local r,s=find_sector(_bsp,plyr)
   if s then
     plyr.root=r
-    plyr.height=s.floor+4
+    plyr.height=s.floor+32
   end
 end
 
@@ -264,8 +236,9 @@ function _draw()
   -- draw_bsp(bsp)
   _c=0
   _yceil,_yfloor=setmetatable({},top_cls),setmetatable({},bottom_cls)
-  cull_bsp(bsp,plyr)
-  
+  cull_bsp(_bsp,plyr)
+  -- draw_bsp(_bsp)
+
   --[[
   local x0,y0=project(plyr)
   local ca,sa=cos(plyr.angle),sin(plyr.angle)
@@ -281,20 +254,141 @@ function _draw()
   ]]
   print(stat(1),2,2,7)
 end
+
+-->8
+-- unpack map
+local cart_id,mem
+local cart_progress=0
+function mpeek()
+	if mem==0x4300 then
+		cart_progress=0
+		cart_id+=1
+		reload(0,0,0x4300,"poom_"..cart_id..".p8")
+		mem=0
+	end
+	local v=peek(mem)
+	if mem%779==0 then
+		cart_progress+=1
+		rectfill(0,120,shl(cart_progress,4),127,cart_id%2==0 and 1 or 7)
+		flip()
+	end
+	mem+=1
+	return v
+end
+
+-- w: number of bytes (1 or 2)
+function unpack_int(w)
+  w=w or 1
+	local i=w==1 and mpeek() or mpeek()<<8|mpeek()
+	return i
+end
+-- unpack 1 or 2 bytes
+function unpack_variant()
+	local h=mpeek()
+	-- above 127?
+	if h&0x80>0 then
+		h=(h&0x7f)<<8|mpeek()
+	end
+	return h
+end
+-- unpack a fixed 16:16 value
+function unpack_fixed()
+	return mpeek()<<8|mpeek()|mpeek()>>8|mpeek()>>16
+end
+
+-- unpack an array of bytes
+function unpack_array(fn)
+	local n=unpack_variant()
+	for i=1,n do
+		fn(i)
+	end
+end
+
+function unpack_bsp(sides,verts)
+  local node={
+    v0=verts[unpack_variant()],
+    v1=verts[unpack_variant()],
+    n={unpack_fixed(),unpack_fixed()},
+    d=unpack_fixed(),
+    sidefront=sides[unpack_variant()],
+    sideback=sides[unpack_variant()]
+  }
+
+  local flags=mpeek()
+  if flags&0x1>0 then
+    node.dual=true
+  end
+  if flags&0x2>0 then
+    node.front=unpack_bsp(sides,verts)
+  end
+  if flags&0x4>0 then
+    node.back=unpack_bsp(sides,verts)
+  end
+  return node
+end
+
+function unpack_map()
+  cart_id,mem=0,0
+  -- sectors
+  local sectors={}
+  unpack_array(function(i)
+    add(sectors,{id=i,ceil=unpack_int(2),floor=unpack_int(2)})
+  end)
+  printh("sectors:"..#sectors)
+  local sides={}
+  unpack_array(function()
+    add(sides,{sector=sectors[unpack_variant()]})
+  end)
+  printh("sides:"..#sides)
+
+  local verts={}
+  unpack_array(function()
+    add(verts,{unpack_fixed(),unpack_fixed()})
+  end)
+  printh("verts:"..#verts)
+
+  return unpack_bsp(sides,verts),verts
+end
+
 __gfx__
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-41600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d1600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-41600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d1600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-41600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d1600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-41600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-95f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d1600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f00085000000080000000800000007ff8c000800010008000000090002000b0004008eff83000b00040089000500890005000500020005000200070080c63030
+303030301010103010102010102020202020202030101010101020202020204040404040303060808060605070505050607080707080a0a0a0a090a090a09090
+9090a0a0a09090a090909090a090b0b0b0b0c0c0c0c0d0d0d0d030303030e0e0e0e030303030f0f0f0f095ff080000ef0c0000ff020000ff060000ff08000000
+0200000008000000080000100800000002000010080000ff0e000000020000ef0a000000020000df06000000060000df0c0000cf0e0000df0a0000df060000df
+0c0000000e0000ef060000ff020000df000000ef080000ef040000df0a0000df06000010080000ef060000000e0000df0a000000060000cf0e0000ff040000cf
+080000df060000df000000bf0e0000df0a0000bf0a0000ef0a0000cf02000000000000ef00000000040000ef060000ff060000cf0a0000ef0a0000df060000ef
+0a0000df0c0000ff020000df000000ff0a0000cf060000ff04000010080000ef0c0000100c0000ff0e0000200e0000ff0e0000200e0000ef0c000020040000ef
+0c0000100c0000ef0c000020000000ff0e000020040000ff0e000020000000ef0c0000200e0000ef000000200e00000008000040080000000800006000000020
+04000080080000100a000040080000ef000000400a0000ef000000400a0000ef08000040080000ff04000040080000ff000000400800000000000040080000ff
+080000800a0000bf0c000050060000bf06000040080000ef080000400a0000ff040000400a0000ff060000400a000000080000900e0000ef0c0000400a0000ff
+000000400a0000ff080000400a000000000000000e0000ff0a0000000e0000ff0e000010020000ff0e000010020000ff0a0000000e0000ef0a0000000e0000ef
+0e000010020000ef0e000010020000ef0a000090090000ef00000000d46bbdef000000df0f0000ef000000000e0000ef000000bf8c0000ef00000050133f3810
+931cf810080000ff59556520820000ff0e0000ff69118aefbb6921100c0000ff1b7cd120000000ffec834e200e000000137cc13009000000080000ff040000ff
+0a000040080000ef060000200e0000ef06000000239442ef06000000c8ccccdf323343dfbfcaafcf6dc7b800d06bbdcf4c29a4b2c2ffff1caeffff705acfc59a
+8c240020d2820000000000100000ef000000e30060e084ffff898000009efeff20192d310060a46100008fb50000e361bfc61106010020b4b200009cc4ffff16
+7d3035be5794004060c4ffff000000000000ef08000082c270617100000f69ffff8a48cfb59b5951002071810000125dffff20f3ffc74e3c1100208191ffff41
+3bffffb99210db464341c670e1a1ffff2105ffff0ade304aee1f12325091e0ffff1019ffff3ebb10faf1ae210020c1d10000e80000005d10ef60d1a0f15250a1
+b100000000ffff000010060000d12250d1e1ffffc7b40000bd4810830dc3024250b1c10000ccccffff6676ef9b99a9e1621014e30000000000100000ff0a0000
+c5e5705060ffff000000000000ef080000300020353000004e9fffffd848fff7337d50a6704050ffff6ad1ffff01d4ffb5431c600020e3f30010000000000000
+000e000095d570f30400000000ffff000000020000a506300414ffff000000000000ef0e0000b5f51030400000953effff01d4ff5b71bf2000008130ffffaeeb
+ffff003effaedb98960000e410000023430000bf70efdac10840002020910000000000100000ff060000b60060203500004e9fffffd848fff7337d50a6101020
+0000bd480000385befdea9e210000015920010000000000000200e0000b30060922500000000ffff0000ff080000c3000052d400000000ffff000000020000f2
+0020025200000000ffff000000020000e20020600200000000ffff0000000200009200205205ffff000000000000ef000000234330f402001000000000000010
+0c0000133310e2f20010000000000000400a0000f3006073830010000000000000400a0000340020b3730010000000000000400a0000c40020c3d30010000000
+000000400a0000052530c2a3ffff91e0ffff19d87f1a8707d30020a364ffff312b000026676f762677e40020f2b30010000000000000400a0000446530d39300
+10000000000000400a000084002083c30010000000000000400a000014002093b400009cc4ffff167d3035be5794000001c00000000000100000ef0600007100
+600313ffff000000000000bf0800006400602333ffff000000000000bf080000a44530c4f1ffff000000000000ef08000082c270f101ffff000000000000ef08
+000072002024340010000000000000000e000016567054240000000000100000ef0a0000466630344400000000ffff0000100200002686304454ffff00000000
+0000ef0e000036761070c0fffffac0ffffd04210341d63c0a030657000006f6200006445ffeb113280004070e4000023430000bf70efdac1084000000572ffff
+000000000000ef00000023437072420000000000100000ef0c000003002042f40010000000000000100c000013335042f10000000000100000ef0c0000d20000
+3303ffff000000000000bf080000f400201363ffff000000000000bf08000054853012150010000000000000200e0000b300606345ffff000000000000bf0800
+00740020a223ffff000000000000bf08000004002025a200000000ffff0000ff080000c3002055220010000000000000200e00009300201222ffff0000000000
+00df020000a2a310621200000000ffff0000000200005300206232ffff000000000000df0c0000738370d46200000000ffff000000020000f200203272000000
+0000100000ef0c000063000022320000000000100000ef0c0000b2000013b300000000ffff000010000000550060f2630000000000100000ef08000075000023
+d300000000ffff000000000000150020c3330000000000100000ff08000035000082550010000000000000200e000093006045d2ffff000000000000bf080000
+740000c094ffff000000000000ff020000810020746500006f6200006445ffeb1132800000907400006f6200006445ffeb11328000601175ffffa2ff0000e800
+df4fc5fe9100609411ffff000000000000ff02000081000053e200006f6200006445305e9c18b400206443ffff312b000026676f762677e400204353ffff2e8a
+0000ef05afac410cd40000b0f0ffffa2ffffff270030e65a52f0006085410000146f00007fb5cfc68c34b1002041a000007c7e0000f9cecf31d798c10060a0b0
+0000e361ffff705a10b81d1790d010a0510000000000100000df0a000061002051a400008fb50000e361bfc61106010000f0d0ffff1caeffff705a30f156dbb0
+00609531fffffac000002fcdcfae2bd0a1002031850000146f00007fb5cfc68c34b100002195fffffac000002fcdcfae2bd0a1002084b0ffff898000009efeff
+20192d3100407521ffffa2ff0000e800df4fc5fe910020d0800000953effff01d4200827bf700040809000005d10ffff270010f82675e00000

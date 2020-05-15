@@ -27,7 +27,7 @@ class VertexWalker(udmfListener):
             elif attribute == 'y':
               y = float(value)
           # scale world down
-          self.result.append((x/16,y/16))
+          self.result.append((x,y))
 class LinedefWalker(udmfListener):     
     def __init__(self):
       self.result=[]   
@@ -80,7 +80,7 @@ class SectorWalker(udmfListener):
             attribute = pair.keyword().getText()
             value = pair.value().getText()
             if attribute == 'heightfloor' or attribute == 'heightceiling':
-              value = float(value)
+              value = int(value)
             sector[attribute] = value
           self.result.append(sector)
 
@@ -100,6 +100,7 @@ def main(argv):
     })
     for k,w in walkers.items(): 
       walker.walk(w, tree)
+      print("{}: #{}".format(k,len(walkers[k].result)))
 
     BSP_Compiler(
       walkers.vertices.result, 
