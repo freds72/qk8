@@ -2,21 +2,45 @@ pico-8 cartridge // http://www.pico-8.com
 version 27
 __lua__
 
+-- globals
 _bsp,_verts=nil
+_cam=nil
 function _init()
   _bsp,_verts=unpack_map()
+  _cam=make_camera()
 end
 
 local plyr={0,0,height=0,angle=0,av=0,v=0}
-
-function world_to_cam(v)
-  -- translate
-  local x,y,z=v[1]-plyr[1],-plyr.height,v[2]-plyr[2]
-  -- rotation
-  local ca,sa=cos(plyr.angle+0.25),-sin(plyr.angle+0.25)
-  x,z=x*ca-z*sa,x*sa+z*ca
-  return {x,y,z}
+function make_camera()
+  return {
+    m={
+      1,0,0,
+      0,1,0},
+    track=function(self,pos,angle,height)
+      local ca,sa=cos(angle+0.25),-sin(angle+0.25)
+      -- world to cam matrix
+      self.m={
+        ca,0,-sa,-ca*pos[1]+sa*pos[2],
+        0, 1,0,-height,
+        sa,0,ca,-sa*pos[1]-ca*pos[2]
+      }
+    end
+  }
 end
+
+v_cache_cls={
+  __index=function(t,v)
+    local m=t.m
+    local x,z=v[1],v[2]
+    local ax,ay,az=
+      m[1]*x+m[3]*z+m[4],
+      m[8],
+      m[9]*x+m[11]*z+m[12]
+    local a={ax,ay,az}
+    t[v]=a
+    return a
+  end
+}
 
 function cam_to_screen(v)
   local w=128/v[3]
@@ -79,7 +103,7 @@ _c=0
 _yfloor,_yceil=nil
 _znear=16
 
-function cull_bsp(root,pos)
+function cull_bsp(v_cache,root,pos)
   if(not root) return
   
   local is_front=v_dot(root.n,pos)>root.d
@@ -90,7 +114,7 @@ function cull_bsp(root,pos)
     far,near=root.front,root.back
   end
 
-  cull_bsp(near,pos)
+  cull_bsp(v_cache,near,pos)
 
   --[[
   if root.dual then
@@ -107,7 +131,7 @@ function cull_bsp(root,pos)
     local bottom=frontsector.floor
   
     -- clip
-    local v0,v1=world_to_cam(root.v0),world_to_cam(root.v1)
+    local v0,v1=v_cache[root.v0],v_cache[root.v1]
     local z0,z1=v0[3],v1[3]
     if(z0>z1) v0,z0,v1,z1=v1,z1,v0,z0
     -- further tip behond camera plane
@@ -205,7 +229,7 @@ function cull_bsp(root,pos)
   end
   --print(_c,(x0+x1)/2,(y0+y1)/2,6)
   _c+=1
-  cull_bsp(far,pos)    
+  cull_bsp(v_cache,far,pos)    
 end
 
 function _update()
@@ -229,14 +253,16 @@ function _update()
     plyr.root=r
     plyr.height=s.floor+32
   end
+  _cam:track(plyr,plyr.angle,plyr.height)
 end
 
 function _draw()
-  cls()
+  --cls()
   -- draw_bsp(bsp)
   _c=0
   _yceil,_yfloor=setmetatable({},top_cls),setmetatable({},bottom_cls)
-  cull_bsp(_bsp,plyr)
+  local v_cache=setmetatable({m=_cam.m},v_cache_cls)
+  cull_bsp(v_cache,_bsp,plyr)
   -- draw_bsp(_bsp)
 
   --[[
@@ -272,7 +298,6 @@ function mpeek()
 		rectfill(0,120,shl(cart_progress,4),127,cart_id%2==0 and 1 or 7)
 		flip()
   end
-  printh(tostr(mem,true))
 	mem+=1
 	return v
 end
@@ -339,20 +364,18 @@ function unpack_map()
   unpack_array(function(i)
     add(sectors,{id=i,ceil=unpack_int(2),floor=unpack_int(2)})
   end)
-  printh("sectors:"..#sectors)
   local sides={}
   unpack_array(function()
     add(sides,{sector=sectors[unpack_variant()]})
   end)
-  printh("sides:"..#sides)
 
   local verts={}
   unpack_array(function()
     add(verts,{unpack_fixed(),unpack_fixed()})
   end)
-  printh("verts:"..#verts)
 
   local bsp=unpack_bsp(sides,verts)
+  -- restore main cart
   reload()
   return bsp,verts
 end
