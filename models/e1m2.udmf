@@ -1,0 +1,11794 @@
+namespace = "zdoom";
+vertex
+{
+x = -704.000;
+y = -416.000;
+}
+
+vertex
+{
+x = -768.000;
+y = -416.000;
+}
+
+vertex
+{
+x = -768.000;
+y = -384.000;
+}
+
+vertex
+{
+x = -704.000;
+y = -384.000;
+}
+
+vertex
+{
+x = -640.000;
+y = -384.000;
+}
+
+vertex
+{
+x = -832.000;
+y = -384.000;
+}
+
+vertex
+{
+x = -512.000;
+y = -288.000;
+}
+
+vertex
+{
+x = -960.000;
+y = -288.000;
+}
+
+vertex
+{
+x = -448.000;
+y = -288.000;
+}
+
+vertex
+{
+x = -1088.000;
+y = -288.000;
+}
+
+vertex
+{
+x = -896.000;
+y = -128.000;
+}
+
+vertex
+{
+x = -864.000;
+y = -128.000;
+}
+
+vertex
+{
+x = -864.000;
+y = -96.000;
+}
+
+vertex
+{
+x = -896.000;
+y = -96.000;
+}
+
+vertex
+{
+x = -608.000;
+y = -128.000;
+}
+
+vertex
+{
+x = -576.000;
+y = -128.000;
+}
+
+vertex
+{
+x = -576.000;
+y = -96.000;
+}
+
+vertex
+{
+x = -608.000;
+y = -96.000;
+}
+
+vertex
+{
+x = -896.000;
+y = 192.000;
+}
+
+vertex
+{
+x = -896.000;
+y = 160.000;
+}
+
+vertex
+{
+x = -864.000;
+y = 160.000;
+}
+
+vertex
+{
+x = -864.000;
+y = 192.000;
+}
+
+vertex
+{
+x = -576.000;
+y = 192.000;
+}
+
+vertex
+{
+x = -608.000;
+y = 192.000;
+}
+
+vertex
+{
+x = -608.000;
+y = 160.000;
+}
+
+vertex
+{
+x = -576.000;
+y = 160.000;
+}
+
+vertex
+{
+x = -448.000;
+y = 0.000;
+}
+
+vertex
+{
+x = -448.000;
+y = -96.000;
+}
+
+vertex
+{
+x = -448.000;
+y = 64.000;
+}
+
+vertex
+{
+x = -448.000;
+y = 384.000;
+}
+
+vertex
+{
+x = -448.000;
+y = 160.000;
+}
+
+vertex
+{
+x = -416.000;
+y = 64.000;
+}
+
+vertex
+{
+x = -416.000;
+y = 160.000;
+}
+
+vertex
+{
+x = -416.000;
+y = -96.000;
+}
+
+vertex
+{
+x = -416.000;
+y = 0.000;
+}
+
+vertex
+{
+x = -416.000;
+y = 320.000;
+}
+
+vertex
+{
+x = -1088.000;
+y = 320.000;
+}
+
+vertex
+{
+x = -960.000;
+y = 320.000;
+}
+
+vertex
+{
+x = -824.000;
+y = 384.000;
+}
+
+vertex
+{
+x = -576.000;
+y = 384.000;
+}
+
+vertex
+{
+x = -320.000;
+y = 384.000;
+}
+
+vertex
+{
+x = -264.000;
+y = -416.000;
+}
+
+vertex
+{
+x = -416.000;
+y = -384.000;
+}
+
+vertex
+{
+x = -120.000;
+y = -480.000;
+}
+
+vertex
+{
+x = -1088.000;
+y = -96.000;
+}
+
+vertex
+{
+x = -1088.000;
+y = 160.000;
+}
+
+vertex
+{
+x = -1280.000;
+y = -64.000;
+}
+
+vertex
+{
+x = -1280.000;
+y = -40.000;
+}
+
+vertex
+{
+x = -1280.000;
+y = 104.000;
+}
+
+vertex
+{
+x = -1280.000;
+y = 128.000;
+}
+
+vertex
+{
+x = -1112.000;
+y = 160.000;
+}
+
+vertex
+{
+x = -1112.000;
+y = -96.000;
+}
+
+vertex
+{
+x = -1296.000;
+y = 104.000;
+}
+
+vertex
+{
+x = -1296.000;
+y = -40.000;
+}
+
+vertex
+{
+x = -1296.000;
+y = -64.000;
+}
+
+vertex
+{
+x = -1344.000;
+y = -192.000;
+}
+
+vertex
+{
+x = -1664.000;
+y = -192.000;
+}
+
+vertex
+{
+x = -1664.000;
+y = 256.000;
+}
+
+vertex
+{
+x = -1344.000;
+y = 256.000;
+}
+
+vertex
+{
+x = -1296.000;
+y = 128.000;
+}
+
+vertex
+{
+x = -1664.000;
+y = 0.000;
+}
+
+vertex
+{
+x = -1632.000;
+y = 0.000;
+}
+
+vertex
+{
+x = -1600.000;
+y = 0.000;
+}
+
+vertex
+{
+x = -1568.000;
+y = 0.000;
+}
+
+vertex
+{
+x = -1536.000;
+y = 0.000;
+}
+
+vertex
+{
+x = -1504.000;
+y = 0.000;
+}
+
+vertex
+{
+x = -1472.000;
+y = 0.000;
+}
+
+vertex
+{
+x = -1472.000;
+y = 64.000;
+}
+
+vertex
+{
+x = -1504.000;
+y = 64.000;
+}
+
+vertex
+{
+x = -1536.000;
+y = 64.000;
+}
+
+vertex
+{
+x = -1568.000;
+y = 64.000;
+}
+
+vertex
+{
+x = -1600.000;
+y = 64.000;
+}
+
+vertex
+{
+x = -1632.000;
+y = 64.000;
+}
+
+vertex
+{
+x = -1664.000;
+y = 64.000;
+}
+
+vertex
+{
+x = -1728.000;
+y = 192.000;
+}
+
+vertex
+{
+x = -1728.000;
+y = -128.000;
+}
+
+vertex
+{
+x = -1744.000;
+y = -128.000;
+}
+
+vertex
+{
+x = -1856.000;
+y = -64.000;
+}
+
+vertex
+{
+x = -1856.000;
+y = 128.000;
+}
+
+vertex
+{
+x = -1744.000;
+y = 192.000;
+}
+
+vertex
+{
+x = -2048.000;
+y = -64.000;
+}
+
+vertex
+{
+x = -2112.000;
+y = -32.000;
+}
+
+vertex
+{
+x = -2112.000;
+y = 96.000;
+}
+
+vertex
+{
+x = -2048.000;
+y = 128.000;
+}
+
+vertex
+{
+x = -1920.000;
+y = 144.000;
+}
+
+vertex
+{
+x = -1920.000;
+y = 128.000;
+}
+
+vertex
+{
+x = -2048.000;
+y = 144.000;
+}
+
+vertex
+{
+x = -2048.000;
+y = -80.000;
+}
+
+vertex
+{
+x = -1920.000;
+y = -64.000;
+}
+
+vertex
+{
+x = -1920.000;
+y = -80.000;
+}
+
+vertex
+{
+x = -2128.000;
+y = -32.000;
+}
+
+vertex
+{
+x = -2128.000;
+y = 96.000;
+}
+
+vertex
+{
+x = -2128.000;
+y = 144.000;
+}
+
+vertex
+{
+x = -2128.000;
+y = -80.000;
+}
+
+vertex
+{
+x = -1888.000;
+y = -80.000;
+}
+
+vertex
+{
+x = -1728.000;
+y = -256.000;
+}
+
+vertex
+{
+x = -1888.000;
+y = 144.000;
+}
+
+vertex
+{
+x = -1728.000;
+y = 320.000;
+}
+
+vertex
+{
+x = -1728.000;
+y = 448.000;
+}
+
+vertex
+{
+x = -1728.000;
+y = -384.000;
+}
+
+vertex
+{
+x = -2432.000;
+y = -384.000;
+}
+
+vertex
+{
+x = -2560.000;
+y = -256.000;
+}
+
+vertex
+{
+x = -2560.000;
+y = 320.000;
+}
+
+vertex
+{
+x = -2432.000;
+y = 448.000;
+}
+
+vertex
+{
+x = -2432.000;
+y = -256.000;
+}
+
+vertex
+{
+x = -2432.000;
+y = 320.000;
+}
+
+vertex
+{
+x = -1880.000;
+y = 128.000;
+}
+
+vertex
+{
+x = -1880.000;
+y = -64.000;
+}
+
+vertex
+{
+x = -1536.000;
+y = 128.000;
+}
+
+vertex
+{
+x = -1472.000;
+y = 128.000;
+}
+
+vertex
+{
+x = -1472.000;
+y = 192.000;
+}
+
+vertex
+{
+x = -1536.000;
+y = 192.000;
+}
+
+vertex
+{
+x = -1536.000;
+y = -128.000;
+}
+
+vertex
+{
+x = -1472.000;
+y = -128.000;
+}
+
+vertex
+{
+x = -1472.000;
+y = -64.000;
+}
+
+vertex
+{
+x = -1536.000;
+y = -64.000;
+}
+
+vertex
+{
+x = -544.000;
+y = 736.000;
+}
+
+vertex
+{
+x = -408.000;
+y = 672.000;
+}
+
+vertex
+{
+x = -320.000;
+y = 704.000;
+}
+
+vertex
+{
+x = -320.000;
+y = 832.000;
+}
+
+vertex
+{
+x = -256.000;
+y = 832.000;
+}
+
+vertex
+{
+x = -256.000;
+y = 704.000;
+}
+
+vertex
+{
+x = -240.000;
+y = 704.000;
+}
+
+vertex
+{
+x = -240.000;
+y = 832.000;
+}
+
+vertex
+{
+x = -128.000;
+y = 704.000;
+}
+
+vertex
+{
+x = -128.000;
+y = 832.000;
+}
+
+vertex
+{
+x = 944.000;
+y = -384.000;
+}
+
+vertex
+{
+x = 696.000;
+y = -480.000;
+}
+
+vertex
+{
+x = 448.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 192.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 64.000;
+y = 384.000;
+}
+
+vertex
+{
+x = 128.000;
+y = 344.000;
+}
+
+vertex
+{
+x = -272.000;
+y = 96.000;
+}
+
+vertex
+{
+x = -120.000;
+y = 160.000;
+}
+
+vertex
+{
+x = 104.000;
+y = 160.000;
+}
+
+vertex
+{
+x = 248.000;
+y = 120.000;
+}
+
+vertex
+{
+x = 336.000;
+y = -8.000;
+}
+
+vertex
+{
+x = 272.000;
+y = -144.000;
+}
+
+vertex
+{
+x = -8.000;
+y = -184.000;
+}
+
+vertex
+{
+x = -248.000;
+y = -120.000;
+}
+
+vertex
+{
+x = 960.000;
+y = 480.000;
+}
+
+vertex
+{
+x = 832.000;
+y = 480.000;
+}
+
+vertex
+{
+x = 728.000;
+y = 704.000;
+}
+
+vertex
+{
+x = 960.000;
+y = 704.000;
+}
+
+vertex
+{
+x = 1152.000;
+y = 608.000;
+}
+
+vertex
+{
+x = 1088.000;
+y = 352.000;
+}
+
+vertex
+{
+x = 1088.000;
+y = 384.000;
+}
+
+vertex
+{
+x = 1256.000;
+y = 384.000;
+}
+
+vertex
+{
+x = 1256.000;
+y = 320.000;
+}
+
+vertex
+{
+x = 960.000;
+y = 216.000;
+}
+
+vertex
+{
+x = 960.000;
+y = 352.000;
+}
+
+vertex
+{
+x = 960.000;
+y = -320.000;
+}
+
+vertex
+{
+x = 960.000;
+y = -96.000;
+}
+
+vertex
+{
+x = 944.000;
+y = -96.000;
+}
+
+vertex
+{
+x = 1512.000;
+y = 224.000;
+}
+
+vertex
+{
+x = 1344.000;
+y = 192.000;
+}
+
+vertex
+{
+x = 1320.000;
+y = -96.000;
+}
+
+vertex
+{
+x = 1152.000;
+y = -272.000;
+}
+
+vertex
+{
+x = 1024.000;
+y = 32.000;
+}
+
+vertex
+{
+x = 1488.000;
+y = -56.000;
+}
+
+vertex
+{
+x = 1192.000;
+y = 64.000;
+}
+
+vertex
+{
+x = 1184.000;
+y = 192.000;
+}
+
+vertex
+{
+x = 1472.000;
+y = -352.000;
+}
+
+vertex
+{
+x = 1280.000;
+y = -384.000;
+}
+
+vertex
+{
+x = 1152.000;
+y = -384.000;
+}
+
+vertex
+{
+x = 1280.000;
+y = -736.000;
+}
+
+vertex
+{
+x = 1152.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 1312.000;
+y = -288.000;
+}
+
+vertex
+{
+x = 1560.000;
+y = -304.000;
+}
+
+vertex
+{
+x = 1680.000;
+y = -168.000;
+}
+
+vertex
+{
+x = 1616.000;
+y = -168.000;
+}
+
+vertex
+{
+x = 1520.000;
+y = -232.000;
+}
+
+vertex
+{
+x = 416.000;
+y = -416.000;
+}
+
+vertex
+{
+x = 384.000;
+y = -416.000;
+}
+
+vertex
+{
+x = 224.000;
+y = -416.000;
+}
+
+vertex
+{
+x = 256.000;
+y = -416.000;
+}
+
+vertex
+{
+x = 384.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 384.000;
+y = -544.000;
+}
+
+vertex
+{
+x = 384.000;
+y = -576.000;
+}
+
+vertex
+{
+x = 256.000;
+y = -544.000;
+}
+
+vertex
+{
+x = 256.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 256.000;
+y = -576.000;
+}
+
+vertex
+{
+x = 256.000;
+y = -608.000;
+}
+
+vertex
+{
+x = 256.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 384.000;
+y = -608.000;
+}
+
+vertex
+{
+x = 384.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 448.000;
+y = -832.000;
+}
+
+vertex
+{
+x = 320.000;
+y = -768.000;
+}
+
+vertex
+{
+x = 448.000;
+y = -704.000;
+}
+
+vertex
+{
+x = 576.000;
+y = -704.000;
+}
+
+vertex
+{
+x = 576.000;
+y = -832.000;
+}
+
+vertex
+{
+x = 1088.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 1088.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 1056.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 1056.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 1024.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 1024.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 992.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 992.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 960.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 960.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 896.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 928.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 840.000;
+y = -528.000;
+}
+
+vertex
+{
+x = 896.000;
+y = -656.000;
+}
+
+vertex
+{
+x = 1120.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 1120.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 1152.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 1152.000;
+y = -736.000;
+}
+
+vertex
+{
+x = 448.000;
+y = -384.000;
+}
+
+vertex
+{
+x = 192.000;
+y = -384.000;
+}
+
+vertex
+{
+x = 880.000;
+y = -656.000;
+}
+
+vertex
+{
+x = 824.000;
+y = -528.000;
+}
+
+vertex
+{
+x = 384.000;
+y = -656.000;
+}
+
+vertex
+{
+x = 256.000;
+y = -656.000;
+}
+
+vertex
+{
+x = 960.000;
+y = 464.000;
+}
+
+vertex
+{
+x = 1168.000;
+y = 608.000;
+}
+
+vertex
+{
+x = 1608.000;
+y = 112.000;
+}
+
+vertex
+{
+x = 1656.000;
+y = -256.000;
+}
+
+vertex
+{
+x = 448.000;
+y = 344.000;
+}
+
+vertex
+{
+x = 480.000;
+y = 256.000;
+}
+
+vertex
+{
+x = 640.000;
+y = 152.000;
+}
+
+vertex
+{
+x = 944.000;
+y = 152.000;
+}
+
+vertex
+{
+x = 960.000;
+y = 152.000;
+}
+
+vertex
+{
+x = 1408.000;
+y = -864.000;
+}
+
+vertex
+{
+x = 1536.000;
+y = -864.000;
+}
+
+vertex
+{
+x = 896.000;
+y = -864.000;
+}
+
+vertex
+{
+x = 1024.000;
+y = -864.000;
+}
+
+vertex
+{
+x = 1064.000;
+y = -896.000;
+}
+
+vertex
+{
+x = 1120.000;
+y = -896.000;
+}
+
+vertex
+{
+x = 1120.000;
+y = -864.000;
+}
+
+vertex
+{
+x = 1312.000;
+y = -864.000;
+}
+
+vertex
+{
+x = 1312.000;
+y = -896.000;
+}
+
+vertex
+{
+x = 1368.000;
+y = -896.000;
+}
+
+vertex
+{
+x = 1312.000;
+y = -1088.000;
+}
+
+vertex
+{
+x = 1312.000;
+y = -1120.000;
+}
+
+vertex
+{
+x = 1368.000;
+y = -1120.000;
+}
+
+vertex
+{
+x = 1368.000;
+y = -1088.000;
+}
+
+vertex
+{
+x = 1064.000;
+y = -1088.000;
+}
+
+vertex
+{
+x = 1064.000;
+y = -1120.000;
+}
+
+vertex
+{
+x = 1120.000;
+y = -1120.000;
+}
+
+vertex
+{
+x = 1120.000;
+y = -1088.000;
+}
+
+vertex
+{
+x = 1096.000;
+y = -896.000;
+}
+
+vertex
+{
+x = 1336.000;
+y = -1088.000;
+}
+
+vertex
+{
+x = 1336.000;
+y = -896.000;
+}
+
+vertex
+{
+x = 1096.000;
+y = -1088.000;
+}
+
+vertex
+{
+x = 1096.000;
+y = -1056.000;
+}
+
+vertex
+{
+x = 1096.000;
+y = -928.000;
+}
+
+vertex
+{
+x = 1336.000;
+y = -1056.000;
+}
+
+vertex
+{
+x = 1336.000;
+y = -928.000;
+}
+
+vertex
+{
+x = 1536.000;
+y = -1280.000;
+}
+
+vertex
+{
+x = 1280.000;
+y = -1280.000;
+}
+
+vertex
+{
+x = 1152.000;
+y = -1280.000;
+}
+
+vertex
+{
+x = 896.000;
+y = -1280.000;
+}
+
+vertex
+{
+x = 1280.000;
+y = -1344.000;
+}
+
+vertex
+{
+x = 1152.000;
+y = -1344.000;
+}
+
+vertex
+{
+x = 1248.000;
+y = -1344.000;
+}
+
+vertex
+{
+x = 1184.000;
+y = -1344.000;
+}
+
+vertex
+{
+x = 1184.000;
+y = -1368.000;
+}
+
+vertex
+{
+x = 1248.000;
+y = -1368.000;
+}
+
+vertex
+{
+x = 1248.000;
+y = -1384.000;
+}
+
+vertex
+{
+x = 1248.000;
+y = -1408.000;
+}
+
+vertex
+{
+x = 1184.000;
+y = -1408.000;
+}
+
+vertex
+{
+x = 1184.000;
+y = -1384.000;
+}
+
+vertex
+{
+x = 1312.000;
+y = -1408.000;
+}
+
+vertex
+{
+x = 1120.000;
+y = -1408.000;
+}
+
+vertex
+{
+x = 1312.000;
+y = -1600.000;
+}
+
+vertex
+{
+x = 1120.000;
+y = -1600.000;
+}
+
+vertex
+{
+x = 1120.000;
+y = -1536.000;
+}
+
+vertex
+{
+x = 1120.000;
+y = -1472.000;
+}
+
+vertex
+{
+x = 1152.000;
+y = -752.000;
+}
+
+vertex
+{
+x = 1280.000;
+y = -752.000;
+}
+
+vertex
+{
+x = 1152.000;
+y = -768.000;
+}
+
+vertex
+{
+x = 1280.000;
+y = -768.000;
+}
+
+vertex
+{
+x = 1232.000;
+y = -1328.000;
+}
+
+vertex
+{
+x = 1200.000;
+y = -1328.000;
+}
+
+vertex
+{
+x = 1200.000;
+y = -1336.000;
+}
+
+vertex
+{
+x = 1232.000;
+y = -1336.000;
+}
+
+vertex
+{
+x = 1232.000;
+y = -1576.000;
+}
+
+vertex
+{
+x = 1200.000;
+y = -1576.000;
+}
+
+vertex
+{
+x = 1200.000;
+y = -1584.000;
+}
+
+vertex
+{
+x = 1232.000;
+y = -1584.000;
+}
+
+vertex
+{
+x = -2032.000;
+y = 0.000;
+}
+
+vertex
+{
+x = -2000.000;
+y = 0.000;
+}
+
+vertex
+{
+x = -1984.000;
+y = 16.000;
+}
+
+vertex
+{
+x = -1984.000;
+y = 48.000;
+}
+
+vertex
+{
+x = -2000.000;
+y = 64.000;
+}
+
+vertex
+{
+x = -2032.000;
+y = 64.000;
+}
+
+vertex
+{
+x = -2048.000;
+y = 48.000;
+}
+
+vertex
+{
+x = -2048.000;
+y = 16.000;
+}
+
+vertex
+{
+x = -128.000;
+y = 896.000;
+}
+
+vertex
+{
+x = -192.000;
+y = 896.000;
+}
+
+vertex
+{
+x = -192.000;
+y = 1152.000;
+}
+
+vertex
+{
+x = -192.000;
+y = 640.000;
+}
+
+vertex
+{
+x = -128.000;
+y = 640.000;
+}
+
+vertex
+{
+x = 768.000;
+y = 1152.000;
+}
+
+vertex
+{
+x = 768.000;
+y = 768.000;
+}
+
+vertex
+{
+x = 704.000;
+y = 768.000;
+}
+
+vertex
+{
+x = 384.000;
+y = 512.000;
+}
+
+vertex
+{
+x = 384.000;
+y = 448.000;
+}
+
+vertex
+{
+x = -192.000;
+y = 1216.000;
+}
+
+vertex
+{
+x = -128.000;
+y = 1216.000;
+}
+
+vertex
+{
+x = 704.000;
+y = 1216.000;
+}
+
+vertex
+{
+x = 768.000;
+y = 1216.000;
+}
+
+vertex
+{
+x = -128.000;
+y = 1152.000;
+}
+
+vertex
+{
+x = 704.000;
+y = 1152.000;
+}
+
+vertex
+{
+x = -128.000;
+y = 448.000;
+}
+
+vertex
+{
+x = -192.000;
+y = 448.000;
+}
+
+vertex
+{
+x = -192.000;
+y = 512.000;
+}
+
+vertex
+{
+x = -128.000;
+y = 512.000;
+}
+
+vertex
+{
+x = 704.000;
+y = 576.000;
+}
+
+vertex
+{
+x = 704.000;
+y = 512.000;
+}
+
+vertex
+{
+x = 728.000;
+y = 576.000;
+}
+
+vertex
+{
+x = 704.000;
+y = 704.000;
+}
+
+vertex
+{
+x = 192.000;
+y = 960.000;
+}
+
+vertex
+{
+x = 192.000;
+y = 1024.000;
+}
+
+vertex
+{
+x = 0.000;
+y = 1024.000;
+}
+
+vertex
+{
+x = 0.000;
+y = 960.000;
+}
+
+vertex
+{
+x = -128.000;
+y = 664.000;
+}
+
+vertex
+{
+x = -128.000;
+y = 872.000;
+}
+
+vertex
+{
+x = 704.000;
+y = 744.000;
+}
+
+vertex
+{
+x = 408.000;
+y = 512.000;
+}
+
+vertex
+{
+x = 320.000;
+y = 672.000;
+}
+
+vertex
+{
+x = 544.000;
+y = 672.000;
+}
+
+vertex
+{
+x = 544.000;
+y = 992.000;
+}
+
+vertex
+{
+x = 320.000;
+y = 992.000;
+}
+
+vertex
+{
+x = 320.000;
+y = 960.000;
+}
+
+vertex
+{
+x = 352.000;
+y = 960.000;
+}
+
+vertex
+{
+x = 384.000;
+y = 960.000;
+}
+
+vertex
+{
+x = 416.000;
+y = 960.000;
+}
+
+vertex
+{
+x = 512.000;
+y = 960.000;
+}
+
+vertex
+{
+x = 512.000;
+y = 704.000;
+}
+
+vertex
+{
+x = 416.000;
+y = 704.000;
+}
+
+vertex
+{
+x = 384.000;
+y = 704.000;
+}
+
+vertex
+{
+x = 352.000;
+y = 704.000;
+}
+
+vertex
+{
+x = 320.000;
+y = 704.000;
+}
+
+vertex
+{
+x = 192.000;
+y = 640.000;
+}
+
+vertex
+{
+x = 192.000;
+y = 704.000;
+}
+
+vertex
+{
+x = 0.000;
+y = 704.000;
+}
+
+vertex
+{
+x = 0.000;
+y = 640.000;
+}
+
+vertex
+{
+x = 200.000;
+y = 712.000;
+}
+
+vertex
+{
+x = -8.000;
+y = 712.000;
+}
+
+vertex
+{
+x = -8.000;
+y = 632.000;
+}
+
+vertex
+{
+x = 200.000;
+y = 632.000;
+}
+
+vertex
+{
+x = -8.000;
+y = 952.000;
+}
+
+vertex
+{
+x = 200.000;
+y = 952.000;
+}
+
+vertex
+{
+x = 200.000;
+y = 1032.000;
+}
+
+vertex
+{
+x = -8.000;
+y = 1032.000;
+}
+
+vertex
+{
+x = 1728.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 1536.000;
+y = -704.000;
+}
+
+vertex
+{
+x = 1408.000;
+y = -704.000;
+}
+
+vertex
+{
+x = 1408.000;
+y = -480.000;
+}
+
+vertex
+{
+x = 1536.000;
+y = -480.000;
+}
+
+vertex
+{
+x = 1568.000;
+y = -384.000;
+}
+
+vertex
+{
+x = 1680.000;
+y = -256.000;
+}
+
+vertex
+{
+x = 1728.000;
+y = -320.000;
+}
+
+vertex
+{
+x = 1560.000;
+y = -328.000;
+}
+
+vertex
+{
+x = 1512.000;
+y = -704.000;
+}
+
+vertex
+{
+x = 1512.000;
+y = -480.000;
+}
+
+vertex
+{
+x = 552.000;
+y = -832.000;
+}
+
+vertex
+{
+x = 472.000;
+y = -832.000;
+}
+
+vertex
+{
+x = 472.000;
+y = -704.000;
+}
+
+vertex
+{
+x = 552.000;
+y = -704.000;
+}
+
+vertex
+{
+x = 384.000;
+y = -440.000;
+}
+
+vertex
+{
+x = 256.000;
+y = -440.000;
+}
+
+vertex
+{
+x = 1728.000;
+y = -576.000;
+}
+
+vertex
+{
+x = 1888.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 1792.000;
+y = -640.000;
+}
+
+vertex
+{
+x = 1952.000;
+y = -544.000;
+}
+
+vertex
+{
+x = 1792.000;
+y = -576.000;
+}
+
+vertex
+{
+x = 1824.000;
+y = -512.000;
+}
+
+vertex
+{
+x = 1760.000;
+y = -288.000;
+}
+
+vertex
+{
+x = 1760.000;
+y = -128.000;
+}
+
+vertex
+{
+x = 1856.000;
+y = 0.000;
+}
+
+vertex
+{
+x = 1888.000;
+y = -288.000;
+}
+
+vertex
+{
+x = 1888.000;
+y = -128.000;
+}
+
+vertex
+{
+x = 2016.000;
+y = 0.000;
+}
+
+vertex
+{
+x = 1704.000;
+y = 232.000;
+}
+
+vertex
+{
+x = 1792.000;
+y = 384.000;
+}
+
+vertex
+{
+x = 1664.000;
+y = 232.000;
+}
+
+vertex
+{
+x = 1568.000;
+y = 384.000;
+}
+
+vertex
+{
+x = 1528.000;
+y = 224.000;
+}
+
+vertex
+{
+x = 1624.000;
+y = 112.000;
+}
+
+vertex
+{
+x = 1744.000;
+y = -576.000;
+}
+
+vertex
+{
+x = 1744.000;
+y = -640.000;
+}
+
+vertex
+{
+x = -448.000;
+y = -128.000;
+}
+
+vertex
+{
+x = -448.000;
+y = -256.000;
+}
+
+vertex
+{
+x = -416.000;
+y = -128.000;
+}
+
+vertex
+{
+x = -416.000;
+y = -256.000;
+}
+
+vertex
+{
+x = -128.000;
+y = 384.000;
+}
+
+vertex
+{
+x = 384.000;
+y = 344.000;
+}
+
+linedef
+{
+v1 = 0;
+v2 = 1;
+sidefront = 0;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 1;
+v2 = 2;
+sidefront = 1;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 3;
+v2 = 0;
+sidefront = 2;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 4;
+v2 = 3;
+sidefront = 3;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 2;
+v2 = 5;
+sidefront = 4;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 6;
+v2 = 4;
+sidefront = 5;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 5;
+v2 = 7;
+sidefront = 6;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 8;
+v2 = 6;
+sidefront = 7;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 7;
+v2 = 9;
+sidefront = 8;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 10;
+v2 = 11;
+sidefront = 9;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 11;
+v2 = 12;
+sidefront = 10;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 12;
+v2 = 13;
+sidefront = 11;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 13;
+v2 = 10;
+sidefront = 12;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 14;
+v2 = 15;
+sidefront = 13;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 15;
+v2 = 16;
+sidefront = 14;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 16;
+v2 = 17;
+sidefront = 15;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 17;
+v2 = 14;
+sidefront = 16;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 18;
+v2 = 19;
+sidefront = 17;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 19;
+v2 = 20;
+sidefront = 18;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 20;
+v2 = 21;
+sidefront = 19;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 21;
+v2 = 18;
+sidefront = 20;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 22;
+v2 = 23;
+sidefront = 21;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 23;
+v2 = 24;
+sidefront = 22;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 24;
+v2 = 25;
+sidefront = 23;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 25;
+v2 = 22;
+sidefront = 24;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 26;
+v2 = 27;
+sidefront = 25;
+sideback = 26;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 28;
+v2 = 26;
+sidefront = 27;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 29;
+v2 = 30;
+sidefront = 28;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 30;
+v2 = 28;
+sidefront = 29;
+sideback = 30;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 31;
+v2 = 32;
+sidefront = 31;
+sideback = 32;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 33;
+v2 = 34;
+sidefront = 33;
+sideback = 34;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 26;
+v2 = 34;
+sidefront = 35;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 33;
+v2 = 27;
+sidefront = 36;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 31;
+v2 = 28;
+sidefront = 37;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 30;
+v2 = 32;
+sidefront = 38;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 34;
+v2 = 31;
+sidefront = 39;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 32;
+v2 = 35;
+sidefront = 40;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 14;
+v2 = 11;
+sidefront = 41;
+sideback = 42;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 27;
+v2 = 15;
+sidefront = 43;
+sideback = 44;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 22;
+v2 = 30;
+sidefront = 45;
+sideback = 46;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 36;
+v2 = 37;
+sidefront = 47;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 37;
+v2 = 38;
+sidefront = 48;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 38;
+v2 = 39;
+sidefront = 49;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 35;
+v2 = 40;
+sidefront = 50;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 41;
+v2 = 42;
+sidefront = 51;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 43;
+v2 = 41;
+sidefront = 52;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 3;
+v2 = 2;
+sidefront = 53;
+sideback = 54;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 20;
+v2 = 24;
+sidefront = 55;
+sideback = 56;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 17;
+v2 = 12;
+sidefront = 57;
+sideback = 58;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 12;
+v2 = 20;
+sidefront = 59;
+sideback = 60;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 13;
+v2 = 19;
+sidefront = 61;
+sideback = 62;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 21;
+v2 = 23;
+sidefront = 63;
+sideback = 64;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 9;
+v2 = 44;
+sidefront = 65;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 45;
+v2 = 36;
+sidefront = 66;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 45;
+v2 = 44;
+sidefront = 67;
+sideback = 68;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 46;
+v2 = 47;
+sidefront = 69;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 48;
+v2 = 49;
+sidefront = 70;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 49;
+v2 = 50;
+sidefront = 71;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 50;
+v2 = 45;
+sidefront = 72;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 44;
+v2 = 51;
+sidefront = 73;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 51;
+v2 = 46;
+sidefront = 74;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 52;
+v2 = 53;
+sidefront = 75;
+sideback = 76;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 47;
+v2 = 53;
+sidefront = 77;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 52;
+v2 = 48;
+sidefront = 78;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 53;
+v2 = 54;
+sidefront = 79;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 54;
+v2 = 55;
+sidefront = 80;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 55;
+v2 = 56;
+sidefront = 81;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 57;
+v2 = 58;
+sidefront = 82;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 59;
+v2 = 52;
+sidefront = 83;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 58;
+v2 = 59;
+sidefront = 84;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 60;
+v2 = 61;
+sidefront = 85;
+sideback = 86;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 61;
+v2 = 62;
+sidefront = 87;
+sideback = 88;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 62;
+v2 = 63;
+sidefront = 89;
+sideback = 90;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 63;
+v2 = 64;
+sidefront = 91;
+sideback = 92;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 64;
+v2 = 65;
+sidefront = 93;
+sideback = 94;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 65;
+v2 = 66;
+sidefront = 95;
+sideback = 96;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 66;
+v2 = 67;
+sidefront = 97;
+sideback = 98;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 67;
+v2 = 68;
+sidefront = 99;
+sideback = 100;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 68;
+v2 = 69;
+sidefront = 101;
+sideback = 102;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 69;
+v2 = 70;
+sidefront = 103;
+sideback = 104;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 70;
+v2 = 71;
+sidefront = 105;
+sideback = 106;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 71;
+v2 = 72;
+sidefront = 107;
+sideback = 108;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 72;
+v2 = 73;
+sidefront = 109;
+sideback = 110;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 61;
+v2 = 72;
+sidefront = 111;
+sideback = 112;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 62;
+v2 = 71;
+sidefront = 113;
+sideback = 114;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 63;
+v2 = 70;
+sidefront = 115;
+sideback = 116;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 64;
+v2 = 69;
+sidefront = 117;
+sideback = 118;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 65;
+v2 = 68;
+sidefront = 119;
+sideback = 120;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 60;
+v2 = 73;
+sidefront = 121;
+sideback = 122;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 73;
+v2 = 74;
+sidefront = 123;
+sideback = 124;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 74;
+v2 = 57;
+sidefront = 125;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 56;
+v2 = 75;
+sidefront = 126;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 75;
+v2 = 60;
+sidefront = 127;
+sideback = 128;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 75;
+v2 = 76;
+sidefront = 129;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 76;
+v2 = 77;
+sidefront = 130;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 78;
+v2 = 79;
+sidefront = 131;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 79;
+v2 = 74;
+sidefront = 132;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 80;
+v2 = 81;
+sidefront = 133;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 82;
+v2 = 83;
+sidefront = 134;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 84;
+v2 = 85;
+sidefront = 135;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 83;
+v2 = 86;
+sidefront = 136;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 87;
+v2 = 80;
+sidefront = 137;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 88;
+v2 = 89;
+sidefront = 138;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 81;
+v2 = 90;
+sidefront = 139;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 91;
+v2 = 82;
+sidefront = 140;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 86;
+v2 = 92;
+sidefront = 141;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 92;
+v2 = 91;
+sidefront = 142;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 90;
+v2 = 93;
+sidefront = 143;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 93;
+v2 = 87;
+sidefront = 144;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 89;
+v2 = 94;
+sidefront = 145;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 94;
+v2 = 95;
+sidefront = 146;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 96;
+v2 = 84;
+sidefront = 147;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 97;
+v2 = 96;
+sidefront = 148;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 78;
+v2 = 77;
+sidefront = 149;
+sideback = 150;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 88;
+v2 = 80;
+sidefront = 151;
+sideback = 152;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 87;
+v2 = 89;
+sidefront = 153;
+sideback = 154;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 83;
+v2 = 85;
+sidefront = 155;
+sideback = 156;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 84;
+v2 = 86;
+sidefront = 157;
+sideback = 158;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 81;
+v2 = 82;
+sidefront = 159;
+sideback = 160;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 91;
+v2 = 90;
+sidefront = 161;
+sideback = 162;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 98;
+v2 = 97;
+sidefront = 163;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 95;
+v2 = 99;
+sidefront = 164;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 99;
+v2 = 100;
+sidefront = 165;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 100;
+v2 = 101;
+sidefront = 166;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 101;
+v2 = 102;
+sidefront = 167;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 102;
+v2 = 103;
+sidefront = 168;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 103;
+v2 = 98;
+sidefront = 169;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 99;
+v2 = 104;
+sidefront = 170;
+sideback = 171;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 104;
+v2 = 105;
+sidefront = 172;
+sideback = 173;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 105;
+v2 = 98;
+sidefront = 174;
+sideback = 175;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 85;
+v2 = 106;
+sidefront = 176;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 106;
+v2 = 78;
+sidefront = 177;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 77;
+v2 = 107;
+sidefront = 178;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 107;
+v2 = 88;
+sidefront = 179;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 108;
+v2 = 109;
+sidefront = 180;
+sideback = 181;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 109;
+v2 = 110;
+sidefront = 182;
+sideback = 183;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 110;
+v2 = 111;
+sidefront = 184;
+sideback = 185;
+special = 63;
+arg0 = 3;
+id = 3;
+twosided = true;
+}
+
+linedef
+{
+v1 = 111;
+v2 = 108;
+sidefront = 186;
+sideback = 187;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 112;
+v2 = 113;
+sidefront = 188;
+sideback = 189;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 113;
+v2 = 114;
+sidefront = 190;
+sideback = 191;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 114;
+v2 = 115;
+sidefront = 192;
+sideback = 193;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 115;
+v2 = 112;
+sidefront = 194;
+sideback = 195;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 39;
+v2 = 116;
+sidefront = 196;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 117;
+v2 = 29;
+sidefront = 197;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 118;
+v2 = 117;
+sidefront = 198;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 116;
+v2 = 119;
+sidefront = 199;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 29;
+v2 = 39;
+sidefront = 200;
+sideback = 201;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 119;
+v2 = 118;
+sidefront = 202;
+sideback = 203;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 120;
+v2 = 121;
+sidefront = 204;
+sideback = 205;
+special = 1;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 122;
+v2 = 123;
+sidefront = 206;
+sideback = 207;
+special = 1;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 121;
+v2 = 118;
+sidefront = 208;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 119;
+v2 = 120;
+sidefront = 209;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 120;
+v2 = 123;
+sidefront = 210;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 122;
+v2 = 121;
+sidefront = 211;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 124;
+v2 = 122;
+sidefront = 212;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 123;
+v2 = 125;
+sidefront = 213;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 126;
+v2 = 127;
+sidefront = 214;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 127;
+v2 = 128;
+sidefront = 215;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 129;
+v2 = 43;
+sidefront = 216;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 130;
+v2 = 131;
+sidefront = 217;
+sideback = 218;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 132;
+v2 = 133;
+sidefront = 219;
+sideback = 220;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 133;
+v2 = 134;
+sidefront = 221;
+sideback = 222;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 134;
+v2 = 135;
+sidefront = 223;
+sideback = 224;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 135;
+v2 = 136;
+sidefront = 225;
+sideback = 226;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 136;
+v2 = 137;
+sidefront = 227;
+sideback = 228;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 137;
+v2 = 138;
+sidefront = 229;
+sideback = 230;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 138;
+v2 = 139;
+sidefront = 231;
+sideback = 232;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 139;
+v2 = 132;
+sidefront = 233;
+sideback = 234;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 140;
+v2 = 141;
+sidefront = 235;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 142;
+v2 = 143;
+sidefront = 236;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 143;
+v2 = 144;
+sidefront = 237;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 145;
+v2 = 146;
+sidefront = 238;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 147;
+v2 = 148;
+sidefront = 239;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 149;
+v2 = 150;
+sidefront = 240;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 151;
+v2 = 152;
+sidefront = 241;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 153;
+v2 = 126;
+sidefront = 242;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 152;
+v2 = 153;
+sidefront = 243;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 148;
+v2 = 154;
+sidefront = 244;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 155;
+v2 = 154;
+sidefront = 245;
+sideback = 246;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 156;
+v2 = 157;
+sidefront = 247;
+sideback = 248;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 158;
+v2 = 156;
+sidefront = 249;
+sideback = 250;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 159;
+v2 = 160;
+sidefront = 251;
+sideback = 252;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 161;
+v2 = 158;
+sidefront = 253;
+sideback = 254;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 160;
+v2 = 155;
+sidefront = 255;
+sideback = 256;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 162;
+v2 = 163;
+sidefront = 257;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 164;
+v2 = 151;
+sidefront = 258;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 163;
+v2 = 165;
+sidefront = 259;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 166;
+v2 = 164;
+sidefront = 260;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 140;
+v2 = 144;
+sidefront = 261;
+sideback = 262;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 152;
+v2 = 157;
+sidefront = 263;
+sideback = 264;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 157;
+v2 = 163;
+sidefront = 265;
+sideback = 266;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 149;
+v2 = 147;
+sidefront = 267;
+sideback = 268;
+special = 88;
+arg0 = 2;
+id = 2;
+twosided = true;
+}
+
+linedef
+{
+v1 = 157;
+v2 = 151;
+sidefront = 269;
+sideback = 270;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 167;
+v2 = 159;
+sidefront = 271;
+sideback = 272;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 162;
+v2 = 167;
+sidefront = 273;
+sideback = 274;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 168;
+v2 = 162;
+sidefront = 275;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 169;
+v2 = 170;
+sidefront = 276;
+sideback = 277;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 170;
+v2 = 171;
+sidefront = 278;
+sideback = 279;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 171;
+v2 = 168;
+sidefront = 280;
+sideback = 281;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 128;
+v2 = 172;
+sidefront = 282;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 172;
+v2 = 173;
+sidefront = 283;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 174;
+v2 = 129;
+sidefront = 284;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 175;
+v2 = 174;
+sidefront = 285;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 176;
+v2 = 177;
+sidefront = 286;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 177;
+v2 = 178;
+sidefront = 287;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 179;
+v2 = 180;
+sidefront = 288;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 181;
+v2 = 179;
+sidefront = 289;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 182;
+v2 = 181;
+sidefront = 290;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 183;
+v2 = 182;
+sidefront = 291;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 178;
+v2 = 184;
+sidefront = 292;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 184;
+v2 = 185;
+sidefront = 293;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 186;
+v2 = 187;
+sidefront = 294;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 173;
+v2 = 175;
+sidefront = 295;
+sideback = 296;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 180;
+v2 = 176;
+sidefront = 297;
+sideback = 298;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 179;
+v2 = 177;
+sidefront = 299;
+sideback = 300;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 181;
+v2 = 178;
+sidefront = 301;
+sideback = 302;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 182;
+v2 = 184;
+sidefront = 303;
+sideback = 304;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 183;
+v2 = 185;
+sidefront = 305;
+sideback = 306;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 186;
+v2 = 188;
+sidefront = 307;
+sideback = 308;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 189;
+v2 = 190;
+sidefront = 309;
+sideback = 310;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 191;
+v2 = 192;
+sidefront = 311;
+sideback = 312;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 193;
+v2 = 194;
+sidefront = 313;
+sideback = 314;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 195;
+v2 = 196;
+sidefront = 315;
+sideback = 316;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 197;
+v2 = 198;
+sidefront = 317;
+sideback = 318;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 199;
+v2 = 200;
+sidefront = 319;
+sideback = 320;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 201;
+v2 = 202;
+sidefront = 321;
+sideback = 322;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 203;
+v2 = 204;
+sidefront = 323;
+sideback = 324;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 203;
+v2 = 201;
+sidefront = 325;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 202;
+v2 = 204;
+sidefront = 326;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 201;
+v2 = 199;
+sidefront = 327;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 199;
+v2 = 197;
+sidefront = 328;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 197;
+v2 = 195;
+sidefront = 329;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 195;
+v2 = 193;
+sidefront = 330;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 193;
+v2 = 191;
+sidefront = 331;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 192;
+v2 = 194;
+sidefront = 332;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 194;
+v2 = 196;
+sidefront = 333;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 196;
+v2 = 198;
+sidefront = 334;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 198;
+v2 = 200;
+sidefront = 335;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 200;
+v2 = 202;
+sidefront = 336;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 191;
+v2 = 205;
+sidefront = 337;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 206;
+v2 = 192;
+sidefront = 338;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 207;
+v2 = 206;
+sidefront = 339;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 205;
+v2 = 166;
+sidefront = 340;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 207;
+v2 = 166;
+sidefront = 341;
+sideback = 342;
+special = 1;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 205;
+v2 = 206;
+sidefront = 343;
+sideback = 344;
+special = 1;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 208;
+v2 = 207;
+sidefront = 345;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 126;
+v2 = 209;
+sidefront = 346;
+sideback = 347;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 209;
+v2 = 210;
+sidefront = 348;
+sideback = 349;
+id = 0;
+twosided = true;
+}
+
+linedef
+{
+v1 = 210;
+v2 = 42;
+sidefront = 350;
+sideback = 351;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 210;
+v2 = 129;
+sidefront = 352;
+sideback = 353;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 128;
+v2 = 209;
+sidefront = 354;
+sideback = 355;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 204;
+v2 = 211;
+sidefront = 356;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 211;
+v2 = 190;
+sidefront = 357;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 189;
+v2 = 212;
+sidefront = 358;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 212;
+v2 = 203;
+sidefront = 359;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 185;
+v2 = 213;
+sidefront = 360;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 213;
+v2 = 188;
+sidefront = 361;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 187;
+v2 = 214;
+sidefront = 362;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 214;
+v2 = 183;
+sidefront = 363;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 149;
+v2 = 161;
+sidefront = 364;
+sideback = 365;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 146;
+v2 = 215;
+sidefront = 366;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 215;
+v2 = 140;
+sidefront = 367;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 144;
+v2 = 216;
+sidefront = 368;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 216;
+v2 = 147;
+sidefront = 369;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 217;
+v2 = 169;
+sidefront = 370;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 169;
+v2 = 218;
+sidefront = 371;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 218;
+v2 = 168;
+sidefront = 372;
+sideback = 373;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 219;
+v2 = 220;
+sidefront = 374;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 220;
+v2 = 221;
+sidefront = 375;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 221;
+v2 = 222;
+sidefront = 376;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 222;
+v2 = 223;
+sidefront = 377;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 152;
+v2 = 223;
+sidefront = 378;
+sideback = 379;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 222;
+v2 = 153;
+sidefront = 380;
+sideback = 381;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 223;
+v2 = 149;
+sidefront = 382;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 224;
+v2 = 225;
+sidefront = 383;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 226;
+v2 = 227;
+sidefront = 384;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 227;
+v2 = 228;
+sidefront = 385;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 229;
+v2 = 230;
+sidefront = 386;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 231;
+v2 = 232;
+sidefront = 387;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 233;
+v2 = 224;
+sidefront = 388;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 234;
+v2 = 235;
+sidefront = 389;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 235;
+v2 = 236;
+sidefront = 390;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 236;
+v2 = 237;
+sidefront = 391;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 238;
+v2 = 239;
+sidefront = 392;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 239;
+v2 = 240;
+sidefront = 393;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 240;
+v2 = 241;
+sidefront = 394;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 228;
+v2 = 242;
+sidefront = 395;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 242;
+v2 = 229;
+sidefront = 396;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 237;
+v2 = 243;
+sidefront = 397;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 243;
+v2 = 234;
+sidefront = 398;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 232;
+v2 = 244;
+sidefront = 399;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 244;
+v2 = 233;
+sidefront = 400;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 241;
+v2 = 245;
+sidefront = 401;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 245;
+v2 = 238;
+sidefront = 402;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 245;
+v2 = 246;
+sidefront = 403;
+sideback = 404;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 246;
+v2 = 247;
+sidefront = 405;
+sideback = 406;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 247;
+v2 = 242;
+sidefront = 407;
+sideback = 408;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 248;
+v2 = 243;
+sidefront = 409;
+sideback = 410;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 244;
+v2 = 249;
+sidefront = 411;
+sideback = 412;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 249;
+v2 = 248;
+sidefront = 413;
+sideback = 414;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 250;
+v2 = 251;
+sidefront = 415;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 252;
+v2 = 253;
+sidefront = 416;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 251;
+v2 = 254;
+sidefront = 417;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 255;
+v2 = 252;
+sidefront = 418;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 229;
+v2 = 232;
+sidefront = 419;
+sideback = 420;
+special = 36;
+arg0 = 1;
+id = 1;
+twosided = true;
+}
+
+linedef
+{
+v1 = 234;
+v2 = 241;
+sidefront = 421;
+sideback = 422;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 165;
+v2 = 208;
+sidefront = 423;
+sideback = 424;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 253;
+v2 = 226;
+sidefront = 425;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 225;
+v2 = 250;
+sidefront = 426;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 238;
+v2 = 228;
+sidefront = 427;
+sideback = 428;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 233;
+v2 = 237;
+sidefront = 429;
+sideback = 430;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 252;
+v2 = 251;
+sidefront = 431;
+sideback = 432;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 254;
+v2 = 256;
+sidefront = 433;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 257;
+v2 = 255;
+sidefront = 434;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 258;
+v2 = 257;
+sidefront = 435;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 256;
+v2 = 259;
+sidefront = 436;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 259;
+v2 = 260;
+sidefront = 437;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 260;
+v2 = 261;
+sidefront = 438;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 262;
+v2 = 263;
+sidefront = 439;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 263;
+v2 = 258;
+sidefront = 440;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 263;
+v2 = 260;
+sidefront = 441;
+sideback = 442;
+special = 1;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 259;
+v2 = 258;
+sidefront = 443;
+sideback = 444;
+special = 1;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 261;
+v2 = 264;
+sidefront = 445;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 265;
+v2 = 262;
+sidefront = 446;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 264;
+v2 = 266;
+sidefront = 447;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 267;
+v2 = 268;
+sidefront = 448;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 268;
+v2 = 269;
+sidefront = 449;
+special = 11;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 269;
+v2 = 265;
+sidefront = 450;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 266;
+v2 = 267;
+sidefront = 451;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 262;
+v2 = 261;
+sidefront = 452;
+sideback = 453;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 270;
+v2 = 208;
+sidefront = 454;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 165;
+v2 = 271;
+sidefront = 455;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 230;
+v2 = 272;
+sidefront = 456;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 272;
+v2 = 270;
+sidefront = 457;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 271;
+v2 = 273;
+sidefront = 458;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 273;
+v2 = 231;
+sidefront = 459;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 271;
+v2 = 270;
+sidefront = 460;
+sideback = 461;
+special = 1;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 272;
+v2 = 273;
+sidefront = 462;
+sideback = 463;
+special = 1;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 274;
+v2 = 275;
+sidefront = 464;
+sideback = 465;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 276;
+v2 = 277;
+sidefront = 466;
+sideback = 467;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 277;
+v2 = 274;
+sidefront = 468;
+sideback = 469;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 275;
+v2 = 276;
+sidefront = 470;
+sideback = 471;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 256;
+v2 = 257;
+sidefront = 472;
+sideback = 473;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 278;
+v2 = 279;
+sidefront = 474;
+sideback = 475;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 280;
+v2 = 281;
+sidefront = 476;
+sideback = 477;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 281;
+v2 = 278;
+sidefront = 478;
+sideback = 479;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 279;
+v2 = 280;
+sidefront = 480;
+sideback = 481;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 150;
+v2 = 145;
+sidefront = 482;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 282;
+v2 = 283;
+sidefront = 483;
+sideback = 484;
+special = 48;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 283;
+v2 = 284;
+sidefront = 485;
+sideback = 486;
+special = 48;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 284;
+v2 = 285;
+sidefront = 487;
+sideback = 488;
+special = 48;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 285;
+v2 = 286;
+sidefront = 489;
+sideback = 490;
+special = 48;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 286;
+v2 = 287;
+sidefront = 491;
+sideback = 492;
+special = 48;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 287;
+v2 = 288;
+sidefront = 493;
+sideback = 494;
+special = 48;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 288;
+v2 = 289;
+sidefront = 495;
+sideback = 496;
+special = 48;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 289;
+v2 = 282;
+sidefront = 497;
+sideback = 498;
+special = 48;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 290;
+v2 = 291;
+sidefront = 499;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 291;
+v2 = 292;
+sidefront = 500;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 293;
+v2 = 294;
+sidefront = 501;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 295;
+v2 = 296;
+sidefront = 502;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 296;
+v2 = 297;
+sidefront = 503;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 298;
+v2 = 299;
+sidefront = 504;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 300;
+v2 = 301;
+sidefront = 505;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 301;
+v2 = 302;
+sidefront = 506;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 302;
+v2 = 303;
+sidefront = 507;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 303;
+v2 = 295;
+sidefront = 508;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 292;
+v2 = 300;
+sidefront = 509;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 290;
+v2 = 304;
+sidefront = 510;
+sideback = 511;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 304;
+v2 = 305;
+sidefront = 512;
+sideback = 513;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 305;
+v2 = 297;
+sidefront = 514;
+sideback = 515;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 306;
+v2 = 307;
+sidefront = 516;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 307;
+v2 = 308;
+sidefront = 517;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 308;
+v2 = 293;
+sidefront = 518;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 298;
+v2 = 309;
+sidefront = 519;
+sideback = 520;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 310;
+v2 = 311;
+sidefront = 521;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 141;
+v2 = 312;
+sidefront = 522;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 313;
+v2 = 142;
+sidefront = 523;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 312;
+v2 = 310;
+sidefront = 524;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 124;
+v2 = 125;
+sidefront = 525;
+sideback = 526;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 313;
+v2 = 310;
+sidefront = 527;
+sideback = 528;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 314;
+v2 = 315;
+sidefront = 529;
+sideback = 530;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 315;
+v2 = 316;
+sidefront = 531;
+sideback = 532;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 316;
+v2 = 317;
+sidefront = 533;
+sideback = 534;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 317;
+v2 = 314;
+sidefront = 535;
+sideback = 536;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 294;
+v2 = 318;
+sidefront = 537;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 318;
+v2 = 124;
+sidefront = 538;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 125;
+v2 = 319;
+sidefront = 539;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 319;
+v2 = 290;
+sidefront = 540;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 297;
+v2 = 320;
+sidefront = 541;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 320;
+v2 = 313;
+sidefront = 542;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 311;
+v2 = 321;
+sidefront = 543;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 321;
+v2 = 298;
+sidefront = 544;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 322;
+v2 = 323;
+sidefront = 545;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 323;
+v2 = 324;
+sidefront = 546;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 324;
+v2 = 325;
+sidefront = 547;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 325;
+v2 = 326;
+sidefront = 548;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 326;
+v2 = 327;
+sidefront = 549;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 327;
+v2 = 328;
+sidefront = 550;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 328;
+v2 = 329;
+sidefront = 551;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 329;
+v2 = 330;
+sidefront = 552;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 330;
+v2 = 331;
+sidefront = 553;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 331;
+v2 = 332;
+sidefront = 554;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 332;
+v2 = 333;
+sidefront = 555;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 333;
+v2 = 334;
+sidefront = 556;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 334;
+v2 = 335;
+sidefront = 557;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 335;
+v2 = 322;
+sidefront = 558;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 327;
+v2 = 334;
+sidefront = 559;
+sideback = 560;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 328;
+v2 = 333;
+sidefront = 561;
+sideback = 562;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 329;
+v2 = 332;
+sidefront = 563;
+sideback = 564;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 336;
+v2 = 337;
+sidefront = 565;
+sideback = 566;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 337;
+v2 = 338;
+sidefront = 567;
+sideback = 568;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 338;
+v2 = 339;
+sidefront = 569;
+sideback = 570;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 339;
+v2 = 336;
+sidefront = 571;
+sideback = 572;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 340;
+v2 = 341;
+sidefront = 573;
+sideback = 574;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 341;
+v2 = 342;
+sidefront = 575;
+sideback = 576;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 342;
+v2 = 343;
+sidefront = 577;
+sideback = 578;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 343;
+v2 = 340;
+sidefront = 579;
+sideback = 580;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 344;
+v2 = 345;
+sidefront = 581;
+sideback = 582;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 345;
+v2 = 346;
+sidefront = 583;
+sideback = 584;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 346;
+v2 = 347;
+sidefront = 585;
+sideback = 586;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 347;
+v2 = 344;
+sidefront = 587;
+sideback = 588;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 141;
+v2 = 143;
+sidefront = 589;
+sideback = 590;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 348;
+v2 = 349;
+sidefront = 591;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 350;
+v2 = 351;
+sidefront = 592;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 352;
+v2 = 353;
+sidefront = 593;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 349;
+v2 = 352;
+sidefront = 594;
+sideback = 595;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 218;
+v2 = 354;
+sidefront = 596;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 354;
+v2 = 355;
+sidefront = 597;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 353;
+v2 = 356;
+sidefront = 598;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 356;
+v2 = 168;
+sidefront = 599;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 349;
+v2 = 357;
+sidefront = 600;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 357;
+v2 = 350;
+sidefront = 601;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 351;
+v2 = 358;
+sidefront = 602;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 358;
+v2 = 352;
+sidefront = 603;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 190;
+v2 = 359;
+sidefront = 604;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 359;
+v2 = 360;
+sidefront = 605;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 360;
+v2 = 186;
+sidefront = 606;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 188;
+v2 = 361;
+sidefront = 607;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 361;
+v2 = 362;
+sidefront = 608;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 362;
+v2 = 189;
+sidefront = 609;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 173;
+v2 = 363;
+sidefront = 610;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 363;
+v2 = 176;
+sidefront = 611;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 180;
+v2 = 364;
+sidefront = 612;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 364;
+v2 = 175;
+sidefront = 613;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 355;
+v2 = 365;
+sidefront = 614;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 366;
+v2 = 367;
+sidefront = 615;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 368;
+v2 = 366;
+sidefront = 616;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 369;
+v2 = 370;
+sidefront = 617;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 370;
+v2 = 371;
+sidefront = 618;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 371;
+v2 = 372;
+sidefront = 619;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 372;
+v2 = 373;
+sidefront = 620;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 374;
+v2 = 368;
+sidefront = 621;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 375;
+v2 = 374;
+sidefront = 622;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 376;
+v2 = 375;
+sidefront = 623;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 373;
+v2 = 377;
+sidefront = 624;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 378;
+v2 = 376;
+sidefront = 625;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 377;
+v2 = 379;
+sidefront = 626;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 380;
+v2 = 378;
+sidefront = 627;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 154;
+v2 = 217;
+sidefront = 628;
+sideback = 629;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 365;
+v2 = 348;
+sidefront = 630;
+sideback = 631;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 369;
+v2 = 367;
+sidefront = 632;
+sideback = 633;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 154;
+v2 = 381;
+sidefront = 634;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 381;
+v2 = 380;
+sidefront = 635;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 379;
+v2 = 382;
+sidefront = 636;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 382;
+v2 = 217;
+sidefront = 637;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 365;
+v2 = 383;
+sidefront = 638;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 383;
+v2 = 369;
+sidefront = 639;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 367;
+v2 = 384;
+sidefront = 640;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 384;
+v2 = 348;
+sidefront = 641;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 27;
+v2 = 385;
+sidefront = 642;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 386;
+v2 = 8;
+sidefront = 643;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 385;
+v2 = 386;
+sidefront = 644;
+sideback = 645;
+special = 38;
+arg0 = 5;
+id = 5;
+twosided = true;
+}
+
+linedef
+{
+v1 = 385;
+v2 = 387;
+sidefront = 646;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 388;
+v2 = 386;
+sidefront = 647;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 42;
+v2 = 388;
+sidefront = 648;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 387;
+v2 = 33;
+sidefront = 649;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 388;
+v2 = 387;
+sidefront = 650;
+sideback = 651;
+special = 109;
+arg0 = 4;
+id = 4;
+twosided = true;
+}
+
+linedef
+{
+v1 = 299;
+v2 = 306;
+sidefront = 652;
+sideback = 653;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 40;
+v2 = 389;
+sidefront = 654;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 389;
+v2 = 130;
+sidefront = 655;
+sideback = 656;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 131;
+v2 = 390;
+sidefront = 657;
+sideback = 658;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 390;
+v2 = 219;
+sidefront = 659;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 299;
+v2 = 390;
+sidefront = 660;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 389;
+v2 = 306;
+sidefront = 661;
+id = 0;
+blocking = true;
+}
+
+linedef
+{
+v1 = 306;
+v2 = 309;
+sidefront = 662;
+sideback = 663;
+twosided = true;
+id = 0;
+}
+
+linedef
+{
+v1 = 309;
+v2 = 294;
+sidefront = 664;
+sideback = 665;
+twosided = true;
+id = 0;
+}
+
+sidedef
+{
+sector = 0;
+texturemiddle = "DOOR3";
+}
+
+sidedef
+{
+sector = 0;
+texturemiddle = "LITE3";
+}
+
+sidedef
+{
+sector = 0;
+texturemiddle = "LITE3";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "BROWN1";
+offsety = 48;
+}
+
+sidedef
+{
+sector = 2;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 88;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "BROWN1";
+offsety = 48;
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 3;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 3;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 2;
+texturemiddle = "BROWN1";
+offsety = 80;
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "BROWN1";
+offsety = 48;
+}
+
+sidedef
+{
+sector = 88;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 89;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "BROWN1";
+offsety = 48;
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 89;
+texturemiddle = "BROWN1";
+offsety = 80;
+}
+
+sidedef
+{
+sector = 3;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 3;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 3;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 4;
+}
+
+sidedef
+{
+sector = 3;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 3;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 5;
+}
+
+sidedef
+{
+sector = 6;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 5;
+}
+
+sidedef
+{
+sector = 6;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 4;
+}
+
+sidedef
+{
+sector = 4;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 4;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 5;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 5;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 6;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 6;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 2;
+texturetop = "COMPUTE2";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 1;
+}
+
+sidedef
+{
+sector = 3;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 1;
+}
+
+sidedef
+{
+sector = 3;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 1;
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 6;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 7;
+texturemiddle = "BROWN144";
+}
+
+sidedef
+{
+sector = 7;
+texturemiddle = "BROWN144";
+}
+
+sidedef
+{
+sector = 1;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 0;
+}
+
+sidedef
+{
+sector = 3;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 89;
+}
+
+sidedef
+{
+sector = 3;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 2;
+}
+
+sidedef
+{
+sector = 3;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 88;
+}
+
+sidedef
+{
+sector = 88;
+texturetop = "COMPUTE2";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 1;
+}
+
+sidedef
+{
+sector = 89;
+texturetop = "COMPUTE2";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 1;
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 8;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 1;
+}
+
+sidedef
+{
+sector = 8;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 8;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 8;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 8;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 8;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 8;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARG3";
+offsety = 104;
+}
+
+sidedef
+{
+sector = 8;
+}
+
+sidedef
+{
+sector = 8;
+texturemiddle = "DOORTRAK";
+}
+
+sidedef
+{
+sector = 8;
+texturemiddle = "DOORTRAK";
+}
+
+sidedef
+{
+sector = 9;
+texturemiddle = "STARG3";
+}
+
+sidedef
+{
+sector = 9;
+texturemiddle = "STARG3";
+}
+
+sidedef
+{
+sector = 9;
+texturemiddle = "STARG3";
+}
+
+sidedef
+{
+sector = 9;
+texturemiddle = "STARG3";
+}
+
+sidedef
+{
+sector = 9;
+texturemiddle = "STARG3";
+}
+
+sidedef
+{
+sector = 9;
+texturemiddle = "STARG3";
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "SLADWALL";
+}
+
+sidedef
+{
+sector = 10;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "SLADWALL";
+}
+
+sidedef
+{
+sector = 11;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "SLADWALL";
+}
+
+sidedef
+{
+sector = 12;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "SLADWALL";
+}
+
+sidedef
+{
+sector = 13;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "SLADWALL";
+}
+
+sidedef
+{
+sector = 14;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "SLADWALL";
+}
+
+sidedef
+{
+sector = 15;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 15;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "SLADWALL";
+}
+
+sidedef
+{
+sector = 15;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "SLADWALL";
+}
+
+sidedef
+{
+sector = 14;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "SLADWALL";
+}
+
+sidedef
+{
+sector = 13;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "SLADWALL";
+}
+
+sidedef
+{
+sector = 12;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "SLADWALL";
+}
+
+sidedef
+{
+sector = 11;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARTAN3";
+texturebottom = "SLADWALL";
+}
+
+sidedef
+{
+sector = 10;
+}
+
+sidedef
+{
+sector = 11;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 10;
+}
+
+sidedef
+{
+sector = 12;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 11;
+}
+
+sidedef
+{
+sector = 13;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 12;
+}
+
+sidedef
+{
+sector = 14;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 13;
+}
+
+sidedef
+{
+sector = 15;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 14;
+}
+
+sidedef
+{
+sector = 10;
+texturetop = "STARG3";
+texturebottom = "STARG3";
+}
+
+sidedef
+{
+sector = 16;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARG3";
+texturebottom = "STARG3";
+}
+
+sidedef
+{
+sector = 16;
+}
+
+sidedef
+{
+sector = 9;
+texturemiddle = "STARG3";
+}
+
+sidedef
+{
+sector = 9;
+texturemiddle = "STARG3";
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "STARG3";
+texturebottom = "STARG3";
+}
+
+sidedef
+{
+sector = 16;
+}
+
+sidedef
+{
+sector = 16;
+texturemiddle = "SUPPORT2";
+offsetx = 4;
+}
+
+sidedef
+{
+sector = 16;
+texturemiddle = "STARG3";
+}
+
+sidedef
+{
+sector = 16;
+texturemiddle = "STARG3";
+}
+
+sidedef
+{
+sector = 16;
+texturemiddle = "SUPPORT2";
+offsetx = 4;
+}
+
+sidedef
+{
+sector = 17;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 17;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 18;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 18;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 19;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 19;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 20;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 20;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 21;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 21;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 21;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 21;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 21;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 21;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 21;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 21;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 17;
+texturetop = "STARG3";
+texturebottom = "STARG3";
+}
+
+sidedef
+{
+sector = 16;
+}
+
+sidedef
+{
+sector = 17;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 19;
+}
+
+sidedef
+{
+sector = 21;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 19;
+}
+
+sidedef
+{
+sector = 17;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 18;
+}
+
+sidedef
+{
+sector = 21;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 18;
+}
+
+sidedef
+{
+sector = 17;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 20;
+}
+
+sidedef
+{
+sector = 21;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 20;
+}
+
+sidedef
+{
+sector = 21;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 21;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 22;
+texturemiddle = "BROWN144";
+}
+
+sidedef
+{
+sector = 22;
+texturemiddle = "BROWN144";
+}
+
+sidedef
+{
+sector = 22;
+texturemiddle = "BROWN144";
+}
+
+sidedef
+{
+sector = 22;
+texturemiddle = "BROWN144";
+}
+
+sidedef
+{
+sector = 22;
+texturemiddle = "BROWN144";
+}
+
+sidedef
+{
+sector = 21;
+texturetop = "STARG3";
+texturebottom = "STARG3";
+}
+
+sidedef
+{
+sector = 22;
+}
+
+sidedef
+{
+sector = 21;
+texturetop = "STARG3";
+texturebottom = "STARG3";
+}
+
+sidedef
+{
+sector = 22;
+}
+
+sidedef
+{
+sector = 21;
+texturetop = "STARG3";
+texturebottom = "STARG3";
+}
+
+sidedef
+{
+sector = 22;
+}
+
+sidedef
+{
+sector = 17;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 17;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 17;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 17;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "TEKWALL4";
+texturebottom = "TEKWALL4";
+}
+
+sidedef
+{
+sector = 23;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "TEKWALL4";
+texturebottom = "TEKWALL4";
+}
+
+sidedef
+{
+sector = 23;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "TEKWALL4";
+texturebottom = "SW1COMP";
+offsety = 8;
+}
+
+sidedef
+{
+sector = 23;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "TEKWALL4";
+texturebottom = "TEKWALL4";
+}
+
+sidedef
+{
+sector = 23;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "TEKWALL4";
+texturebottom = "TEKWALL4";
+}
+
+sidedef
+{
+sector = 24;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "TEKWALL4";
+texturebottom = "TEKWALL4";
+}
+
+sidedef
+{
+sector = 24;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "TEKWALL4";
+texturebottom = "TEKWALL4";
+}
+
+sidedef
+{
+sector = 24;
+}
+
+sidedef
+{
+sector = 9;
+texturetop = "TEKWALL4";
+texturebottom = "TEKWALL4";
+}
+
+sidedef
+{
+sector = 24;
+}
+
+sidedef
+{
+sector = 25;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 25;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 25;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 25;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 25;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 1;
+}
+
+sidedef
+{
+sector = 25;
+texturetop = "STARTAN3";
+texturebottom = "STEP6";
+}
+
+sidedef
+{
+sector = 26;
+}
+
+sidedef
+{
+sector = 26;
+texturetop = "BIGDOOR2";
+}
+
+sidedef
+{
+sector = 27;
+}
+
+sidedef
+{
+sector = 28;
+texturetop = "BIGDOOR2";
+}
+
+sidedef
+{
+sector = 27;
+}
+
+sidedef
+{
+sector = 26;
+texturemiddle = "STARTAN3";
+offsety = 56;
+}
+
+sidedef
+{
+sector = 26;
+texturemiddle = "STARTAN3";
+offsety = 56;
+}
+
+sidedef
+{
+sector = 27;
+texturemiddle = "DOORTRAK";
+}
+
+sidedef
+{
+sector = 27;
+texturemiddle = "DOORTRAK";
+}
+
+sidedef
+{
+sector = 28;
+texturemiddle = "STARGR1";
+offsety = 56;
+}
+
+sidedef
+{
+sector = 28;
+texturemiddle = "STARGR1";
+offsety = 56;
+}
+
+sidedef
+{
+sector = 29;
+texturemiddle = "BROWN144";
+}
+
+sidedef
+{
+sector = 29;
+texturemiddle = "BROWN144";
+}
+
+sidedef
+{
+sector = 7;
+texturemiddle = "BROWN144";
+}
+
+sidedef
+{
+sector = 6;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+offsety = 88;
+}
+
+sidedef
+{
+sector = 30;
+}
+
+sidedef
+{
+sector = 31;
+texturebottom = "BROWN144";
+}
+
+sidedef
+{
+sector = 6;
+}
+
+sidedef
+{
+sector = 31;
+texturebottom = "BROWN144";
+}
+
+sidedef
+{
+sector = 6;
+}
+
+sidedef
+{
+sector = 31;
+texturebottom = "BROWN144";
+}
+
+sidedef
+{
+sector = 6;
+}
+
+sidedef
+{
+sector = 31;
+texturebottom = "BROWN144";
+}
+
+sidedef
+{
+sector = 6;
+}
+
+sidedef
+{
+sector = 31;
+texturebottom = "BROWN144";
+}
+
+sidedef
+{
+sector = 6;
+}
+
+sidedef
+{
+sector = 31;
+texturebottom = "BROWN144";
+}
+
+sidedef
+{
+sector = 6;
+}
+
+sidedef
+{
+sector = 31;
+texturebottom = "BROWN144";
+}
+
+sidedef
+{
+sector = 6;
+}
+
+sidedef
+{
+sector = 31;
+texturebottom = "BROWN144";
+}
+
+sidedef
+{
+sector = 6;
+}
+
+sidedef
+{
+sector = 32;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 33;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 32;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 34;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 35;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 34;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 36;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 6;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 37;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 35;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 38;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 35;
+}
+
+sidedef
+{
+sector = 39;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 35;
+}
+
+sidedef
+{
+sector = 39;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 35;
+}
+
+sidedef
+{
+sector = 38;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 35;
+}
+
+sidedef
+{
+sector = 39;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 35;
+}
+
+sidedef
+{
+sector = 38;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 35;
+}
+
+sidedef
+{
+sector = 35;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 40;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 40;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 40;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 34;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 32;
+}
+
+sidedef
+{
+sector = 36;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 39;
+}
+
+sidedef
+{
+sector = 40;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 35;
+}
+
+sidedef
+{
+sector = 35;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 34;
+}
+
+sidedef
+{
+sector = 36;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 40;
+}
+
+sidedef
+{
+sector = 38;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 35;
+}
+
+sidedef
+{
+sector = 38;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 35;
+}
+
+sidedef
+{
+sector = 38;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 38;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 41;
+}
+
+sidedef
+{
+sector = 38;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 41;
+}
+
+sidedef
+{
+sector = 38;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 41;
+}
+
+sidedef
+{
+sector = 42;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 42;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 42;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 42;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 43;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 44;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 43;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 44;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 45;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 46;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 45;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 46;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 47;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 42;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 48;
+}
+
+sidedef
+{
+sector = 43;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 48;
+}
+
+sidedef
+{
+sector = 44;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 43;
+}
+
+sidedef
+{
+sector = 45;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 44;
+}
+
+sidedef
+{
+sector = 46;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 45;
+}
+
+sidedef
+{
+sector = 47;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 46;
+texturetop = "BROWN1";
+}
+
+sidedef
+{
+sector = 49;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 47;
+}
+
+sidedef
+{
+sector = 49;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 50;
+}
+
+sidedef
+{
+sector = 51;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 52;
+}
+
+sidedef
+{
+sector = 53;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 51;
+}
+
+sidedef
+{
+sector = 54;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 53;
+}
+
+sidedef
+{
+sector = 55;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 54;
+}
+
+sidedef
+{
+sector = 56;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 55;
+}
+
+sidedef
+{
+sector = 57;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 56;
+}
+
+sidedef
+{
+sector = 50;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 57;
+texturetop = "BROWN1";
+}
+
+sidedef
+{
+sector = 57;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 57;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 56;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 55;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 54;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 53;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 51;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 51;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 53;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 54;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 55;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 56;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 52;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 52;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 58;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 58;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 40;
+texturetop = "BROWN96";
+texturebottom = "BROWN96";
+offsety = 72;
+}
+
+sidedef
+{
+sector = 58;
+}
+
+sidedef
+{
+sector = 52;
+texturetop = "BROWN96";
+texturebottom = "BROWN96";
+}
+
+sidedef
+{
+sector = 58;
+}
+
+sidedef
+{
+sector = 40;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 6;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 29;
+}
+
+sidedef
+{
+sector = 6;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 42;
+}
+
+sidedef
+{
+sector = 6;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 7;
+}
+
+sidedef
+{
+sector = 7;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 42;
+}
+
+sidedef
+{
+sector = 29;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 42;
+}
+
+sidedef
+{
+sector = 50;
+texturemiddle = "SUPPORT2";
+offsetx = 4;
+}
+
+sidedef
+{
+sector = 50;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 50;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 50;
+texturemiddle = "SUPPORT2";
+offsetx = 4;
+}
+
+sidedef
+{
+sector = 47;
+texturemiddle = "SUPPORT2";
+offsetx = 4;
+}
+
+sidedef
+{
+sector = 47;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 47;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 47;
+texturemiddle = "SUPPORT2";
+offsetx = 4;
+}
+
+sidedef
+{
+sector = 39;
+texturebottom = "NUKE24";
+}
+
+sidedef
+{
+sector = 35;
+}
+
+sidedef
+{
+sector = 34;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 34;
+texturemiddle = "SUPPORT2";
+offsetx = 4;
+}
+
+sidedef
+{
+sector = 34;
+texturemiddle = "SUPPORT2";
+offsetx = 4;
+}
+
+sidedef
+{
+sector = 34;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 38;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 41;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 41;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 59;
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 6;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 6;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 6;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 37;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 39;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 37;
+}
+
+sidedef
+{
+sector = 6;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+}
+
+sidedef
+{
+sector = 37;
+}
+
+sidedef
+{
+sector = 39;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 61;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 61;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 62;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 90;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 91;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 90;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 90;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 91;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 90;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 62;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 90;
+texturemiddle = "BRNBIGL";
+}
+
+sidedef
+{
+sector = 62;
+texturemiddle = "BRNBIGR";
+}
+
+sidedef
+{
+sector = 90;
+texturemiddle = "BRNBIGC";
+}
+
+sidedef
+{
+sector = 62;
+texturemiddle = "BRNBIGC";
+}
+
+sidedef
+{
+sector = 90;
+texturemiddle = "BRNBIGR";
+}
+
+sidedef
+{
+sector = 62;
+texturemiddle = "BRNBIGL";
+}
+
+sidedef
+{
+sector = 90;
+texturemiddle = "BRNBIGR";
+}
+
+sidedef
+{
+sector = 91;
+texturemiddle = "BRNBIGL";
+}
+
+sidedef
+{
+sector = 90;
+texturemiddle = "BRNBIGL";
+}
+
+sidedef
+{
+sector = 91;
+texturemiddle = "BRNBIGR";
+}
+
+sidedef
+{
+sector = 90;
+texturemiddle = "BRNBIGC";
+}
+
+sidedef
+{
+sector = 91;
+texturemiddle = "BRNBIGC";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 63;
+texturemiddle = "LITE3";
+}
+
+sidedef
+{
+sector = 63;
+texturemiddle = "LITE3";
+}
+
+sidedef
+{
+sector = 90;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 61;
+}
+
+sidedef
+{
+sector = 90;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+}
+
+sidedef
+{
+sector = 40;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 64;
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 62;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+}
+
+sidedef
+{
+sector = 91;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+}
+
+sidedef
+{
+sector = 63;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 60;
+}
+
+sidedef
+{
+sector = 63;
+texturemiddle = "STARTAN1";
+}
+
+sidedef
+{
+sector = 63;
+texturemiddle = "STARTAN1";
+}
+
+sidedef
+{
+sector = 65;
+texturemiddle = "EXITDOOR";
+offsetx = 88;
+}
+
+sidedef
+{
+sector = 65;
+texturemiddle = "EXITDOOR";
+offsetx = 64;
+}
+
+sidedef
+{
+sector = 66;
+texturemiddle = "DOORTRAK";
+}
+
+sidedef
+{
+sector = 67;
+texturemiddle = "EXITDOOR";
+offsetx = 88;
+}
+
+sidedef
+{
+sector = 67;
+texturemiddle = "EXITDOOR";
+offsetx = 64;
+}
+
+sidedef
+{
+sector = 66;
+texturemiddle = "DOORTRAK";
+}
+
+sidedef
+{
+sector = 67;
+texturetop = "EXITDOOR";
+}
+
+sidedef
+{
+sector = 66;
+}
+
+sidedef
+{
+sector = 65;
+texturetop = "EXITDOOR";
+}
+
+sidedef
+{
+sector = 66;
+}
+
+sidedef
+{
+sector = 68;
+texturemiddle = "STARTAN1";
+}
+
+sidedef
+{
+sector = 68;
+texturemiddle = "STARTAN1";
+}
+
+sidedef
+{
+sector = 68;
+texturemiddle = "STARTAN1";
+}
+
+sidedef
+{
+sector = 68;
+texturemiddle = "STARTAN1";
+}
+
+sidedef
+{
+sector = 68;
+texturemiddle = "SW1STRTN";
+}
+
+sidedef
+{
+sector = 68;
+texturemiddle = "STARTAN1";
+}
+
+sidedef
+{
+sector = 68;
+texturemiddle = "STARTAN1";
+}
+
+sidedef
+{
+sector = 68;
+texturetop = "STARTAN1";
+offsety = 16;
+}
+
+sidedef
+{
+sector = 67;
+}
+
+sidedef
+{
+sector = 64;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 64;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 61;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 69;
+texturemiddle = "DOORTRAK";
+}
+
+sidedef
+{
+sector = 69;
+texturemiddle = "DOORTRAK";
+}
+
+sidedef
+{
+sector = 61;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 64;
+texturetop = "BIGDOOR4";
+}
+
+sidedef
+{
+sector = 69;
+}
+
+sidedef
+{
+sector = 61;
+texturetop = "BIGDOOR4";
+}
+
+sidedef
+{
+sector = 69;
+}
+
+sidedef
+{
+sector = 63;
+texturetop = "EXITSIGN";
+}
+
+sidedef
+{
+sector = 70;
+}
+
+sidedef
+{
+sector = 63;
+texturetop = "EXITSIGN";
+}
+
+sidedef
+{
+sector = 70;
+}
+
+sidedef
+{
+sector = 63;
+texturetop = "EXITSIGN";
+offsetx = 32;
+}
+
+sidedef
+{
+sector = 70;
+}
+
+sidedef
+{
+sector = 63;
+texturetop = "EXITSIGN";
+offsetx = 32;
+}
+
+sidedef
+{
+sector = 70;
+}
+
+sidedef
+{
+sector = 63;
+texturetop = "STARTAN1";
+}
+
+sidedef
+{
+sector = 65;
+}
+
+sidedef
+{
+sector = 68;
+texturetop = "EXITSIGN";
+}
+
+sidedef
+{
+sector = 71;
+}
+
+sidedef
+{
+sector = 68;
+texturetop = "EXITSIGN";
+}
+
+sidedef
+{
+sector = 71;
+}
+
+sidedef
+{
+sector = 68;
+texturetop = "EXITSIGN";
+offsetx = 32;
+}
+
+sidedef
+{
+sector = 71;
+}
+
+sidedef
+{
+sector = 68;
+texturetop = "EXITSIGN";
+offsetx = 32;
+}
+
+sidedef
+{
+sector = 71;
+}
+
+sidedef
+{
+sector = 34;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 17;
+texturetop = "TEKWALL1";
+texturebottom = "TEKWALL1";
+offsetx = 8;
+}
+
+sidedef
+{
+sector = 72;
+}
+
+sidedef
+{
+sector = 17;
+texturetop = "TEKWALL1";
+texturebottom = "TEKWALL1";
+offsetx = 8;
+}
+
+sidedef
+{
+sector = 72;
+}
+
+sidedef
+{
+sector = 17;
+texturetop = "TEKWALL1";
+texturebottom = "TEKWALL1";
+offsetx = 8;
+}
+
+sidedef
+{
+sector = 72;
+}
+
+sidedef
+{
+sector = 17;
+texturetop = "TEKWALL1";
+texturebottom = "TEKWALL1";
+offsetx = 8;
+}
+
+sidedef
+{
+sector = 72;
+}
+
+sidedef
+{
+sector = 17;
+texturetop = "TEKWALL1";
+texturebottom = "TEKWALL1";
+offsetx = 8;
+}
+
+sidedef
+{
+sector = 72;
+}
+
+sidedef
+{
+sector = 17;
+texturetop = "TEKWALL1";
+texturebottom = "TEKWALL1";
+offsetx = 8;
+}
+
+sidedef
+{
+sector = 72;
+}
+
+sidedef
+{
+sector = 17;
+texturetop = "TEKWALL1";
+texturebottom = "TEKWALL1";
+offsetx = 8;
+}
+
+sidedef
+{
+sector = 72;
+}
+
+sidedef
+{
+sector = 17;
+texturetop = "TEKWALL1";
+texturebottom = "TEKWALL1";
+offsetx = 8;
+}
+
+sidedef
+{
+sector = 72;
+}
+
+sidedef
+{
+sector = 73;
+texturemiddle = "LITE3";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 73;
+texturemiddle = "COMPUTE2";
+}
+
+sidedef
+{
+sector = 74;
+texturemiddle = "LITE3";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 73;
+texturemiddle = "COMPUTE2";
+}
+
+sidedef
+{
+sector = 73;
+texturemiddle = "LITE3";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 75;
+texturemiddle = "LITE3";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 73;
+texturemiddle = "LITE3";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 73;
+texturemiddle = "COMPUTE2";
+}
+
+sidedef
+{
+sector = 73;
+texturemiddle = "LITE3";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 73;
+texturemiddle = "LITE3";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 73;
+texturemiddle = "LITE3";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "COMPTALL";
+texturebottom = "COMPSPAN";
+}
+
+sidedef
+{
+sector = 73;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "COMPTALL";
+texturebottom = "COMPSPAN";
+}
+
+sidedef
+{
+sector = 73;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "COMPTALL";
+texturebottom = "COMPSPAN";
+}
+
+sidedef
+{
+sector = 73;
+}
+
+sidedef
+{
+sector = 74;
+texturemiddle = "LITE3";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 74;
+texturemiddle = "LITE3";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 74;
+texturemiddle = "COMPUTE2";
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "COMPTALL";
+texturebottom = "COMPSPAN";
+}
+
+sidedef
+{
+sector = 75;
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "STARGR1";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 33;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 33;
+texturemiddle = "SUPPORT2";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 33;
+texturemiddle = "SUPPORT2";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "STARGR1";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 28;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "STARGR1";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 33;
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 77;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 78;
+}
+
+sidedef
+{
+sector = 77;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 78;
+}
+
+sidedef
+{
+sector = 77;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 78;
+}
+
+sidedef
+{
+sector = 77;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 78;
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "STARGR1";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "STARGR1";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "STARGR1";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "STARGR1";
+offsety = 32;
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "COMPTILE";
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "COMPTILE";
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "COMPTILE";
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "COMPTILE";
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "SUPPORT2";
+offsetx = 6;
+}
+
+sidedef
+{
+sector = 79;
+texturemiddle = "COMPTILE";
+}
+
+sidedef
+{
+sector = 80;
+texturemiddle = "COMPTILE";
+offsetx = 96;
+}
+
+sidedef
+{
+sector = 81;
+texturemiddle = "COMPTILE";
+}
+
+sidedef
+{
+sector = 81;
+texturemiddle = "COMPTILE";
+}
+
+sidedef
+{
+sector = 81;
+texturemiddle = "COMPTILE";
+}
+
+sidedef
+{
+sector = 80;
+texturemiddle = "COMPTILE";
+}
+
+sidedef
+{
+sector = 79;
+texturemiddle = "COMPTILE";
+offsetx = 96;
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "SUPPORT2";
+offsetx = 6;
+}
+
+sidedef
+{
+sector = 76;
+texturemiddle = "COMPTILE";
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "COMPTILE";
+texturebottom = "STEP1";
+}
+
+sidedef
+{
+sector = 79;
+}
+
+sidedef
+{
+sector = 79;
+texturebottom = "STEP1";
+}
+
+sidedef
+{
+sector = 80;
+}
+
+sidedef
+{
+sector = 80;
+texturebottom = "STEP1";
+}
+
+sidedef
+{
+sector = 81;
+}
+
+sidedef
+{
+sector = 82;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 83;
+}
+
+sidedef
+{
+sector = 82;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 83;
+}
+
+sidedef
+{
+sector = 82;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 83;
+}
+
+sidedef
+{
+sector = 82;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 83;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 82;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 82;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 82;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 82;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 77;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 77;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 77;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "PLANET1";
+texturebottom = "STARGR1";
+}
+
+sidedef
+{
+sector = 77;
+}
+
+sidedef
+{
+sector = 32;
+texturetop = "BROWN1";
+texturebottom = "BROWN1";
+}
+
+sidedef
+{
+sector = 33;
+}
+
+sidedef
+{
+sector = 59;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 84;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 59;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 59;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 84;
+}
+
+sidedef
+{
+sector = 59;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 59;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 59;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 59;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 84;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 84;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 84;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 84;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 49;
+texturemiddle = "SUPPORT2";
+offsety = 16;
+}
+
+sidedef
+{
+sector = 49;
+texturemiddle = "BROWN1";
+offsety = 16;
+}
+
+sidedef
+{
+sector = 49;
+texturemiddle = "SUPPORT2";
+offsety = 16;
+}
+
+sidedef
+{
+sector = 49;
+texturemiddle = "SUPPORT2";
+offsety = 16;
+}
+
+sidedef
+{
+sector = 49;
+texturemiddle = "BROWN1";
+offsety = 16;
+}
+
+sidedef
+{
+sector = 49;
+texturemiddle = "SUPPORT2";
+offsety = 16;
+}
+
+sidedef
+{
+sector = 48;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 48;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 48;
+texturemiddle = "BROWN1";
+}
+
+sidedef
+{
+sector = 48;
+texturemiddle = "SUPPORT2";
+}
+
+sidedef
+{
+sector = 59;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 38;
+texturetop = "BROWNGRN";
+texturemiddle = "BROWNGRN";
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturetop = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 59;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 86;
+texturetop = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 86;
+texturetop = "BROWNGRN";
+texturebottom = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "SUPPORT2";
+offsetx = 4;
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 85;
+texturemiddle = "SUPPORT2";
+offsetx = 4;
+}
+
+sidedef
+{
+sector = 86;
+texturemiddle = "SUPPORT2";
+offsetx = 4;
+}
+
+sidedef
+{
+sector = 86;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 86;
+texturemiddle = "BROWNGRN";
+}
+
+sidedef
+{
+sector = 86;
+texturemiddle = "SUPPORT2";
+offsetx = 4;
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 1;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 1;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+offsety = 72;
+}
+
+sidedef
+{
+sector = 87;
+}
+
+sidedef
+{
+sector = 87;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 87;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 6;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 6;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 6;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+offsety = 88;
+}
+
+sidedef
+{
+sector = 87;
+}
+
+sidedef
+{
+sector = 75;
+texturetop = "COMPUTE3";
+texturebottom = "COMPUTE3";
+offsety = 88;
+}
+
+sidedef
+{
+sector = 30;
+texturetop = "COMPUTE3";
+texturebottom = "COMPUTE3";
+}
+
+sidedef
+{
+sector = 6;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 6;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+offsety = 88;
+}
+
+sidedef
+{
+sector = 30;
+}
+
+sidedef
+{
+sector = 6;
+texturetop = "STARTAN3";
+texturebottom = "STARTAN3";
+offsety = 88;
+}
+
+sidedef
+{
+sector = 30;
+}
+
+sidedef
+{
+sector = 6;
+texturemiddle = "STARTAN3";
+}
+
+sidedef
+{
+sector = 30;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 30;
+texturemiddle = "DOORSTOP";
+}
+
+sidedef
+{
+sector = 75;
+texturetop = "COMPTALL";
+texturebottom = "COMPSPAN";
+}
+
+sidedef
+{
+sector = 74;
+}
+
+sidedef
+{
+sector = 76;
+texturetop = "COMPTALL";
+texturebottom = "COMPSPAN";
+}
+
+sidedef
+{
+sector = 74;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL3_5";
+heightceiling = 72;
+lightlevel = 255;
+special = 1;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL3_5";
+heightceiling = 72;
+lightlevel = 144;
+}
+
+sector
+{
+texturefloor = "FLAT14";
+textureceiling = "CEIL3_5";
+heightfloor = -8;
+heightceiling = 120;
+lightlevel = 192;
+}
+
+sector
+{
+texturefloor = "FLAT14";
+textureceiling = "CEIL3_5";
+heightfloor = -16;
+heightceiling = 200;
+lightlevel = 224;
+}
+
+sector
+{
+texturefloor = "FLAT5_5";
+textureceiling = "FLAT5_5";
+heightfloor = 8;
+heightceiling = 192;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLAT5_5";
+textureceiling = "FLAT5_5";
+heightfloor = 8;
+heightceiling = 192;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR7_1";
+textureceiling = "F_SKY1";
+heightfloor = -56;
+heightceiling = 216;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR7_1";
+textureceiling = "F_SKY1";
+heightfloor = -56;
+heightceiling = 24;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL3_5";
+heightfloor = -8;
+heightceiling = 120;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLOOR7_2";
+heightfloor = -8;
+heightceiling = 224;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLOOR7_2";
+heightfloor = 88;
+heightceiling = 224;
+lightlevel = 144;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLOOR7_2";
+heightfloor = 72;
+heightceiling = 224;
+lightlevel = 144;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLOOR7_2";
+heightfloor = 56;
+heightceiling = 224;
+lightlevel = 144;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLOOR7_2";
+heightfloor = 40;
+heightceiling = 224;
+lightlevel = 144;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLOOR7_2";
+heightfloor = 24;
+heightceiling = 224;
+lightlevel = 144;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLOOR7_2";
+heightfloor = 8;
+heightceiling = 224;
+lightlevel = 144;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLOOR7_2";
+heightfloor = 104;
+heightceiling = 192;
+lightlevel = 176;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLOOR7_2";
+heightfloor = 104;
+heightceiling = 264;
+lightlevel = 192;
+}
+
+sector
+{
+texturefloor = "FLAT20";
+textureceiling = "FLAT20";
+heightfloor = 136;
+heightceiling = 240;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLAT20";
+textureceiling = "FLAT20";
+heightfloor = 136;
+heightceiling = 240;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLAT20";
+textureceiling = "FLAT20";
+heightfloor = 136;
+heightceiling = 240;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR7_1";
+textureceiling = "F_SKY1";
+heightceiling = 264;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR7_1";
+textureceiling = "F_SKY1";
+heightceiling = 128;
+lightlevel = 224;
+}
+
+sector
+{
+texturefloor = "STEP2";
+textureceiling = "TLITE6_1";
+heightfloor = 40;
+heightceiling = 184;
+lightlevel = 255;
+special = 8;
+}
+
+sector
+{
+texturefloor = "STEP2";
+textureceiling = "TLITE6_1";
+heightfloor = 40;
+heightceiling = 184;
+lightlevel = 255;
+special = 8;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL3_5";
+heightceiling = 144;
+lightlevel = 144;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "TLITE6_4";
+heightceiling = 88;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLAT20";
+lightlevel = 208;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL3_5";
+heightceiling = 72;
+}
+
+sector
+{
+texturefloor = "FLOOR7_1";
+textureceiling = "F_SKY1";
+heightfloor = -56;
+heightceiling = 24;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL5_1";
+lightlevel = 255;
+id = 4;
+}
+
+sector
+{
+texturefloor = "NUKAGE3";
+textureceiling = "F_SKY1";
+heightfloor = -80;
+heightceiling = 216;
+lightlevel = 255;
+special = 7;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL3_5";
+heightfloor = -16;
+heightceiling = 72;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL3_5";
+heightfloor = -8;
+heightceiling = 72;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "CEIL3_5";
+heightfloor = -24;
+heightceiling = 176;
+lightlevel = 144;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "CEIL3_5";
+heightfloor = -24;
+heightceiling = 176;
+lightlevel = 192;
+}
+
+sector
+{
+texturefloor = "NUKAGE3";
+textureceiling = "CEIL3_5";
+heightfloor = -48;
+heightceiling = 176;
+lightlevel = 144;
+special = 7;
+}
+
+sector
+{
+texturefloor = "FLAT20";
+textureceiling = "FLAT20";
+heightceiling = 136;
+lightlevel = 192;
+}
+
+sector
+{
+texturefloor = "NUKAGE3";
+textureceiling = "CEIL3_5";
+heightfloor = -48;
+heightceiling = 176;
+lightlevel = 192;
+special = 7;
+}
+
+sector
+{
+texturefloor = "NUKAGE3";
+textureceiling = "CEIL3_5";
+heightfloor = -48;
+heightceiling = 176;
+lightlevel = 192;
+special = 7;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "CEIL3_5";
+heightfloor = -24;
+heightceiling = 176;
+lightlevel = 144;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL3_5";
+heightfloor = 96;
+heightceiling = 176;
+id = 1;
+}
+
+sector
+{
+texturefloor = "FLOOR7_1";
+textureceiling = "F_SKY1";
+heightfloor = -56;
+heightceiling = 64;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "CEIL5_2";
+heightfloor = -72;
+heightceiling = 16;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "CEIL5_2";
+heightfloor = -88;
+heightceiling = 16;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "CEIL5_2";
+heightfloor = -104;
+heightceiling = 16;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "CEIL5_2";
+heightfloor = -120;
+heightceiling = 16;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "CEIL5_2";
+heightfloor = -136;
+heightceiling = -40;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR7_1";
+textureceiling = "CEIL5_2";
+heightfloor = -56;
+heightceiling = 16;
+lightlevel = 176;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "TLITE6_6";
+heightfloor = -136;
+heightceiling = -24;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "CEIL5_2";
+heightfloor = -136;
+heightceiling = -40;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "CEIL5_2";
+heightfloor = -40;
+heightceiling = 48;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "CEIL5_2";
+heightfloor = -24;
+heightceiling = 48;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "CEIL5_2";
+heightfloor = -56;
+heightceiling = 48;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "CEIL5_2";
+heightfloor = -72;
+heightceiling = 48;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "CEIL5_2";
+heightfloor = -88;
+heightceiling = 48;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "CEIL5_2";
+heightfloor = -104;
+heightceiling = 48;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_1";
+textureceiling = "CEIL5_2";
+heightfloor = -120;
+heightceiling = 48;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "FLAT5_5";
+heightfloor = -24;
+heightceiling = -24;
+lightlevel = 144;
+special = 9;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLOOR6_2";
+heightfloor = -48;
+heightceiling = 104;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "CEIL3_5";
+heightfloor = -24;
+heightceiling = 48;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "CEIL3_5";
+heightfloor = -24;
+heightceiling = 48;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "TLITE6_5";
+heightfloor = -24;
+heightceiling = 104;
+lightlevel = 255;
+special = 12;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "CEIL3_5";
+heightfloor = -24;
+heightceiling = 72;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "CEIL3_5";
+heightfloor = -24;
+heightceiling = 48;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "CEIL3_5";
+heightfloor = -24;
+heightceiling = 48;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "FLAT20";
+heightfloor = -24;
+heightceiling = -24;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "CEIL3_5";
+heightfloor = -24;
+heightceiling = 48;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "TLITE6_5";
+heightfloor = -24;
+heightceiling = 88;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "FLAT20";
+heightfloor = -24;
+heightceiling = -24;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "FLAT23";
+heightfloor = -24;
+heightceiling = 56;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "FLAT23";
+heightfloor = -24;
+heightceiling = 72;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR1_1";
+textureceiling = "FLOOR7_2";
+heightfloor = 128;
+heightceiling = 264;
+lightlevel = 192;
+}
+
+sector
+{
+texturefloor = "FLAT18";
+textureceiling = "CEIL5_1";
+heightfloor = 32;
+heightceiling = 88;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLAT18";
+textureceiling = "CEIL5_1";
+heightfloor = 32;
+heightceiling = 88;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL5_1";
+heightfloor = 32;
+heightceiling = 88;
+lightlevel = 255;
+id = 5;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL3_5";
+heightceiling = 224;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL3_5";
+heightceiling = 224;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "TLITE6_5";
+heightceiling = 96;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLAT14";
+textureceiling = "TLITE6_5";
+heightfloor = 8;
+heightceiling = 152;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLAT14";
+textureceiling = "TLITE6_5";
+heightfloor = 16;
+heightceiling = 152;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLAT14";
+textureceiling = "TLITE6_5";
+heightfloor = 24;
+heightceiling = 152;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "CEIL3_5";
+heightceiling = 224;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "TLITE6_5";
+heightceiling = 96;
+lightlevel = 255;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "TLITE6_6";
+heightfloor = -48;
+heightceiling = 32;
+lightlevel = 255;
+special = 9;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLOOR6_2";
+heightfloor = 104;
+heightceiling = 184;
+lightlevel = 128;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLOOR6_2";
+heightfloor = 104;
+heightceiling = 184;
+lightlevel = 128;
+special = 9;
+id = 2;
+}
+
+sector
+{
+texturefloor = "FLOOR4_8";
+textureceiling = "FLAT20";
+lightlevel = 144;
+id = 3;
+}
+
+sector
+{
+texturefloor = "FLAT14";
+textureceiling = "CEIL3_5";
+heightfloor = -8;
+heightceiling = 120;
+lightlevel = 192;
+}
+
+sector
+{
+texturefloor = "FLAT14";
+textureceiling = "CEIL3_5";
+heightfloor = -8;
+heightceiling = 120;
+lightlevel = 192;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "TLITE6_5";
+heightfloor = -24;
+heightceiling = 104;
+lightlevel = 255;
+special = 12;
+}
+
+sector
+{
+texturefloor = "FLOOR5_2";
+textureceiling = "TLITE6_5";
+heightfloor = -24;
+heightceiling = 104;
+lightlevel = 255;
+special = 12;
+}
+

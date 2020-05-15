@@ -5,12 +5,19 @@ __lua__
 -- globals
 _bsp,_verts=nil
 _cam=nil
+local plyr={0,0,height=0,angle=0,av=0,v=0}
+
 function _init()
   _bsp,_verts=unpack_map()
+  -- start pos
+  local s=find_sector(_bsp,plyr)
+  assert(s,"invalid start position")
+  plyr.sector=s
+  plyr.height=s.floor
+
   _cam=make_camera()
 end
 
-local plyr={0,0,height=0,angle=0,av=0,v=0}
 function make_camera()
   return {
     m={
@@ -80,9 +87,12 @@ function find_sector(root,pos)
       return find_sector(root.front,pos)
     end
     -- leaf?
-    return root,root.sidefront.sector
+    return root.sidefront.sector
   elseif root.back then
     return find_sector(root.back,pos)
+  -- dual face
+  elseif root.dual then
+    return root.sideback.sector
   end
 end
 
@@ -248,12 +258,11 @@ function _update()
   plyr.v*=0.8
   plyr.av*=0.8
 
-  local r,s=find_sector(_bsp,plyr)
+  local s=find_sector(_bsp,plyr)
   if s then
-    plyr.root=r
-    plyr.height=s.floor+32
+    plyr.height=s.floor
   end
-  _cam:track(plyr,plyr.angle,plyr.height)
+  _cam:track(plyr,plyr.angle,plyr.height+32)
 end
 
 function _draw()
@@ -279,6 +288,10 @@ function _draw()
   end
   ]]
   print(stat(1),2,2,7)
+  local s=find_sector(_bsp,plyr)
+  if s then
+    print("sector: "..s.id,2,8,7)
+  end
 end
 
 -->8
