@@ -68,43 +68,66 @@ function v_lerp(a,b,t)
 end
 
 function project(v)
-  return 64+v[1]/32,64-v[2]/32
+  return 64+v[1]/4+plyr[1],64-v[2]/4+plyr[2]
 end
 
-function draw_segs(segs)
-  local v0=segs[#segs].v0
-  local x0,y0=project(v0)
-  for i=1,#segs do
-    local x1,y1=project(segs[i].v0)
-    line(x0,y0,x1,y1,7)
-    x0,y0=x1,y1
+function polyfill(v,c)
+  color(c)
+  local v0,nodes=v[#v],{}
+  local x0,y0=v0[1],v0[2]
+  for i=1,#v do
+    local v1=v[i]
+    local x1,y1=v1[1],v1[2]
+    local _x1,_y1=x1,y1
+    if(y0>y1) x0,y0,x1,y1=x1,y1,x0,y0
+    local cy0,cy1,dx=y0\1+1,y1\1,(x1-x0)/(y1-y0)
+    if(y0<0) x0-=y0*dx y0=0
+     x0+=(-y0+cy0)*dx
+    for y=cy0,min(cy1,127) do
+      local x=nodes[y]
+      if x then
+        rectfill(x,y,x0,y)
+      else
+       nodes[y]=x0
+      end
+      x0+=dx					
+    end			
+    --break
+    x0,y0=_x1,_y1
   end
 end
+function draw_segs(segs)
+  polyfill(segs,segs.sector.id%15+1)
+end
 
-function draw_bsp(root)
-  for _,node in pairs(root) do
-    if node.flags&0x1>0 then
-      draw_segs(node.front)
-    end
-    if node.flags&0x2>0 then
-      draw_segs(node.back)
-    end
+function draw_bsp(node)
+  if(not node) return
+  if node.flags&0x1>0 then
+    draw_segs(node.front)
+  else
+    draw_bsp(node.front)
+  end
+  if node.flags&0x2>0 then
+    draw_segs(node.back)
+  else
+    draw_bsp(node.back)
   end
 end
 
 function find_sector(root,pos)
   -- go down (if possible)
   if v_dot(root.n,pos)>root.d then
-    if root.front then
+    if root.front and root.flags&0x1==0 then
       return find_sector(root.front,pos)
     end
     -- leaf?
-    return root.sidefront.sector
-  elseif root.back then
-    return find_sector(root.back,pos)
-  -- dual face
-  elseif root.dual then
-    return root.sideback.sector
+    return root.front.sector
+  else
+    if root.back and root.flags&0x2==0 then
+      return find_sector(root.back,pos)
+    end
+    -- leaf?
+    return root.back.sector
   end
 end
 
@@ -125,133 +148,81 @@ _c=0
 _yfloor,_yceil=nil
 _znear=16
 
-function cull_bsp(v_cache,root,pos)
-  if(not root) return
-  
-  local is_front=v_dot(root.n,pos)>root.d
-  local far,near
-  if is_front then
-    far,near=root.back,root.front
-  else 
-    far,near=root.front,root.back
-  end
-
-  cull_bsp(v_cache,near,pos)
-
-  --[[
-  if root.dual then
-    if is_front then
-      top=frontsector.floor/16
-    else
-      bottom=root.sideback.sector.ceil/16
-    end
-  end
-  ]]
-  if is_front or root.dual then
-    local frontsector=root.sidefront.sector
-    local top=frontsector.ceil
-    local bottom=frontsector.floor
-  
-    -- clip
-    local v0,v1=v_cache[root.v0],v_cache[root.v1]
-    local z0,z1=v0[3],v1[3]
-    if(z0>z1) v0,z0,v1,z1=v1,z1,v0,z0
+function project_segs(v_cache,segs)
+  local top=segs.sector.ceil
+  local bottom=segs.sector.floor
+  -- clip
+  local s0=segs[#segs]
+  local v0=v_cache[s0.v0]
+  local z0=v0[3]
+  for i=1,#segs do
+    local s1=segs[i]
+    local v1=v_cache[s1.v0]
+    local z1=v1[3]
+    local _s1,_v1,_z1=s1,v1,z1
+    if(z0>z1) s0,v0,z0,s1,v1,z1=s1,v1,z1,s0,v0,z0
     -- further tip behond camera plane
     if z1>_znear then
       if z0<_znear then
         -- clip?
         v0=v_lerp(v0,v1,(z0-_znear)/(z0-z1))
       end
-    
-      -- span rasterization
       local x0,y0,w0=cam_to_screen(v0)
       local x1,y1,w1=cam_to_screen(v1)
-      if(x0>x1) x0,y0,w0,x1,y1,w1=x1,y1,w1,x0,y0,w0
-      local dx=x1-x0
-      local dy,dw=(y1-y0)/dx,(w1-w0)/dx
-      if(x0<0) y0-=x0*dy w0-=x0*dw x0=0
-      local cx=ceil(x0)
-      y0+=(cx-x0)*dy
-      w0+=(cx-x0)*dw
+      local t0,t1=y0-top*w0,y1-top*w1
+      local b0,b1=y0-bottom*w0,y1-bottom*w1
 
-      if root.dual then
-        frontsector=is_front and root.sidefront.sector or root.sideback.sector
-        top=frontsector.ceil
-        bottom=frontsector.floor
-    
-        local othersector=is_front and root.sideback.sector or root.sidefront.sector
-        local othert,otherb=othersector.ceil,othersector.floor
+      -- floor/ceil
+      line(x0,t0,x1,t1,1)
+      line(x0,b0,x1,b1,5)
 
-        local id=frontsector.id%16
-        local wall_c=sget(0,id)
-        local ceil_c,floor_c=sget(1,id),sget(2,id)
-
-        for x=cx,min(ceil(x1)-1,127) do
-          local maxt,minb=_yceil[x],_yfloor[x]
-          local t,b=max(y0-top*w0,maxt),min(y0-bottom*w0,minb)
-          local ot,ob=max(y0-othert*w0,maxt),min(y0-otherb*w0,minb)
-          
-          if t>maxt then
-            -- ceiling
-            rectfill(x,maxt,x,t,ceil_c)
-          end
-          -- floor
-          if b<minb then
-            rectfill(x,minb,x,b,floor_c)
-          end
-
-          -- wall
-          -- top wall side between current sector and back sector
-          if t<ot then
-            rectfill(x,t,x,ot,wall_c)
-            -- new window top
-            t=ot
-          end
-          -- bottom wall side between current sector and back sector     
-          if b>ob then
-            rectfill(x,ob,x,b,wall_c)
-            -- new window bottom
-            b=ob
-          end
-          
-          _yceil[x],_yfloor[x]=t,b
-          y0+=dy
-          w0+=dw
-        end
-      else
-        local id=frontsector.id%16
-        local wall_c=sget(0,id)
-        local ceil_c,floor_c=sget(1,id),sget(2,id)
-
-        for x=cx,min(ceil(x1)-1,127) do
-          local maxt,minb=_yceil[x],_yfloor[x]
-          local t,b=max(y0-top*w0,maxt),min(y0-bottom*w0,minb)
-          if t>maxt then
-            -- ceiling
-            rectfill(x,maxt,x,t,ceil_c)
-          end
-          -- floor
-          if b<minb then
-            rectfill(x,minb,x,b,floor_c)
-          end
-
-          -- wall
-          if t<=b then
-            rectfill(x,t,x,b,wall_c)
-          end
-
-          -- kill this row
-          _yceil[x],_yfloor[x]=128,-1
-          y0+=dy
-          w0+=dw
-        end
+      -- dual?
+      local ldef=s0.line
+      if ldef then
+        if ldef.sidefront and ldef.sideback then
+          local top,bottom=ldef.sideback.sector.ceil,ldef.sideback.sector.floor
+          local ot0,ot1=y0-top*w0,y1-top*w1
+          local ob0,ob1=y0-bottom*w0,y1-bottom*w1
+          if(ot0>t0) line(x0,ot0,x1,ot1,8) rectfill(x0,t0,x0,ot0) rectfill(x1,t1,x1,ot1)
+          if(ob0<b0) line(x0,ob0,x1,ob1,2) rectfill(x0,b0,x0,ob0) rectfill(x1,b1,x1,ob1)
+        else
+          rectfill(x0,t0,x0,b0,11)
+          rectfill(x1,t1,x1,b1,11)
+        end 
       end
-    
+
+      -- walls
+      -- 
+      --rectfill(x1,t1,x0,t1,7)
+      --polyfill({{x0,t0},{x1,t1},{x1,b1},{x0,b0}},segs.sector.id%15+1)
     end
+    s0,v0,z0=_s1,_v1,_z1
   end
-  --print(_c,(x0+x1)/2,(y0+y1)/2,6)
-  _c+=1
-  cull_bsp(v_cache,far,pos)    
+end
+
+function cull_bsp(v_cache,root,pos)
+
+  local is_front=v_dot(root.n,pos)>root.d
+  local far,near,far_mask,near_mask
+  if not is_front then
+    far,far_mask,near,near_mask=root.back,0x02,root.front,0x1
+  else 
+    far,far_mask,near,near_mask=root.front,0x1,root.back,0x2
+  end
+
+  -- far polygons?
+  if root.flags&far_mask!=0 then
+    project_segs(v_cache,far)
+  elseif far then
+    cull_bsp(v_cache,far,pos)
+  end
+
+  -- near polygons?
+  if root.flags&near_mask!=0 then
+    project_segs(v_cache,near)
+  elseif near then
+    cull_bsp(v_cache,near,pos)
+  end   
 end
 
 function _update()
@@ -270,13 +241,11 @@ function _update()
   plyr.v*=0.8
   plyr.av*=0.8
 
-  --[[
   local s=find_sector(_bsp,plyr)
   if s then
     plyr.height=s.floor
   end
   _cam:track(plyr,plyr.angle,plyr.height+32)
-  ]]
 end
 
 function _draw()
@@ -285,8 +254,8 @@ function _draw()
   _c=0
   _yceil,_yfloor=setmetatable({},top_cls),setmetatable({},bottom_cls)
   local v_cache=setmetatable({m=_cam.m},v_cache_cls)
-  --cull_bsp(v_cache,_bsp,plyr)
-  draw_bsp(_bsp)
+  cull_bsp(v_cache,_bsp,plyr)
+  --draw_bsp(_bsp[#_bsp])
 
   --[[
   local x0,y0=project(plyr)
@@ -302,12 +271,10 @@ function _draw()
   end
   ]]
   print(stat(1),2,2,7)
-  --[[
   local s=find_sector(_bsp,plyr)
   if s then
     print("sector: "..s.id,2,8,7)
   end
-  ]]
 end
 
 -->8
@@ -377,23 +344,17 @@ function unpack_map()
 
   local verts={}
   unpack_array(function()
-    local v={unpack_fixed(),unpack_fixed()}
-    printh("v: "..v[1]..","..v[2])
-    add(verts,v)
+    add(verts,{unpack_fixed(),unpack_fixed()})
   end)
-  printh("verts:"..#verts)
 
   local lines={}
   unpack_array(function()
-    local s,b=unpack_variant(),unpack_variant()
-    printh(s.." / "..b)
     local line={
-      sidefront=sides[s],
-      sideback=sides[b],
+      sidefront=sides[unpack_variant()],
+      sideback=sides[unpack_variant()],
       flags=mpeek()}
     add(lines,line)
   end)
-  printh("lines:"..#lines)
 
   local nodes={}
   local function unpack_segs(segs)
@@ -403,20 +364,23 @@ function unpack_map()
         side=mpeek(),
         line=lines[unpack_variant()]    
       })
+      -- direct link to sector (if not already set)
+      if s.line and not segs.sector then
+        segs.sector=s.line.sidefront.sector
+      end
       assert(s.v0,"invalid seg")
+      assert(segs.sector,"missing sector")
     end
   end
   unpack_array(function()
     local node={
       n={unpack_fixed(),unpack_fixed()},
       d=unpack_fixed()}
-    printh("node:"..node.n[1].."/"..node.n[2])
     local flags=mpeek()
     local child=nil
     if flags&0x1>0 then
       child={}
       unpack_array(unpack_segs(child))
-      printh("front segs: "..#child)
     else
       child=nodes[unpack_variant()]
     end
@@ -426,7 +390,6 @@ function unpack_map()
     if flags&0x2>0 then
       child={}
       unpack_array(unpack_segs(child))
-      printh("back segs: "..#child)
     else
       child=nodes[unpack_variant()]
     end
@@ -434,11 +397,10 @@ function unpack_map()
     node.flags=flags
     add(nodes,node)
   end)
-  printh("nodes: "..#nodes)
 
   -- restore main cart
   reload()
-  return nodes,verts
+  return nodes[#nodes],verts
 end
 
 __gfx__
