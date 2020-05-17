@@ -4,12 +4,8 @@ from udmfLexer import udmfLexer
 from udmfParser import udmfParser
 from udmfVisitor import udmfVisitor
 from udmfListener import udmfListener
-from bsp_compiler import BSP_Compiler 
-
-# helper dict
-class dotdict(dict):
-    def __getattr__(self, name):
-        return self[name]
+from collections import namedtuple
+from dotdict import dotdict
 
 class VertexWalker(udmfListener):
     def __init__(self):
@@ -84,9 +80,9 @@ class SectorWalker(udmfListener):
             sector[attribute] = value
           self.result.append(sector)
 
-def main(argv):
-    input_stream = FileStream("e1m2.udmf")
-    lexer = udmfLexer(input_stream)
+class UDMF():
+  def __init__(self, data):
+    lexer = udmfLexer(InputStream(data))
     stream = CommonTokenStream(lexer)
     parser = udmfParser(stream)
     tree = parser.udmf()
@@ -98,16 +94,9 @@ def main(argv):
       'sides':SideWalker(),
       'sectors':SectorWalker()
     })
-    print("map stats before compiling:")
     for k,w in walkers.items(): 
       walker.walk(w, tree)
-      print("{}: #{}".format(k,len(walkers[k].result)))
-
-    BSP_Compiler(
-      walkers.vertices.result, 
-      walkers.lines.result, 
-      walkers.sides.result, 
-      walkers.sectors.result)
-
-if __name__ == '__main__':
-    main(sys.argv)
+    self.vertices = walkers.vertices.result
+    self.lines = walkers.lines.result
+    self.sides = walkers.sides.result
+    self.sectors = walkers.sectors.result
