@@ -10,11 +10,12 @@ local plyr={0,0,height=0,angle=0,av=0,v=0}
 function _init()
   _bsp,_verts=unpack_map()
   -- start pos
+  --[[
   local s=find_sector(_bsp,plyr)
   assert(s,"invalid start position")
   plyr.sector=s
   plyr.height=s.floor
-
+  ]]
   _cam=make_camera()
 end
 
@@ -67,17 +68,28 @@ function v_lerp(a,b,t)
 end
 
 function project(v)
-  return 64+v[1]/16,64-v[2]/16
+  return 64+v[1]/32,64-v[2]/32
+end
+
+function draw_segs(segs)
+  local v0=segs[#segs].v0
+  local x0,y0=project(v0)
+  for i=1,#segs do
+    local x1,y1=project(segs[i].v0)
+    line(x0,y0,x1,y1,7)
+    x0,y0=x1,y1
+  end
 end
 
 function draw_bsp(root)
-  if(not root) return
-  local x0,y0=project(root.v0)
-  local x1,y1=project(root.v1)
-  line(x0,y0,x1,y1,_c%15+1)
-  _c+=1
-  draw_bsp(root.front)
-  draw_bsp(root.back)
+  for _,node in pairs(root) do
+    if node.flags&0x1>0 then
+      draw_segs(node.front)
+    end
+    if node.flags&0x2>0 then
+      draw_segs(node.back)
+    end
+  end
 end
 
 function find_sector(root,pos)
@@ -258,21 +270,23 @@ function _update()
   plyr.v*=0.8
   plyr.av*=0.8
 
+  --[[
   local s=find_sector(_bsp,plyr)
   if s then
     plyr.height=s.floor
   end
   _cam:track(plyr,plyr.angle,plyr.height+32)
+  ]]
 end
 
 function _draw()
-  --cls()
+  cls()
   -- draw_bsp(bsp)
   _c=0
   _yceil,_yfloor=setmetatable({},top_cls),setmetatable({},bottom_cls)
   local v_cache=setmetatable({m=_cam.m},v_cache_cls)
-  cull_bsp(v_cache,_bsp,plyr)
-  -- draw_bsp(_bsp)
+  --cull_bsp(v_cache,_bsp,plyr)
+  draw_bsp(_bsp)
 
   --[[
   local x0,y0=project(plyr)
@@ -288,10 +302,12 @@ function _draw()
   end
   ]]
   print(stat(1),2,2,7)
+  --[[
   local s=find_sector(_bsp,plyr)
   if s then
     print("sector: "..s.id,2,8,7)
   end
+  ]]
 end
 
 -->8
@@ -344,29 +360,6 @@ function unpack_array(fn)
 	end
 end
 
-function unpack_bsp(sides,verts)
-  local node={
-    v0=verts[unpack_variant()],
-    v1=verts[unpack_variant()],
-    n={unpack_fixed(),unpack_fixed()},
-    d=unpack_fixed(),
-    sidefront=sides[unpack_variant()],
-    sideback=sides[unpack_variant()]
-  }
-
-  local flags=mpeek()
-  if flags&0x1>0 then
-    node.dual=true
-  end
-  if flags&0x2>0 then
-    node.front=unpack_bsp(sides,verts)
-  end
-  if flags&0x4>0 then
-    node.back=unpack_bsp(sides,verts)
-  end
-  return node
-end
-
 function unpack_map()
   -- jump to data cart
   cart_id,mem=0,0
@@ -384,13 +377,68 @@ function unpack_map()
 
   local verts={}
   unpack_array(function()
-    add(verts,{unpack_fixed(),unpack_fixed()})
+    local v={unpack_fixed(),unpack_fixed()}
+    printh("v: "..v[1]..","..v[2])
+    add(verts,v)
   end)
+  printh("verts:"..#verts)
 
-  local bsp=unpack_bsp(sides,verts)
+  local lines={}
+  unpack_array(function()
+    local s,b=unpack_variant(),unpack_variant()
+    printh(s.." / "..b)
+    local line={
+      sidefront=sides[s],
+      sideback=sides[b],
+      flags=mpeek()}
+    add(lines,line)
+  end)
+  printh("lines:"..#lines)
+
+  local nodes={}
+  local function unpack_segs(segs)
+    return function()
+      local s=add(segs,{
+        v0=verts[unpack_variant()],
+        side=mpeek(),
+        line=lines[unpack_variant()]    
+      })
+      assert(s.v0,"invalid seg")
+    end
+  end
+  unpack_array(function()
+    local node={
+      n={unpack_fixed(),unpack_fixed()},
+      d=unpack_fixed()}
+    printh("node:"..node.n[1].."/"..node.n[2])
+    local flags=mpeek()
+    local child=nil
+    if flags&0x1>0 then
+      child={}
+      unpack_array(unpack_segs(child))
+      printh("front segs: "..#child)
+    else
+      child=nodes[unpack_variant()]
+    end
+    node.front=child
+    -- back
+    child={}
+    if flags&0x2>0 then
+      child={}
+      unpack_array(unpack_segs(child))
+      printh("back segs: "..#child)
+    else
+      child=nodes[unpack_variant()]
+    end
+    node.back=child
+    node.flags=flags
+    add(nodes,node)
+  end)
+  printh("nodes: "..#nodes)
+
   -- restore main cart
   reload()
-  return bsp,verts
+  return nodes,verts
 end
 
 __gfx__

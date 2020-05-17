@@ -6,6 +6,11 @@ import math
 from collections import namedtuple
 from udmf_reader import UDMF
 from dotdict import dotdict
+from python2pico import pack_int
+from python2pico import pack_variant
+from python2pico import pack_fixed
+from python2pico import to_multicart
+from python2pico import pack_int32
 
 # helper funcs
 def dot(v0,v1):
@@ -43,15 +48,21 @@ VERTEXHeader = namedtuple('VERTEXHeader',
     )
 fmt_VERTEXHeader = '<2i'
 
-SUBSECTORHeader = namedtuple('SUBSECTORHeader', 
+SEGHeader = namedtuple('SEGHeader', 
     ("v1,partner,lineword,side")
     )
-fmt_SUBSECTORHeader = '<2iHc'
+fmt_SEGHeader = '<2iHc'
 
 ZNODEHeader = namedtuple('ZNODEHeader', 
     ("x,y,dx,dy,top0,bottom0,left0,right0,top1,bottom1,left1,right1,child0,child1")
     )
 fmt_ZNODEHeader = '<4h4h4h2i'
+
+# helper structures
+SEG = namedtuple('SEG',['v1','line','side'])
+AABB = namedtuple('AABB',['top','bottom','left','right'])
+ZNODE = namedtuple('ZNODE',['n','d','flags','child','aabb'])
+ZMAP = namedtuple('ZMAP',['vertices','other_vertices','lines','sides','sectors','nodes'])
 
 class MAPDirectory():
   def __init__(self,file, name, entry):
@@ -75,7 +86,6 @@ class MAPDirectory():
     textmap_data = file.read(entry.lump_size).decode('ascii')
     udmf = UDMF(textmap_data)
     # ZNODES
-    znodes=dotdict()
     entry = self.lumps['ZNODES']
     file.seek(entry.lump_ofs)
     header_data =  file.read(struct.calcsize(fmt_ZNODESHeader))
@@ -88,8 +98,7 @@ class MAPDirectory():
     vertices = []
     for i in range(0, header.additional_verts_size):
       vertices.append((int.from_bytes(file.read(4), 'little'),int.from_bytes(file.read(4), 'little')))
-    znodes['vertices'] = vertices
-
+ 
     # sub sectors
     subs_size = int.from_bytes(file.read(4), 'little')
     print("subs: {}".format(subs_size))
@@ -108,12 +117,12 @@ class MAPDirectory():
       print("seg#: {}".format(n))
       segs = []
       for i in range(0,n):
-        header_data = file.read(struct.calcsize(fmt_SUBSECTORHeader))
-        header = SUBSECTORHeader._make(struct.unpack(fmt_SUBSECTORHeader, header_data))
+        header_data = file.read(struct.calcsize(fmt_SEGHeader))
+        header = SEGHeader._make(struct.unpack(fmt_SEGHeader, header_data))
         print("{}".format(header.v1, header.lineword))
-        segs.append(header)
+        segs.append(SEG(header.v1, header.lineword==0xFFFF and -1 or header.lineword, header.side))
       sub_sectors.append(segs)
-    znodes['sub_sectors'] = sub_sectors
+ 
     # bsp nodes
     num_nodes = int.from_bytes(file.read(4), 'little')
     print("znodes: {}".format(num_nodes))
@@ -121,31 +130,88 @@ class MAPDirectory():
     for i in range(0, num_nodes):
       header_data = file.read(struct.calcsize(fmt_ZNODEHeader))
       header = ZNODEHeader._make(struct.unpack(fmt_ZNODEHeader, header_data))
+      n=normal((header.dx,header.dy))
+      d=dot(n, (header.x,header.y))
+      node = ZNODE(n,d,0x00,[None,None],[None, None])
+      # left child
       if header.child0 & 0x80000000 != 0:
-        print("sub-sector 0: {}".format(len(sub_sectors[header.child0 & 0x7FFFFFFF])))  
+        node = node._replace(flags=1)
+        node.child[0]=sub_sectors[header.child0 & 0x7FFFFFFF]
       else:
-        print("child node 0: {}".format(nodes[header.child0]))
-      nodes.append(header)
-    
-class MAPWriter():
-  def __init__(self):
-    # export data
-    s = pack_variant(len(sectors))
-    for sector in sectors:
-      s += pack_int(sector.heightceiling)
-      s += pack_int(sector.heightfloor)
+        # actual reference resolved by p8 code
+        node.child[0]=header.child0
+      # right child
+      if header.child1 & 0x80000000 != 0:
+        node = node._replace(flags=node.flags|2)
+        node.child[1]=sub_sectors[header.child1 & 0x7FFFFFFF]
+      else:
+        # actual reference resolved by p8 code
+        node.child[1]=header.child1
+      # bounding boxes
+      node.aabb[0] = AABB(header.top0,header.bottom0,header.left0,header.right0)
+      node.aabb[1] = AABB(header.top1,header.bottom1,header.left1,header.right1)
+      nodes.append(node)
+    return ZMAP(udmf.vertices, vertices, udmf.lines, udmf.sides, udmf.sectors, nodes)
 
-    s += pack_variant(len(sides))
-    for side in sides:
-      s += pack_variant(side.sector+1)
+# ZMAP export to pico8 format
+def pack_segs(segs):
+  s = pack_variant(len(segs))
+  for seg in segs:
+    s += pack_variant(seg.v1+1)
+    s += "{:02X}".format(seg.side==0 and 0 or 1)
+    s += pack_variant(seg.line+1)
+  return s
 
-    s += pack_variant(len(vertices))
-    for v in vertices:
-      s += lua_vector(v)
+def pack_zmap(map):
+  # export data
+  s = pack_variant(len(map.sectors))
+  for sector in map.sectors:
+    s += pack_int(sector.heightceiling)
+    s += pack_int(sector.heightfloor)
 
-    s += export_bsp_tree(tree, 0)
+  s += pack_variant(len(map.sides))
+  for side in map.sides:
+    s += pack_variant(side.sector+1)
 
-    to_multicart(s, "poom")
+  s += pack_variant(len(map.vertices)+len(map.other_vertices))
+  for v in map.vertices:
+    s += pack_fixed(v[0])
+    s += pack_fixed(v[1])
+  for v in map.other_vertices:
+    s += pack_int32(v[0])
+    s += pack_int32(v[1])
+
+  s += pack_variant(len(map.lines))
+  for line in map.lines:
+    print("{} / {}".format(line.sidefront+1,line.sideback+1))
+    s += pack_variant(line.sidefront+1)
+    s += pack_variant(line.sideback+1)
+    flags = 0
+    if line.twosided==True:
+      flags |= 1
+    # todo: other game flags
+    s += "{:02X}".format(flags)
+  
+  s += pack_variant(len(map.nodes))
+  for node in map.nodes:
+    # n
+    s += pack_fixed(node.n[0])
+    s += pack_fixed(node.n[1])
+    s += pack_fixed(node.d)
+    s += "{:02X}".format(node.flags)
+    # segs list
+    if node.flags & 0x1:
+      s += pack_segs(node.child[0])
+    else:
+      s += pack_variant(node.child[0]+1)
+    # segs list
+    if node.flags & 0x2:
+      s += pack_segs(node.child[1])
+    else:
+      s += pack_variant(node.child[1]+1)
+  print(s)
+
+  to_multicart(s, "poom")
 
 def load_WAD(filepath,mapname):
   with open(filepath, 'rb') as file:
@@ -176,6 +242,7 @@ def load_WAD(filepath,mapname):
       i += 1
 
     # pick map
-    maps[mapname].read(file)
-  
-load_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
+    zmap = maps[mapname].read(file)
+    pack_zmap(zmap)
+
+load_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M2")

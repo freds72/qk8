@@ -6,6 +6,21 @@ import random
 import math
 import socket
 
+# file helpers
+local_dir = os.path.dirname(os.path.realpath(__file__))
+pico_dir = ""
+if socket.gethostname()=="FRWS3706":
+    pico_dir = os.path.join("C:",os.path.sep,"pico-8-0.2.0")
+else:
+    pico_dir = os.path.join("D:",os.path.sep,"pico-8_0.1.12c")
+
+def call(args):
+    proc = Popen(args, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate()
+    exitcode = proc.returncode
+    #
+    return exitcode, out, err
+
 # pack helpers
 def tohex(val, nbits):
     return (hex((int(round(val,0)) + (1<<nbits)) % (1<<nbits))[2:]).zfill(nbits>>2)
@@ -31,6 +46,12 @@ def pack_int(x):
     h = tohex(x,16)
     if len(h)!=4:
         raise Exception('Unable to convert: {} into a word: {}'.format(x,h))
+    return h
+
+def pack_int32(x):
+    h = tohex(x,32)
+    if len(h)!=8:
+        raise Exception('Unable to convert: {} into a dword: {}'.format(x,h))
     return h
 
 # 16:16 fixed point value
