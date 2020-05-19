@@ -5,6 +5,8 @@ __lua__
 -- globals
 _bsp,_verts=nil
 _cam=nil
+_znear=16
+
 local plyr={0,0,height=0,angle=0,av=0,v=0}
 
 function _init()
@@ -44,7 +46,8 @@ v_cache_cls={
       m[1]*x+m[3]*z+m[4],
       m[8],
       m[9]*x+m[11]*z+m[12]
-    local a={ax,ay,az}
+
+    local a={ax,ay,az,clipcode=az>_znear and 0 or 1}
     t[v]=a
     return a
   end
@@ -68,7 +71,10 @@ function v_lerp(a,b,t)
 end
 
 function project(v)
-  return 64+v[1]/4+plyr[1],64-v[2]/4+plyr[2]
+  local x,y=(v[1]-plyr[1])/16,(v[2]-plyr[2])/16
+  local ca,sa=cos(plyr.angle+0.25),-sin(plyr.angle+0.25)
+  x,y=ca*x-sa*y,sa*x+ca*y
+  return 64+x,64-y
 end
 
 function polyfill(v,c)
@@ -92,43 +98,67 @@ function polyfill(v,c)
       end
       x0+=dx					
     end			
-    --break
     x0,y0=_x1,_y1
   end
 end
-function draw_segs(segs)
-  polyfill(segs,segs.sector.id%15+1)
+
+function draw_segs(segs,c)
+  local v={}
+  local x,y=0,0
+  for i=1,#segs do
+    local s0=segs[i]
+    local x0,y0=project(s0.v0)
+    x+=x0
+    y+=y0
+    v[i]={x0,y0}
+  end
+  polyfill(v,plyr.sector==segs.sector and rnd(15) or 1)
+  -- print(segs.id,x/#segs,y/#segs,7)
+  _c+=1
 end
 
 function draw_bsp(node)
   if(not node) return
-  if node.flags&0x1>0 then
-    draw_segs(node.front)
+
+  if node.leaf[true] then
+    draw_segs(node.leaf[true],3)
   else
-    draw_bsp(node.front)
+    draw_bsp(node.child[true])
   end
-  if node.flags&0x2>0 then
-    draw_segs(node.back)
+  if node.leaf[false] then
+    draw_segs(node.leaf[false],2)
   else
-    draw_bsp(node.back)
+    draw_bsp(node.child[false])
   end
 end
 
-function find_sector(root,pos)
-  -- go down (if possible)
-  if v_dot(root.n,pos)>root.d then
-    if root.front and root.flags&0x1==0 then
-      return find_sector(root.front,pos)
-    end
-    -- leaf?
-    return root.front.sector
-  else
-    if root.back and root.flags&0x2==0 then
-      return find_sector(root.back,pos)
-    end
-    -- leaf?
-    return root.back.sector
+function draw_bsp2(node)
+  if(not node) return
+  -- split
+  local p={node.d*node.n[1],node.d*node.n[2]}
+  local p0={p[1]-512*node.n[2],p[2]+512*node.n[1]}
+  local p1={p[1]+512*node.n[2],p[2]-512*node.n[1]}
+  local x0,y0=project(p0)
+  local x1,y1=project(p1)
+  local side=v_dot(node.n,plyr)<node.d
+  line(x0,y0,x1,y1,side and 11 or 8)
+
+  if node.child[side] then
+    return draw_bsp(node.child[side])
   end
+  draw_segs(node.leaf[side],side and 3 or 2)
+end
+
+function find_sector(root,pos,trace)
+  -- go down (if possible)
+  local side=v_dot(root.n,pos)<root.d
+  trace=trace.."\n"..(side and "front" or "back")
+  if root.child[side] then
+    return find_sector(root.child[side],pos,trace)
+  end
+  -- leaf?
+  trace=trace.."\nleaf: "..root.leaf[side].id
+  return root.leaf[side].sector,trace
 end
 
 top_cls={
@@ -146,7 +176,6 @@ bottom_cls={
 
 _c=0
 _yfloor,_yceil=nil
-_znear=16
 
 function project_segs(v_cache,segs)
   local top=segs.sector.ceil
@@ -169,29 +198,30 @@ function project_segs(v_cache,segs)
       end
       local x0,y0,w0=cam_to_screen(v0)
       local x1,y1,w1=cam_to_screen(v1)
-      local t0,t1=y0-top*w0,y1-top*w1
-      local b0,b1=y0-bottom*w0,y1-bottom*w1
+        local t0,t1=y0-top*w0,y1-top*w1
+        local b0,b1=y0-bottom*w0,y1-bottom*w1
 
-      -- floor/ceil
-      line(x0,t0,x1,t1,1)
-      line(x0,b0,x1,b1,5)
+        -- floor/ceil
+        line(x0,t0,x1,t1,1)
+        line(x0,b0,x1,b1,5)
 
-      -- dual?
-      local ldef=s0.line
-      if ldef then
-        if ldef.sidefront and ldef.sideback then
-          local top,bottom=ldef.sideback.sector.ceil,ldef.sideback.sector.floor
-          local ot0,ot1=y0-top*w0,y1-top*w1
-          local ob0,ob1=y0-bottom*w0,y1-bottom*w1
-          if(ot0>t0) line(x0,ot0,x1,ot1,8) rectfill(x0,t0,x0,ot0) rectfill(x1,t1,x1,ot1)
-          if(ob0<b0) line(x0,ob0,x1,ob1,2) rectfill(x0,b0,x0,ob0) rectfill(x1,b1,x1,ob1)
-        else
-          rectfill(x0,t0,x0,b0,11)
-          rectfill(x1,t1,x1,b1,11)
-        end 
-      end
-
-      -- walls
+        -- dual?
+        local ldef=s0.line
+        if ldef then 
+          local otherside=ldef.sides[not s0.side]
+          if otherside then
+            local otop,obottom=otherside.sector.ceil,otherside.sector.floor
+            local ot0,ot1=y0-otop*w0,y1-otop*w1
+            local ob0,ob1=y0-obottom*w0,y1-obottom*w1
+            line(x0,ot0,x1,ot1,8) rectfill(x0,t0,x0,ot0) rectfill(x1,t1,x1,ot1)
+            line(x0,ob0,x1,ob1,2) rectfill(x0,b0,x0,ob0) rectfill(x1,b1,x1,ob1)
+          else
+            -- walls
+            rectfill(x0,t0,x0,b0,11)
+            rectfill(x1,t1,x1,b1,11)
+          end
+        end
+      
       -- 
       --rectfill(x1,t1,x0,t1,7)
       --polyfill({{x0,t0},{x1,t1},{x1,b1},{x0,b0}},segs.sector.id%15+1)
@@ -202,27 +232,22 @@ end
 
 function cull_bsp(v_cache,root,pos)
 
-  local is_front=v_dot(root.n,pos)>root.d
-  local far,near,far_mask,near_mask
-  if not is_front then
-    far,far_mask,near,near_mask=root.back,0x02,root.front,0x1
-  else 
-    far,far_mask,near,near_mask=root.front,0x1,root.back,0x2
-  end
+  local side=v_dot(root.n,pos)>root.d
 
-  -- far polygons?
-  if root.flags&far_mask!=0 then
-    project_segs(v_cache,far)
-  elseif far then
+  -- far nodes?
+  local far=root.child[not side]
+  if far then
     cull_bsp(v_cache,far,pos)
+  else
+    project_segs(v_cache,root.leaf[not side])
   end
 
-  -- near polygons?
-  if root.flags&near_mask!=0 then
-    project_segs(v_cache,near)
-  elseif near then
+  local near=root.child[side]
+  if near then
     cull_bsp(v_cache,near,pos)
-  end   
+  else
+    project_segs(v_cache,root.leaf[side])
+  end
 end
 
 function _update()
@@ -241,8 +266,9 @@ function _update()
   plyr.v*=0.8
   plyr.av*=0.8
 
-  local s=find_sector(_bsp,plyr)
+  local s=find_sector(_bsp,plyr,"")
   if s then
+    plyr.sector=s
     plyr.height=s.floor
   end
   _cam:track(plyr,plyr.angle,plyr.height+32)
@@ -254,8 +280,9 @@ function _draw()
   _c=0
   _yceil,_yfloor=setmetatable({},top_cls),setmetatable({},bottom_cls)
   local v_cache=setmetatable({m=_cam.m},v_cache_cls)
-  cull_bsp(v_cache,_bsp,plyr)
-  --draw_bsp(_bsp[#_bsp])
+  -- cull_bsp(v_cache,_bsp,plyr)
+  draw_bsp(_bsp,plyr)
+  pset(64,64,8)
 
   --[[
   local x0,y0=project(plyr)
@@ -271,10 +298,35 @@ function _draw()
   end
   ]]
   print(stat(1),2,2,7)
-  local s=find_sector(_bsp,plyr)
+  local s,trace=find_sector(_bsp,plyr,plyr[1].."/"..plyr[2].."\n")
   if s then
     print("sector: "..s.id,2,8,7)
+    print(trace,2,16,7)
   end
+end
+
+-->8
+-- 3d functions
+function z_poly_clip(znear,v)
+	local res,v0={},v[#v]
+	local d0=v0[3]-znear
+	for i=1,#v do
+		local v1=v[i]
+		local d1=v1[3]-znear
+		if d1>0 then
+			if d0<=0 then
+				local nv=v_lerp(v0,v1,d0/(d0-d1)) 
+				res[#res+1]=nv
+			end
+			res[#res+1]=v1
+		elseif d0>0 then
+			local nv=v_lerp(v0,v1,d0/(d0-d1)) 
+			local z=nv[3]
+		  res[#res+1]=nv
+		end
+		v0,d0=v1,d1
+	end
+	return res
 end
 
 -->8
@@ -350,23 +402,28 @@ function unpack_map()
   local lines={}
   unpack_array(function()
     local line={
-      sidefront=sides[unpack_variant()],
-      sideback=sides[unpack_variant()],
+      sides={
+        [true]=sides[unpack_variant()],
+        [false]=sides[unpack_variant()]
+      },
       flags=mpeek()}
     add(lines,line)
   end)
 
   local nodes={}
+  local total_segs=0
   local function unpack_segs(segs)
+    total_segs+=1
     return function()
       local s=add(segs,{
+        -- debug
         v0=verts[unpack_variant()],
-        side=mpeek(),
+        side=mpeek()==0,
         line=lines[unpack_variant()]    
       })
       -- direct link to sector (if not already set)
       if s.line and not segs.sector then
-        segs.sector=s.line.sidefront.sector
+        segs.sector=s.line.sides[s.side].sector
       end
       assert(s.v0,"invalid seg")
       assert(segs.sector,"missing sector")
@@ -377,24 +434,22 @@ function unpack_map()
       n={unpack_fixed(),unpack_fixed()},
       d=unpack_fixed()}
     local flags=mpeek()
-    local child=nil
+    local child,leaf={},{}
     if flags&0x1>0 then
-      child={}
-      unpack_array(unpack_segs(child))
+      leaf[true]={id=total_segs+1}
+      unpack_array(unpack_segs(leaf[true]))
     else
-      child=nodes[unpack_variant()]
+      child[true]=nodes[unpack_variant()]
     end
-    node.front=child
     -- back
-    child={}
     if flags&0x2>0 then
-      child={}
-      unpack_array(unpack_segs(child))
+      leaf[false]={id=total_segs+1}
+      unpack_array(unpack_segs(leaf[false]))
     else
-      child=nodes[unpack_variant()]
+      child[false]=nodes[unpack_variant()]
     end
-    node.back=child
-    node.flags=flags
+    node.child=child
+    node.leaf=leaf
     add(nodes,node)
   end)
 

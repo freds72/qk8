@@ -113,14 +113,16 @@ class MAPDirectory():
     
     # sub sector sides (segs)
     sub_sectors=[]
+    seg_id=0
     for n in segs:
       print("seg#: {}".format(n))
       segs = []
       for i in range(0,n):
         header_data = file.read(struct.calcsize(fmt_SEGHeader))
         header = SEGHeader._make(struct.unpack(fmt_SEGHeader, header_data))
-        print("{}".format(header.v1, header.lineword))
+        print("{}: {} -> {} ({})".format(seg_id, header.v1, header.partner, header.side))
         segs.append(SEG(header.v1, header.lineword==0xFFFF and -1 or header.lineword, header.side))
+        seg_id += 1
       sub_sectors.append(segs)
  
     # bsp nodes
@@ -130,7 +132,7 @@ class MAPDirectory():
     for i in range(0, num_nodes):
       header_data = file.read(struct.calcsize(fmt_ZNODEHeader))
       header = ZNODEHeader._make(struct.unpack(fmt_ZNODEHeader, header_data))
-      n=normal((header.dx,header.dy))
+      n=normal((-header.dy,header.dx))
       d=dot(n, (header.x,header.y))
       node = ZNODE(n,d,0x00,[None,None],[None, None])
       # left child
@@ -158,7 +160,8 @@ def pack_segs(segs):
   s = pack_variant(len(segs))
   for seg in segs:
     s += pack_variant(seg.v1+1)
-    s += "{:02X}".format(seg.side==0 and 0 or 1)
+    # get single byte value
+    s += "{:02X}".format(seg.side[0])
     s += pack_variant(seg.line+1)
   return s
 
@@ -183,7 +186,6 @@ def pack_zmap(map):
 
   s += pack_variant(len(map.lines))
   for line in map.lines:
-    print("{} / {}".format(line.sidefront+1,line.sideback+1))
     s += pack_variant(line.sidefront+1)
     s += pack_variant(line.sideback+1)
     flags = 0
@@ -209,7 +211,6 @@ def pack_zmap(map):
       s += pack_segs(node.child[1])
     else:
       s += pack_variant(node.child[1]+1)
-  print(s)
 
   to_multicart(s, "poom")
 
@@ -245,4 +246,4 @@ def load_WAD(filepath,mapname):
     zmap = maps[mapname].read(file)
     pack_zmap(zmap)
 
-load_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M2")
+load_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
