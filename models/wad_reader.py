@@ -59,10 +59,10 @@ ZNODEHeader = namedtuple('ZNODEHeader',
 fmt_ZNODEHeader = '<4h4h4h2i'
 
 # helper structures
-SEG = namedtuple('SEG',['v1','line','side'])
+SEG = namedtuple('SEG',['id','v1','line','side','partner'])
 AABB = namedtuple('AABB',['top','bottom','left','right'])
 ZNODE = namedtuple('ZNODE',['n','d','flags','child','aabb'])
-ZMAP = namedtuple('ZMAP',['vertices','other_vertices','lines','sides','sectors','nodes'])
+ZMAP = namedtuple('ZMAP',['vertices','other_vertices','lines','sides','sectors','sub_sectors', 'nodes'])
 
 class MAPDirectory():
   def __init__(self,file, name, entry):
@@ -113,6 +113,8 @@ class MAPDirectory():
     
     # sub sector sides (segs)
     sub_sectors=[]
+    # reverse lookup: seg->
+    subsector_by_seg= {}
     seg_id=0
     for n in segs:
       print("seg#: {}".format(n))
@@ -121,10 +123,18 @@ class MAPDirectory():
         header_data = file.read(struct.calcsize(fmt_SEGHeader))
         header = SEGHeader._make(struct.unpack(fmt_SEGHeader, header_data))
         print("{}: {} -> {} ({})".format(seg_id, header.v1, header.partner, header.side))
-        segs.append(SEG(header.v1, header.lineword==0xFFFF and -1 or header.lineword, header.side))
+        segs.append(SEG(seg_id, header.v1, header.lineword==0xFFFF and -1 or header.lineword, header.side, header.partner))
+        subsector_by_seg[seg_id] = len(sub_sectors)
         seg_id += 1
       sub_sectors.append(segs)
  
+    # replace partner links to sub-sector reference
+    for subs in sub_sectors:
+      for i in range(0,len(subs)):
+        seg = subs[i]
+        if seg.partner!=-1:
+          subs[i] = seg._replace(partner=subsector_by_seg[seg.partner])
+      
     # bsp nodes
     num_nodes = int.from_bytes(file.read(4), 'little')
     print("znodes: {}".format(num_nodes))
@@ -138,14 +148,14 @@ class MAPDirectory():
       # left child
       if header.child0 & 0x80000000 != 0:
         node = node._replace(flags=1)
-        node.child[0]=sub_sectors[header.child0 & 0x7FFFFFFF]
+        node.child[0]=header.child0 & 0x7FFFFFFF
       else:
         # actual reference resolved by p8 code
         node.child[0]=header.child0
       # right child
       if header.child1 & 0x80000000 != 0:
         node = node._replace(flags=node.flags|2)
-        node.child[1]=sub_sectors[header.child1 & 0x7FFFFFFF]
+        node.child[1]=header.child1 & 0x7FFFFFFF
       else:
         # actual reference resolved by p8 code
         node.child[1]=header.child1
@@ -153,7 +163,7 @@ class MAPDirectory():
       node.aabb[0] = AABB(header.top0,header.bottom0,header.left0,header.right0)
       node.aabb[1] = AABB(header.top1,header.bottom1,header.left1,header.right1)
       nodes.append(node)
-    return ZMAP(udmf.vertices, vertices, udmf.lines, udmf.sides, udmf.sectors, nodes)
+    return ZMAP(udmf.vertices, vertices, udmf.lines, udmf.sides, udmf.sectors, sub_sectors, nodes)
 
 # ZMAP export to pico8 format
 def pack_segs(segs):
@@ -162,7 +172,10 @@ def pack_segs(segs):
     s += pack_variant(seg.v1+1)
     # get single byte value
     s += "{:02X}".format(seg.side[0])
+    # linedef ref (or none)
     s += pack_variant(seg.line+1)
+    # reference to connected sub-sector
+    s += pack_variant(seg.partner+1)
   return s
 
 def pack_zmap(map):
@@ -194,6 +207,10 @@ def pack_zmap(map):
     # todo: other game flags
     s += "{:02X}".format(flags)
   
+  s += pack_variant(len(map.sub_sectors))
+  for segs in map.sub_sectors:
+    s += pack_segs(segs)
+
   s += pack_variant(len(map.nodes))
   for node in map.nodes:
     # n
@@ -201,14 +218,14 @@ def pack_zmap(map):
     s += pack_fixed(node.n[1])
     s += pack_fixed(node.d)
     s += "{:02X}".format(node.flags)
-    # segs list
+    # segs reference
     if node.flags & 0x1:
-      s += pack_segs(node.child[0])
+      s += pack_variant(node.child[0]+1)
     else:
       s += pack_variant(node.child[0]+1)
-    # segs list
+    # segs reference
     if node.flags & 0x2:
-      s += pack_segs(node.child[1])
+      s += pack_variant(node.child[1]+1)
     else:
       s += pack_variant(node.child[1]+1)
 

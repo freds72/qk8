@@ -116,14 +116,17 @@ function draw_segs2d(v_cache,segs)
       local v1=verts[i]
       local x1,y1,w1=cam_to_screen2d(v1)
       
-      line(x0,y0,x1,y1,v0.seg.line and 11 or 8)
+      line(x0,y0,x1,y1,v0.seg.partner and 11 or 8)
       x0,y0=x1,y1
       v0=v1
     end
   end
 end
 
-function draw_segs(v_cache,segs)
+function draw_segs(v_cache,segs,xmin,xmax,stack)
+  -- 'lock'
+  stack[segs]=true
+
   local verts,clipcode={},0
   for i=1,#segs do
     local s0=segs[i]
@@ -143,6 +146,14 @@ function draw_segs(v_cache,segs)
       local v1=verts[i]
       local x1,y1,w1=cam_to_screen(v1,0)
       local t1,b1=y1-top*w1,y1-bottom*w1
+
+      -- portal?
+      local osegs=v0.seg.partner
+      if osegs and not stack[osegs] and x0<x1 then
+        draw_segs(v_cache,osegs,max(xmin,x0),min(xmax,x1),stack)
+        --flip()
+      end
+
       local ldef=v0.seg.line
       -- logical split or wall?
       if ldef then
@@ -156,8 +167,8 @@ function draw_segs(v_cache,segs)
           local ob0,ob1=y0-obottom*w0,y1-obottom*w1
 
           local odt,odb=(ot1-ot0)/(x1-x0),(ob1-ob0)/(x1-x0)
-          if(x0<0) t0-=x0*dt b0-=x0*db ot0-=x0*odt ob0-=x0*odb x0=0
-          for x=ceil(x0),min(ceil(x1)-1,128) do
+          if(x0<xmin) x0-=xmin t0-=x0*dt b0-=x0*db ot0-=x0*odt ob0-=x0*odb x0=xmin
+          for x=ceil(x0),min(ceil(x1)-1,xmax) do
             -- useless as it cannot cross
             -- ceiling lower in other room?
             if otop<top then
@@ -173,9 +184,9 @@ function draw_segs(v_cache,segs)
             end
           end 
         else
-          if(x0<0) t0-=x0*dt b0-=x0*db x0=0
+          if(x0<xmin) x0-=xmin t0-=x0*dt b0-=x0*db x0=xmin
           color((sector.id+3)%15+1)
-          for x=ceil(x0),min(ceil(x1)-1,128) do
+          for x=ceil(x0),min(ceil(x1)-1,xmax) do
             rectfill(x,t0,x,b0)
             t0+=dt
             b0+=db
@@ -184,9 +195,12 @@ function draw_segs(v_cache,segs)
       end
       v0,x0,y0,w0,t0,b0=v1,x1,y1,w1,t1,b1
     end
+    clip(xmin,0,xmax-xmin,128)
     polyfill(verts,cam_to_screen,sector.floor,(sector.id+1)%15+1)--plyr.sector==segs.sector and rnd(15) or 1)
     polyfill(verts,cam_to_screen,sector.ceil,sector.id%15+1)--plyr.sector==segs.sector and rnd(15) or 1)
+    clip()
   end
+  stack[segs]=nil
 end
 
 function draw_bsp(v_cache,node)
@@ -202,6 +216,16 @@ function draw_bsp(v_cache,node)
   else
     draw_bsp(v_cache,node.child[false])
   end
+end
+
+function draw_portals(v_cache,root,pos)
+  -- go down (if possible)
+  local side=v_dot(root.n,pos)<root.d
+  if root.child[side] then
+    return draw_portals(v_cache,root.child[side],pos)
+  end
+  -- leaf?
+  draw_segs(v_cache,root.leaf[side],0,128,{})
 end
 
 function draw_bsp2(node)
@@ -228,7 +252,7 @@ function find_sector(root,pos)
     return find_sector(root.child[side],pos)
   end
   -- leaf?
-  return root.leaf[side].sector
+  return root.leaf[side].sector,root.leaf[side]
 end
 
 top_cls={
@@ -360,8 +384,9 @@ function _draw()
   _c=0
   _yceil,_yfloor=setmetatable({},top_cls),setmetatable({},bottom_cls)
   local v_cache=setmetatable({m=_cam.m},v_cache_cls)
-  cull_bsp(v_cache,_bsp,plyr)
-  --draw_bsp(v_cache,_bsp)
+  -- cull_bsp(v_cache,_bsp,plyr)
+  draw_portals(v_cache,_bsp,plyr)
+  -- draw_bsp(v_cache,_bsp)
   pset(64,64,8)
 
   --[[
@@ -378,7 +403,7 @@ function _draw()
   end
   ]]
   print(stat(1),2,2,7)
-  local s=find_sector(_bsp,plyr)
+  local s,segs=find_sector(_bsp,plyr)
   if s then
     print("sector: "..s.id,2,8,7)
   end
@@ -490,16 +515,16 @@ function unpack_map()
     add(lines,line)
   end)
 
-  local nodes={}
-  local total_segs=0
-  local function unpack_segs(segs)
-    total_segs+=1
-    return function()
+  local sub_sectors,all_segs={},{}
+  unpack_array(function()
+    local segs={}
+    unpack_array(function()
       local s=add(segs,{
         -- debug
         v0=verts[unpack_variant()],
         side=mpeek()==0,
-        line=lines[unpack_variant()]    
+        line=lines[unpack_variant()],
+        partner=unpack_variant()
       })
       -- direct link to sector (if not already set)
       if s.line and not segs.sector then
@@ -507,8 +532,16 @@ function unpack_map()
       end
       assert(s.v0,"invalid seg")
       assert(segs.sector,"missing sector")
-    end
+      add(all_segs,s)
+    end)
+    add(sub_sectors,segs)
+  end)
+  -- fix seg -> sub-sector link (e.g. portals)
+  for _,seg in pairs(all_segs) do
+    seg.partner=sub_sectors[seg.partner]
   end
+
+  local nodes={}
   unpack_array(function()
     local node={
       n={unpack_fixed(),unpack_fixed()},
@@ -516,15 +549,13 @@ function unpack_map()
     local flags=mpeek()
     local child,leaf={},{}
     if flags&0x1>0 then
-      leaf[true]={id=total_segs+1}
-      unpack_array(unpack_segs(leaf[true]))
+      leaf[true]=sub_sectors[unpack_variant()]
     else
       child[true]=nodes[unpack_variant()]
     end
     -- back
     if flags&0x2>0 then
-      leaf[false]={id=total_segs+1}
-      unpack_array(unpack_segs(leaf[false]))
+      leaf[false]=sub_sectors[unpack_variant()]
     else
       child[false]=nodes[unpack_variant()]
     end
