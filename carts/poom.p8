@@ -6,6 +6,7 @@ __lua__
 _bsp,_verts=nil
 _cam=nil
 _znear=16
+_yceil,_yfloor=nil
 
 local plyr={0,0,height=0,angle=0,av=0,v=0}
 
@@ -123,10 +124,99 @@ function draw_segs2d(v_cache,segs)
   end
 end
 
-function draw_segs(v_cache,segs,xmin,xmax,stack)
-  -- 'lock'
-  stack[segs]=true
+function draw_sub_sector(v_cache,segs)
 
+  local verts,clipcode={},0
+  -- 
+  local ytop,ybottom=_yceil,_yfloor
+
+  for i=1,#segs do
+    local s0=segs[i]
+    local v0=add(verts,v_cache[s0])
+    clipcode+=v0.clipcode
+  end
+  if(clipcode!=0) verts=z_poly_clip(_znear,verts)
+  if #verts>2 then
+    local sector=segs.sector
+    local top,bottom=sector.ceil,sector.floor
+    color((sector.id+2)%15+1)
+    local v0=verts[#verts]
+    local x0,y0,w0=cam_to_screen(v0,0)
+
+    for i=1,#verts do
+      local v1=verts[i]
+      local x1,y1,w1=cam_to_screen(v1,0)
+      local t1,b1=y1-top*w1,y1-bottom*w1
+      local dy,dw=(y1-y0)/(x1-x0),(w1-w0)/(x1-x0)
+
+      -- sub pix shift
+      local cx=ceil(x0)
+      y0+=(cx-x0)*dy
+      w0+=(cx-x0)*dw
+
+      local ldef=v0.seg.line
+      -- logical split or wall?
+      if ldef then
+        -- dual?
+        color(1)
+        local otherside=ldef.sides[not v0.seg.side]
+        if otherside then
+          local otop,obottom=otherside.sector.ceil,otherside.sector.floor
+          for x=cx,min(ceil(x1)-1,127) do
+            local maxt,minb=ytop[x],ybottom[x]
+            local t,b=max(y0-top*w0,maxt),min(y0-bottom*w0,minb)
+            local ot,ob=max(y0-otop*w0,maxt),min(y0-obottom*w0,minb)
+
+            -- wall
+            -- top wall side between current sector and back sector
+            if t<ot then
+              rectfill(x,t,x,ot,11)
+              -- new window top
+              t=ot
+            end
+            -- bottom wall side between current sector and back sector     
+            if b>ob then
+              rectfill(x,ob,x,b,8)
+              -- new window bottom
+              b=ob
+            end
+            w0+=dw
+            y0+=dy
+            ytop[x],ybottom[x]=t,b
+          end
+        else
+          color((sector.id+3)%15+1)
+          for x=ceil(x0),min(ceil(x1)-1,128) do
+            local t0,b0=max(ytop[x],y0-top*w0),min(ybottom[x],y0-bottom*w0)
+            if(t0<b0) rectfill(x,t0,x,b0)
+            w0+=dw
+            y0+=dy
+            ytop[x]=129
+            ybottom[x]=-1
+          end
+        end
+      end
+      v0,x0,y0,w0,t0,b0=v1,x1,y1,w1,t1,b1
+    end
+  end
+end
+function draw_sub_sectors(v_cache,node,pos)
+  if(not node) return
+  local side=v_dot(node.n,pos)<node.d
+  if node.leaf[side] then
+    draw_sub_sector(v_cache,node.leaf[side])
+  else
+    draw_sub_sectors(v_cache,node.child[side],pos)
+  end
+  if node.leaf[not side] then
+    draw_sub_sector(v_cache,node.leaf[not side])
+  else
+    draw_sub_sectors(v_cache,node.child[not side],pos)
+  end
+end
+
+-- ceil/floor rendering
+function draw_flat(v_cache,segs)
   local verts,clipcode={},0
   for i=1,#segs do
     local s0=segs[i]
@@ -138,69 +228,24 @@ function draw_segs(v_cache,segs,xmin,xmax,stack)
     local sector=segs.sector
     local top=sector.ceil
     local bottom=sector.floor
-    color((sector.id+2)%15+1)
-    local v0=verts[#verts]
-    local x0,y0,w0=cam_to_screen(v0,0)
-    local t0,b0=y0-top*w0,y0-bottom*w0
-    for i=1,#verts do
-      local v1=verts[i]
-      local x1,y1,w1=cam_to_screen(v1,0)
-      local t1,b1=y1-top*w1,y1-bottom*w1
-
-      -- portal?
-      local osegs=v0.seg.partner
-      if osegs and not stack[osegs] and x0<x1 then
-        draw_segs(v_cache,osegs,max(xmin,x0),min(xmax,x1),stack)
-        --flip()
-      end
-
-      local ldef=v0.seg.line
-      -- logical split or wall?
-      if ldef then
-        local dt,db=(t1-t0)/(x1-x0),(b1-b0)/(x1-x0)
-        -- dual?
-        color(1)
-        local otherside=ldef.sides[not v0.seg.side]
-        if otherside then
-          local otop,obottom=otherside.sector.ceil,otherside.sector.floor
-          local ot0,ot1=y0-otop*w0,y1-otop*w1
-          local ob0,ob1=y0-obottom*w0,y1-obottom*w1
-
-          local odt,odb=(ot1-ot0)/(x1-x0),(ob1-ob0)/(x1-x0)
-          if(x0<xmin) x0-=xmin t0-=x0*dt b0-=x0*db ot0-=x0*odt ob0-=x0*odb x0=xmin
-          for x=ceil(x0),min(ceil(x1)-1,xmax) do
-            -- useless as it cannot cross
-            -- ceiling lower in other room?
-            if otop<top then
-              rectfill(x,t0,x,ot0,11)
-              t0+=dt
-              ot0+=odt
-            end
-              -- floor higher in other room?
-            if obottom>bottom then
-              rectfill(x,b0,x,ob0,8)
-              b0+=db
-              ob0+=odb
-            end
-          end 
-        else
-          if(x0<xmin) x0-=xmin t0-=x0*dt b0-=x0*db x0=xmin
-          color((sector.id+3)%15+1)
-          for x=ceil(x0),min(ceil(x1)-1,xmax) do
-            rectfill(x,t0,x,b0)
-            t0+=dt
-            b0+=db
-          end
-        end
-      end
-      v0,x0,y0,w0,t0,b0=v1,x1,y1,w1,t1,b1
-    end
-    clip(xmin,0,xmax-xmin,128)
+    
     polyfill(verts,cam_to_screen,sector.floor,(sector.id+1)%15+1)--plyr.sector==segs.sector and rnd(15) or 1)
     polyfill(verts,cam_to_screen,sector.ceil,sector.id%15+1)--plyr.sector==segs.sector and rnd(15) or 1)
-    clip()
   end
-  stack[segs]=nil
+end
+function draw_flats(v_cache,node,pos)
+  if(not node) return
+  local side=not (v_dot(node.n,pos)<node.d)
+  if node.leaf[side] then
+    draw_flat(v_cache,node.leaf[side])
+  else
+    draw_flats(v_cache,node.child[side],pos)
+  end
+  if node.leaf[not side] then
+    draw_flat(v_cache,node.leaf[not side])
+  else
+    draw_flats(v_cache,node.child[not side],pos)
+  end
 end
 
 function draw_bsp(v_cache,node)
@@ -268,92 +313,6 @@ bottom_cls={
   end
 }
 
-_c=0
-_yfloor,_yceil=nil
-
-function project_segs(v_cache,segs)
-  local sector=segs.sector
-  local top=sector.ceil
-  local bottom=sector.floor
-  -- clip
-  local s0=segs[#segs]
-  local v0=v_cache[s0]
-  local z0=v0[3]
-  for i=1,#segs do
-    local s1=segs[i]
-    local v1=v_cache[s1]
-    local z1=v1[3]
-    local _s1,_v1,_z1=s1,v1,z1
-    if(z0>z1) s0,v0,z0,s1,v1,z1=s1,v1,z1,s0,v0,z0
-    -- further tip behond camera plane
-    if z1>_znear then
-      if z0<_znear then
-        -- clip?
-        v0=v_lerp(v0,v1,(z0-_znear)/(z0-z1))
-      end
-      local x0,y0,w0=cam_to_screen(v0)
-      local x1,y1,w1=cam_to_screen(v1)
-      local t0,t1=y0-top*w0,y1-top*w1
-      local b0,b1=y0-bottom*w0,y1-bottom*w1
-
-      -- floor/ceil
-      if(t0>t1) x0,t0,x1,t1=x1,t1,x0,t0
-      -- anything to draw?
-      if t1>0 then
-        local dx=(x1-x0)/(t1-t0)
-        if(t0<0) x0-=t0*dx t0=0
-        rectfill(x0,0,x1,t0,sector.id%15+1)
-        for y=ceil(t0),min(ceil(t1)-1,127) do
-          rectfill(x1,y,x0,y)
-          x0+=dx
-        end
-      end
-      --line(x0,t0,x1,t1,1)
-      --line(x0,b0,x1,b1,5)
-
-      -- dual?
-      --[[
-      local ldef=s0.line
-      if ldef then 
-        local otherside=ldef.sides[not s0.side]
-        if otherside then
-          local otop,obottom=otherside.sector.ceil,otherside.sector.floor
-          local ot0,ot1=y0-otop*w0,y1-otop*w1
-          local ob0,ob1=y0-obottom*w0,y1-obottom*w1
-          line(x0,ot0,x1,ot1,8) rectfill(x0,t0,x0,ot0) rectfill(x1,t1,x1,ot1)
-          line(x0,ob0,x1,ob1,2) rectfill(x0,b0,x0,ob0) rectfill(x1,b1,x1,ob1)
-        else
-          -- walls
-          rectfill(x0,t0,x0,b0,11)
-          rectfill(x1,t1,x1,b1,11)
-        end
-      end
-      ]]
-    end
-    s0,v0,z0=_s1,_v1,_z1
-  end
-end
-
-function cull_bsp(v_cache,root,pos)
-
-  local side=v_dot(root.n,pos)<root.d
-
-  -- far nodes?
-  local far=root.child[not side]
-  if far then
-    cull_bsp(v_cache,far,pos)
-  else
-    draw_segs(v_cache,root.leaf[not side])
-  end
-
-  local near=root.child[side]
-  if near then
-    cull_bsp(v_cache,near,pos)
-  else
-    draw_segs(v_cache,root.leaf[side])
-  end
-end
-
 function _update()
   local da,dv=0,0
   if(btn(0)) da-=1
@@ -381,13 +340,14 @@ end
 function _draw()
   cls()
   -- draw_bsp(bsp)
-  _c=0
   _yceil,_yfloor=setmetatable({},top_cls),setmetatable({},bottom_cls)
   local v_cache=setmetatable({m=_cam.m},v_cache_cls)
   -- cull_bsp(v_cache,_bsp,plyr)
-  draw_portals(v_cache,_bsp,plyr)
+  -- draw_portals(v_cache,_bsp,plyr)
   -- draw_bsp(v_cache,_bsp)
-  pset(64,64,8)
+  draw_flats(v_cache,_bsp,plyr)
+  draw_sub_sectors(v_cache,_bsp,plyr)
+  -- pset(64,64,8)
 
   --[[
   local x0,y0=project(plyr)
