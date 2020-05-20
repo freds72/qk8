@@ -65,6 +65,12 @@ function v_lerp(a,b,t)
     a[3]*(1-t)+t*b[3]
   }
 end
+function v2_normal(v)
+  local d=max(abs(v[1]),abs(v[2]))
+  local n=min(abs(v[1]),abs(v[2])) / d
+  d*=sqrt(n*n + 1)
+  return {v[1]/d,v[2]/d}
+end
 
 function cam_to_screen(v,yoffset)
   local w=128/v[3]
@@ -124,92 +130,104 @@ function draw_segs2d(v_cache,segs)
   end
 end
 
-function draw_sub_sector(v_cache,segs)
+function draw_sub_sector(v_cache,segs,pos)
 
   local verts,clipcode={},0
   -- 
   local ytop,ybottom=_yceil,_yfloor
 
+  local sector=segs.sector
+  local top,bottom=sector.ceil,sector.floor
+  color((sector.id+2)%15+1)
+  local s0=segs[#segs]
+  local v0=v_cache[s0]
+  local z0=v0[3]
+
   for i=1,#segs do
-    local s0=segs[i]
-    local v0=add(verts,v_cache[s0])
-    clipcode+=v0.clipcode
-  end
-  if(clipcode!=0) verts=z_poly_clip(_znear,verts)
-  if #verts>2 then
-    local sector=segs.sector
-    local top,bottom=sector.ceil,sector.floor
-    color((sector.id+2)%15+1)
-    local v0=verts[#verts]
-    local x0,y0,w0=cam_to_screen(v0,0)
+    local seg=v0.seg
+    local ldef=seg.line
 
-    for i=1,#verts do
-      local v1=verts[i]
-      local x1,y1,w1=cam_to_screen(v1,0)
-      local t1,b1=y1-top*w1,y1-bottom*w1
-      local dy,dw=(y1-y0)/(x1-x0),(w1-w0)/(x1-x0)
+    local s1=segs[i]
+    local v1=v_cache[s1]
+    local z1=v1[3]
+    local _v1,_z1=v1,z1
+    -- front facing?
+    if v_dot(seg.n,pos)<seg.d then
+      if(z0>z1) v0,z0,v1,z1=v1,z1,v0,z0
+      -- further tip behond camera plane
+      if z1>_znear then
+        if z0<_znear then
+          -- clip?
+          v0=v_lerp(v0,v1,(z0-_znear)/(z0-z1))
+        end
+      
+        -- span rasterization
+        local x0,y0,w0=cam_to_screen(v0,0)
+        local x1,y1,w1=cam_to_screen(v1,0)
+        if(x0>x1) x0,y0,w0,x1,y1,w1=x1,y1,w1,x0,y0,w0
+        local dx=x1-x0
+        local dy,dw=(y1-y0)/dx,(w1-w0)/dx
+        if(x0<0) y0-=x0*dy w0-=x0*dw x0=0
+        local cx=ceil(x0)
+        y0+=(cx-x0)*dy
+        w0+=(cx-x0)*dw
 
-      -- sub pix shift
-      local cx=ceil(x0)
-      y0+=(cx-x0)*dy
-      w0+=(cx-x0)*dw
+        -- logical split or wall?
+        if ldef then
+          -- dual?
+          color(1)
+          local otherside=ldef.sides[not seg.side]
+          if otherside then
+            local otop,obottom=otherside.sector.ceil,otherside.sector.floor
+            for x=cx,min(ceil(x1)-1,127) do
+              local maxt,minb=ytop[x],ybottom[x]
+              local t,b=max(y0-top*w0,maxt),min(y0-bottom*w0,minb)
+              local ot,ob=max(y0-otop*w0,maxt),min(y0-obottom*w0,minb)
 
-      local ldef=v0.seg.line
-      -- logical split or wall?
-      if ldef then
-        -- dual?
-        color(1)
-        local otherside=ldef.sides[not v0.seg.side]
-        if otherside then
-          local otop,obottom=otherside.sector.ceil,otherside.sector.floor
-          for x=cx,min(ceil(x1)-1,127) do
-            local maxt,minb=ytop[x],ybottom[x]
-            local t,b=max(y0-top*w0,maxt),min(y0-bottom*w0,minb)
-            local ot,ob=max(y0-otop*w0,maxt),min(y0-obottom*w0,minb)
-
-            -- wall
-            -- top wall side between current sector and back sector
-            if t<ot then
-              rectfill(x,t,x,ot,11)
-              -- new window top
-              t=ot
+              -- wall
+              -- top wall side between current sector and back sector
+              if t<ot then
+                rectfill(x,t,x,ot,11)
+                -- new window top
+                t=ot
+              end
+              -- bottom wall side between current sector and back sector     
+              if b>ob then
+                rectfill(x,ob,x,b,8)
+                -- new window bottom
+                b=ob
+              end
+              w0+=dw
+              y0+=dy
+              ytop[x],ybottom[x]=t,b
             end
-            -- bottom wall side between current sector and back sector     
-            if b>ob then
-              rectfill(x,ob,x,b,8)
-              -- new window bottom
-              b=ob
+          else
+            color((sector.id+3)%15+1)
+            for x=ceil(x0),min(ceil(x1)-1,128) do
+              local t0,b0=max(ytop[x],y0-top*w0),min(ybottom[x],y0-bottom*w0)
+              if(t0<b0) rectfill(x,t0,x,b0)
+              w0+=dw
+              y0+=dy
+              ytop[x]=129
+              ybottom[x]=-1
             end
-            w0+=dw
-            y0+=dy
-            ytop[x],ybottom[x]=t,b
-          end
-        else
-          color((sector.id+3)%15+1)
-          for x=ceil(x0),min(ceil(x1)-1,128) do
-            local t0,b0=max(ytop[x],y0-top*w0),min(ybottom[x],y0-bottom*w0)
-            if(t0<b0) rectfill(x,t0,x,b0)
-            w0+=dw
-            y0+=dy
-            ytop[x]=129
-            ybottom[x]=-1
           end
         end
       end
-      v0,x0,y0,w0,t0,b0=v1,x1,y1,w1,t1,b1
     end
+    v0,z0=_v1,_z1
   end
 end
 function draw_sub_sectors(v_cache,node,pos)
   if(not node) return
   local side=v_dot(node.n,pos)<node.d
   if node.leaf[side] then
-    draw_sub_sector(v_cache,node.leaf[side])
+    draw_sub_sector(v_cache,node.leaf[side],pos)
   else
     draw_sub_sectors(v_cache,node.child[side],pos)
   end
   if node.leaf[not side] then
-    draw_sub_sector(v_cache,node.leaf[not side])
+    draw_sub_sector(v_cache,node.leaf[not side],pos)
   else
     draw_sub_sectors(v_cache,node.child[not side],pos)
   end
@@ -494,6 +512,18 @@ function unpack_map()
       assert(segs.sector,"missing sector")
       add(all_segs,s)
     end)
+    -- normals
+    local s0=segs[#segs]
+    local v0=s0.v0
+    for i=1,#segs do
+      local s1=segs[i]
+      local v1=s1.v0
+      local n=v2_normal({v1[1]-v0[1],v1[2]-v0[2]})
+      n={-n[2],n[1]}
+      s0.n,s0.d=n,v_dot(n,v0)
+      v0,s0=v1,s1
+    end
+
     add(sub_sectors,segs)
   end)
   -- fix seg -> sub-sector link (e.g. portals)
