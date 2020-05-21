@@ -5,5 +5,7 @@ activity_log.txt
 /bbs/
 /carts/demos
 /cdata
+.antlr
+__pycache__
 *.blend1
 sdl_controllers.txt

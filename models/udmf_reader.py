@@ -85,7 +85,7 @@ class SectorWalker(udmfListener):
           self.result.append(sector)
 
 def main(argv):
-    input_stream = FileStream("e1m2.udmf")
+    input_stream = FileStream("e1m1.udmf")
     lexer = udmfLexer(input_stream)
     stream = CommonTokenStream(lexer)
     parser = udmfParser(stream)
