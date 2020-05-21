@@ -108,16 +108,12 @@ function polyfill(v,offset,top)
    poke(0x5f3b,0)
   end
   local v0,spans=v[#v],{}
-  local x0,y0,u0,v0,w0=v0.x,v0.y,v0.u,v0.v,v0.w
-  u0*=w0
-  v0*=w0
-  y0-=offset*w0
+  local x0,w0=v0.x,v0.w
+  local y0,u0,v0=v0.y-offset*w0,v0.u*w0,v0.v*w0
   for i=1,#v do
     local v1=v[i]
-    local x1,y1,u1,v1,w1=v1.x,v1.y,v1.u,v1.v,v1.w
-    u1*=w1
-    v1*=w1
-    y1-=offset*w1
+    local x1,w1=v1.x,v1.w
+    local y1,u1,v1=v1.y-offset*w1,v1.u*w1,v1.v*w1
     local _x1,_y1,_u1,_v1,_w1=x1,y1,u1,v1,w1
     if(y0>y1) x0,y0,u0,v0,w0,x1,y1,u1,v1,w1=x1,y1,u1,v1,w1,x0,y0,u0,v0,w0
     local dy=y1-y0
@@ -129,22 +125,24 @@ function polyfill(v,offset,top)
     v0+=sy*dv
     w0+=sy*dw
     for y=cy0,min(y1\1,127) do
-      local span=spans[y]
-      if span then
-        local a,au,av,b,bu,bv,bw=span.x,span.u,span.v,x0,u0,v0
-				if(a>b) a,au,av,b,bu,bv=b,bu,bv,a,au,av
-				local dab=b-a
-				local dau,dav=(bu-au)/dab,(bv-av)/dab
-				local ca,cb=ceil(a),ceil(b)-1
-				if ca<=cb then
-					-- sub-pix shift
-          local sa=ca-a
-          local w0=16*w0
-          tline(ca,y,cb,y,(au+sa*dau)/w0,(av+sa*dav)/w0,dau/w0,dav/w0)
-          --rectfill(ca,y,cb,y,5)
-				end
-      else
-       spans[y]={x=x0,u=u0,v=v0}
+      if w0>0.2 then
+        local span=spans[y]
+        if span then
+          local a,au,av,b,bu,bv,bw=span.x,span.u,span.v,x0,u0,v0
+          if(a>b) a,au,av,b,bu,bv=b,bu,bv,a,au,av
+          local dab=b-a
+          local dau,dav=(bu-au)/dab,(bv-av)/dab
+          local ca,cb=ceil(a),ceil(b)-1
+          if ca<=cb then
+            -- sub-pix shift
+            local sa=ca-a
+            local w0=16*w0
+            tline(ca,y,cb,y,(au+sa*dau)/w0,(av+sa*dav)/w0,dau/w0,dav/w0)
+            --rectfill(ca,y,cb,y,5)
+          end
+        else
+        spans[y]={x=x0,u=u0,v=v0}
+        end
       end
       x0+=dx
       u0+=du
