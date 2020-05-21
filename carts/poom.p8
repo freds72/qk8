@@ -54,7 +54,8 @@ v_cache_cls={
     if(ax>az) outcode+=k_right
     if(-ax>az) outcode+=k_left
     
-    local a={ax,ay,az,outcode=outcode,clipcode=outcode&2,seg=seg,x=63.5+((ax/az)<<7),y=63.5-((ay/az)<<7),w=128/az}
+    local w=128/az
+    local a={ax,ay,az,outcode=outcode,clipcode=outcode&2,seg=seg,x=63.5+ax*w,y=63.5-ay*w,w=w}
     t[v]=a
     return a
   end
@@ -148,18 +149,17 @@ function draw_sub_sector(segs,pos)
   color((sector.id+2)%15+1)
   local v_cache=segs.v_cache
   local v0=v_cache[#v_cache]
-  local z0=v0[3]
+  local x0,y0,w0=v0.x,v0.y,v0.w
 
   for i=1,#v_cache do
     local seg=v0.seg
     local v1=v_cache[i]
+    local x1,y1,w1=v1.x,v1.y,v1.w
     -- front facing?
-    if v_dot(seg.n,pos)<seg.d then
+    if x0<x1 then
       local ldef=seg.line
       -- span rasterization
-      local x0,y0,w0=v0.x,v0.y,v0.w
-      local x1,y1,w1=v1.x,v1.y,v1.w
-      if(x0>x1) x0,y0,w0,x1,y1,w1=x1,y1,w1,x0,y0,w0
+      --printh(x0.."->"..x1)
       local dx=x1-x0
       local dy,dw=(y1-y0)/dx,(w1-w0)/dx
       if(x0<0) y0-=x0*dy w0-=x0*dw x0=0
@@ -209,7 +209,7 @@ function draw_sub_sector(segs,pos)
         end
       end
     end
-    v0=v1
+    v0,x0,y0,w0=v1,x1,y1,w1
   end
 end
 function draw_sub_sectors(node,pos)
@@ -396,10 +396,10 @@ function z_poly_clip(znear,v)
 		if d1>0 then
 			if d0<=0 then
         local nv=v_lerp(v0,v1,d0/(d0-d1))
-				local z=nv[3]
-				nv.x=63.5+((nv[1]/z)<<7)
-				nv.y=63.5-((nv[2]/z)<<7)
-				nv.w=128/z        
+				local w=128/nv[3]
+				nv.x=63.5+nv[1]*w
+				nv.y=63.5-nv[2]*w
+				nv.w=w        
         nv.seg=v0.seg
         
 				res[#res+1]=nv
@@ -407,10 +407,10 @@ function z_poly_clip(znear,v)
 			res[#res+1]=v1
 		elseif d0>0 then
 			local nv=v_lerp(v0,v1,d0/(d0-d1)) 
-      local z=nv[3]
-      nv.x=63.5+((nv[1]/z)<<7)
-      nv.y=63.5-((nv[2]/z)<<7)
-      nv.w=128/z        
+      local w=128/nv[3]
+      nv.x=63.5+nv[1]*w
+      nv.y=63.5-nv[2]*w
+      nv.w=w        
       nv.seg=v0.seg
 		  res[#res+1]=nv
 		end
