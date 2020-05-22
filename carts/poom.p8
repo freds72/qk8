@@ -191,14 +191,11 @@ function draw_segs2d(v_cache,segs)
 end
 
 local wall_ramp={7,7,6,13,5,1}
-function draw_sub_sector(segs)
+function draw_sub_sector(segs,v_cache)
   -- 
-  local ytop,ybottom=_yceil,_yfloor
-
   local sector=segs.sector
   local top,bottom=sector.ceil,sector.floor
   color((sector.id+2)%15+1)
-  local v_cache=segs.v_cache
   local v0=v_cache[#v_cache]
   local x0,y0,w0=v0.x,v0.y,v0.w
 
@@ -227,40 +224,32 @@ function draw_sub_sector(segs)
         if otherside then
           local otop,obottom=otherside.sector.ceil,otherside.sector.floor
           for x=cx,min(ceil(x1)-1,127) do
-            local maxt,minb=ytop[x],ybottom[x]
-            if maxt<minb then
-              local t,b=max(y0-top*w0,maxt),min(y0-bottom*w0,minb)
-              local ot,ob=mid(y0-otop*w0,maxt,minb),mid(y0-obottom*w0,maxt,minb)
-              color(wall_ramp[flr(0.75/w0)+1])
-              -- wall
-              -- top wall side between current sector and back sector
-              if t<ot then
-                rectfill(x,t,x,ot)
-                -- new window top
-                t=ot
-              end
-              -- bottom wall side between current sector and back sector     
-              if b>ob then
-                rectfill(x,ob,x,b)
-                -- new window bottom
-                b=ob
-              end
-              ytop[x],ybottom[x]=min(t,128),max(b,-1)
+            local t,b=y0-top*w0,y0-bottom*w0
+            local ot,ob=y0-otop*w0,y0-obottom*w0
+            color(wall_ramp[flr(0.75/w0)+1])
+            -- wall
+            -- top wall side between current sector and back sector
+            if t<ot then
+              rectfill(x,t,x,ot)
+              -- new window top
+            end
+            -- bottom wall side between current sector and back sector     
+            if b>ob then
+              rectfill(x,ob,x,b)
+              -- new window bottom
             end
             w0+=dw
             y0+=dy
           end
         else
           for x=cx,min(ceil(x1)-1,127) do
-            local t0,b0=max(ytop[x],y0-top*w0),min(ybottom[x],y0-bottom*w0)
+            local t0,b0=y0-top*w0,y0-bottom*w0
             if t0<b0 then
               --fillp(bnot(dither_pat[flr(4/w0)+1])&0xffff) 
               rectfill(x,t0,x,b0,wall_ramp[flr(0.75/w0)+1])
             end
             w0+=dw
             y0+=dy
-            ytop[x]=129
-            ybottom[x]=-1
           end
         end
       end
@@ -269,8 +258,8 @@ function draw_sub_sector(segs)
   end
 end
 
--- ceil/floor rendering
-function draw_flat(v_cache,segs,vs)
+-- ceil/floor/wal rendering
+function draw_flats(v_cache,segs,vs)
   local verts,outcode,clipcode,left,right={},0xffff,0,0,0
   for i=1,#segs do
     local v0=v_cache[segs[i]]
@@ -289,32 +278,32 @@ function draw_flat(v_cache,segs,vs)
       if #verts>2 then
         if(right!=0) verts=poly_clip(0.707,0.707,0,verts)
         if #verts>2 then
-          -- keep verts for wall rendering
-          segs.v_cache=verts
           local sector=segs.sector
           
           polyfill(verts,sector.floor)
           polyfill(verts,sector.ceil,true)
 
-          -- add to visible set
-          vs[#vs+1]=segs
+          draw_sub_sector(segs,verts)
+          -- todo: draw things
         end
       end
     end
   end
 end
-function draw_flats(v_cache,node,pos,segs)
+-- traverse and renders bsp in back to front order
+-- overdraw is a lot less critical on pico
+function draw_bsp(v_cache,node,pos)
   if(not node) return
   local side=not (v_dot(node.n,pos)<node.d)
   if node.leaf[side] then
-    draw_flat(v_cache,node.leaf[side],segs)
+    draw_flats(v_cache,node.leaf[side])
   else
-    draw_flats(v_cache,node.child[side],pos,segs)
+    draw_bsp(v_cache,node.child[side],pos)
   end
   if node.leaf[not side] then
-    draw_flat(v_cache,node.leaf[not side],segs)
+    draw_flats(v_cache,node.leaf[not side])
   else
-    draw_flats(v_cache,node.child[not side],pos,segs)
+    draw_bsp(v_cache,node.child[not side],pos)
   end
 end
 
@@ -383,18 +372,13 @@ end
 function _draw()
   cls()
   -- draw_bsp(bsp)
-  _yceil,_yfloor=setmetatable({},top_cls),setmetatable({},bottom_cls)
   local v_cache=setmetatable({m=_cam.m},v_cache_cls)
   -- cull_bsp(v_cache,_bsp,plyr)
   if btn(4) then
     draw_bsp_map(v_cache,_bsp,plyr)
     pset(64,64,8)
   else
-    local segs={}
-    draw_flats(v_cache,_bsp,plyr,segs)
-    for i=#segs,1,-1 do
-      draw_sub_sector(segs[i])
-    end
+    draw_bsp(v_cache,_bsp,plyr)
   end
 
   --[[
