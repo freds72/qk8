@@ -10,6 +10,32 @@ _yceil,_yfloor=nil
 local k_far,k_near=0,2
 local k_right,k_left=4,8
 local dither_pat={0b1111111111111111,0b0111111111111111,0b0111111111011111,0b0101111111011111,0b0101111101011111,0b0101101101011111,0b0101101101011110,0b0101101001011110,0b0101101001011010,0b0001101001011010,0b0001101001001010,0b0000101001001010,0b0000101000001010,0b0000001000001010,0b0000001000001000,0b0000000000000000}
+local fade_ramps={
+  {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+  {1,1,1,1,1,1,1,0,0,0,0,0,0,0,0},
+  {2,2,2,2,2,2,1,1,1,0,0,0,0,0,0},
+  {3,3,3,3,3,3,1,1,1,0,0,0,0,0,0},
+  {4,4,4,2,2,2,2,2,1,1,0,0,0,0,0},
+  {5,5,5,5,5,1,1,1,1,1,0,0,0,0,0},
+  {6,6,13,13,13,13,5,5,5,5,1,1,1,0,0},
+  {7,6,6,6,6,13,13,13,5,5,5,1,1,0,0},
+  {8,8,8,8,2,2,2,2,2,2,0,0,0,0,0},
+  {9,9,9,4,4,4,4,4,4,5,5,0,0,0,0},
+  {10,10,9,9,9,4,4,4,5,5,5,5,0,0,0},
+  {11,11,11,3,3,3,3,3,3,3,0,0,0,0,0},
+  {12,12,12,12,12,3,3,1,1,1,1,1,1,0,0},
+  {13,13,13,5,5,5,5,1,1,1,1,1,0,0,0},
+  {14,14,14,13,4,4,2,2,2,2,2,1,1,0,0},
+  {15,15,6,13,13,13,5,5,5,5,5,1,1,0,0}
+ }
+-- copy table to memory
+local mem=0x4300
+for i=0,15 do 
+  for c=0,15 do
+    poke(mem,(fade_ramps[c+1][i+1] or 0))
+    mem+=1
+  end
+end
 
 local plyr={0,0,height=0,angle=0,av=0,v=0}
 
@@ -126,20 +152,26 @@ function polyfill(v,offset,top)
     u0+=sy*du
     v0+=sy*dv
     w0+=sy*dw
+
+    -- initial palette
+    local pal0=-1
     for y=cy0,min(ceil(y1)-1,127) do
       -- limit visibility
-      if w0>0.2 then
+      if w0>0.3 then
         local span=spans[y]
         if span then
           local a,au,av,b,bu,bv,bw=span.x,span.u,span.v,x0,u0,v0
           if(a>b) a,au,av,b,bu,bv=b,bu,bv,a,au,av
-          local dab=b-a
-          local dau,dav=(bu-au)/dab,(bv-av)/dab
-          local ca,cb=ceil(a),ceil(b)-1
+          local ca,cb=ceil(a),min(ceil(b)-1,127)
           if ca<=cb then
+            -- color shifing
+            local pal1=4\w0
+            if(pal0!=pal1) memcpy(0x5f00,0x4300+16*pal1,16) pal0=pal1
             -- sub-pix shift
+            local dab=b-a
+            local dau,dav=(bu-au)/dab,(bv-av)/dab
             local sa=ca-a
-            local w0=16*w0
+            local w0=w0<<4
             tline(ca,y,cb,y,(au+sa*dau)/w0,(av+sa*dav)/w0,dau/w0,dav/w0)
             --rectfill(ca,y,cb,y,5)
           end
@@ -167,6 +199,7 @@ function draw_segs2d(v_cache,segs)
     right+=(v0.outcode&8)
     clipcode+=v0.clipcode
   end
+  --[[
   if outcode==0 then
     if(clipcode!=0) verts=z_poly_clip(_znear,verts)
     if #verts>2 then
@@ -188,9 +221,19 @@ function draw_segs2d(v_cache,segs)
       end
     end
   end
+  ]]
+  local v0=verts[#verts]
+  local x0,y0,w0=cam_to_screen2d(v0)
+  for i=1,#verts do
+    local v1=verts[i]
+    local x1,y1,w1=cam_to_screen2d(v1)
+    
+    line(x0,y0,x1,y1,v0.seg.partner and 11 or 8)
+    x0,y0=x1,y1
+    v0=v1
+  end
 end
 
-local wall_ramp={7,7,6,13,5,1}
 function draw_sub_sector(segs,v_cache)
   -- 
   local sector=segs.sector
@@ -215,10 +258,11 @@ function draw_sub_sector(segs,v_cache)
       local dx=x1-x0
       local dy,du,dw=(y1-y0)/dx,(u1-u0)/dx,(w1-w0)/dx
       if(x0<0) y0-=x0*dy u0-=x0*du w0-=x0*dw x0=0
-      local cx=ceil(x0)
-      y0+=(cx-x0)*dy
-      u0+=(cx-x0)*du
-      w0+=(cx-x0)*dw
+      local cx0,cx1=ceil(x0),min(ceil(x1)-1,127)
+      local sx=cx0-x0
+      y0+=sx*dy
+      u0+=sx*du
+      w0+=sx*dw
 
       -- logical split or wall?
       if ldef then
@@ -231,16 +275,21 @@ function draw_sub_sector(segs,v_cache)
         poke(0x5f3b,0)
 
         local otherside=ldef.sides[not seg.side]
+        local pal0=-1
         if otherside then
           local otop,obottom=otherside.sector.ceil,otherside.sector.floor
-          for x=cx,min(ceil(x1)-1,127) do
-            if w0>0.2 then
+          for x=cx0,cx1 do
+            if w0>0.3 then
+              -- color shifing
+              local pal1=4\w0
+              if(pal0!=pal1) memcpy(0x5f00,0x4300+16*pal1,16) pal0=pal1
+
               local t,b=y0-top*w0,y0-bottom*w0
               local ot,ob=y0-otop*w0,y0-obottom*w0
               -- wall
               -- top wall side between current sector and back sector
               local w=w0<<4
-              if t<ot then
+              if t<ot then                
                 tline(x,t,x,ot,u0/w,0,0,1/w)
                 -- new window top
                 t=ot
@@ -263,11 +312,11 @@ function draw_sub_sector(segs,v_cache)
           poke(0x5f3a,6)
           poke(0x5f3b,0)
 
-          for x=cx,min(ceil(x1)-1,127) do
-            if w0>0.2 then
-              local t0,b0=y0-top*w0,y0-bottom*w0
-              --rectfill(x,t0,x,b0,wall_ramp[flr(0.75/w0)+1])
-              local w=w0<<4
+          for x=cx0,cx1 do
+            if w0>0.3 then
+              local pal1=4\w0
+              if(pal0!=pal1) memcpy(0x5f00,0x4300+16*pal1,16) pal0=pal1
+              local t0,b0,w=y0-top*w0,y0-bottom*w0,w0<<4
               tline(x,t0,x,b0,u0/w,0,0,1/w)
             end
             y0+=dy
@@ -398,6 +447,7 @@ function _draw()
   local v_cache=setmetatable({m=_cam.m},v_cache_cls)
   -- cull_bsp(v_cache,_bsp,plyr)
   if btn(4) then
+    pal()
     draw_bsp_map(v_cache,_bsp,plyr)
     pset(64,64,8)
   else
@@ -417,6 +467,8 @@ function _draw()
     rectfill(x,zb.t,x,127,5)
   end
   ]]
+  pal()
+
   local cpu=stat(1)
   print(cpu,2,3,1)
   print(cpu,2,2,7)
