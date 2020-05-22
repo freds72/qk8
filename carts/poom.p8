@@ -204,9 +204,8 @@ function draw_sub_sector(segs,v_cache)
     local seg=v0.seg
     local v1=v_cache[i]
     local x1,y1,w1=v1.x,v1.y,v1.w
-    local uv="u"
-    if(abs(seg.n[1])>abs(seg.n[3])) uv="v"
-    local u0,u1=v0[uv]*w0,v1[uv]*w1
+    -- pick correct texture "major"
+    local u0,u1=v0[seg.uv]*w0,v1[seg.uv]*w1
 
     -- front facing?
     if x0<x1 then
@@ -242,13 +241,13 @@ function draw_sub_sector(segs,v_cache)
               -- top wall side between current sector and back sector
               local w=w0<<4
               if t<ot then
-                tline(x,t,x,ot,u0/w,0,0,8/(ot-t))
+                tline(x,t,x,ot,u0/w,0,0,1/w)
                 -- new window top
                 t=ot
               end
               -- bottom wall side between current sector and back sector     
               if b>ob then
-                tline(x,ob,x,b,u0/w,0,0,8/(b-ob))
+                tline(x,ob,x,b,u0/w,0,0,1/w)
                 -- new window bottom
                 b=ob
               end
@@ -269,7 +268,7 @@ function draw_sub_sector(segs,v_cache)
               local t0,b0=y0-top*w0,y0-bottom*w0
               --rectfill(x,t0,x,b0,wall_ramp[flr(0.75/w0)+1])
               local w=w0<<4
-              tline(x,t0,x,b0,u0/w,0,0,8/(b0-t0))
+              tline(x,t0,x,b0,u0/w,0,0,1/w)
             end
             y0+=dy
             u0+=du
@@ -601,6 +600,9 @@ function unpack_map()
       local n=v2_normal({v1[1]-v0[1],v1[2]-v0[2]})
       n={-n[2],n[1]}
       s0.n,s0.d=n,v_dot(n,v0)
+      -- use normal direction to select uv direction
+      s0.uv=abs(n[1])>abs(n[2]) and "v" or "u"
+
       v0,s0=v1,s1
     end
 
