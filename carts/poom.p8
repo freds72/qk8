@@ -179,7 +179,7 @@ function draw_segs2d(v_cache,segs)
   end
 end
 
-local wall_ramp={7,6,13,5,1}
+local wall_ramp={7,7,6,13,5,1}
 function draw_sub_sector(segs)
   -- 
   local ytop,ybottom=_yceil,_yfloor
@@ -219,8 +219,7 @@ function draw_sub_sector(segs)
             local maxt,minb=ytop[x],ybottom[x]
             if maxt<minb then
               local t,b=max(y0-top*w0,maxt),min(y0-bottom*w0,minb)
-              local ot,ob=max(y0-otop*w0,maxt),min(y0-obottom*w0,minb)
-              --fillp(bnot(dither_pat[flr(2/w0)+1])&0xffff) 
+              local ot,ob=mid(y0-otop*w0,maxt,minb),mid(y0-obottom*w0,maxt,minb)
               color(wall_ramp[flr(0.75/w0)+1])
               -- wall
               -- top wall side between current sector and back sector
@@ -362,7 +361,7 @@ function _update()
 end
 
 function _draw()
-  --cls(11)
+  cls()
   -- draw_bsp(bsp)
   _yceil,_yfloor=setmetatable({},top_cls),setmetatable({},bottom_cls)
   local v_cache=setmetatable({m=_cam.m},v_cache_cls)
@@ -394,6 +393,11 @@ function _draw()
   if s then
     print("sector: "..s.id,2,8,7)
     print("#sector: "..#segs,2,14,7)
+    local c=0
+    for _,_ in pairs(v_cache) do
+      c+=1
+    end
+    print("#verts: "..c,2,20,7)
   end
 end
 
