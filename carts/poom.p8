@@ -157,24 +157,35 @@ function polyfill(v,offset,top)
 end
 
 function draw_segs2d(v_cache,segs)
-  local verts,clipcode={},0
+  local verts,outcode,left,right,clipcode={},0xffff,0,0,0
 
   for i=1,#segs do
     local s0=segs[i]
     local v0=add(verts,v_cache[s0])
+    outcode&=v0.outcode
+    left+=(v0.outcode&4)
+    right+=(v0.outcode&8)
     clipcode+=v0.clipcode
   end
-  --if(clipcode!=0) verts=z_poly_clip(_znear,verts)
-  if #verts>2 then
-    local v0=verts[#verts]
-    local x0,y0,w0=cam_to_screen2d(v0)
-    for i=1,#verts do
-      local v1=verts[i]
-      local x1,y1,w1=cam_to_screen2d(v1)
-      
-      line(x0,y0,x1,y1,v0.seg.partner and 11 or 8)
-      x0,y0=x1,y1
-      v0=v1
+  if outcode==0 then
+    if(clipcode!=0) verts=z_poly_clip(_znear,verts)
+    if #verts>2 then
+      if(left!=0) verts=poly_clip(-0.707,0.707,0,verts)
+      if #verts>2 then
+        if(right!=0) verts=poly_clip(0.707,0.707,0,verts)
+        if #verts>2 then
+          local v0=verts[#verts]
+          local x0,y0,w0=cam_to_screen2d(v0)
+          for i=1,#verts do
+            local v1=verts[i]
+            local x1,y1,w1=cam_to_screen2d(v1)
+            
+            line(x0,y0,x1,y1,v0.seg.partner and 11 or 8)
+            x0,y0=x1,y1
+            v0=v1
+          end
+        end
+      end
     end
   end
 end
@@ -260,26 +271,35 @@ end
 
 -- ceil/floor rendering
 function draw_flat(v_cache,segs,vs)
-  local verts,outcode,clipcode={},0xffff,0
+  local verts,outcode,clipcode,left,right={},0xffff,0,0,0
   for i=1,#segs do
     local v0=v_cache[segs[i]]
     verts[i]=v0
     outcode&=v0.outcode
+    left+=(v0.outcode&4)
+    right+=(v0.outcode&8)
+
     clipcode+=v0.clipcode
   end
   -- out of screen?
   if outcode==0 then
     if(clipcode!=0) verts=z_poly_clip(_znear,verts)
     if #verts>2 then
-      -- keep verts for wall rendering
-      segs.v_cache=verts
-      local sector=segs.sector
-      
-      polyfill(verts,sector.floor)
-      polyfill(verts,sector.ceil,true)
+      if(left!=0) verts=poly_clip(-0.707,0.707,0,verts)
+      if #verts>2 then
+        if(right!=0) verts=poly_clip(0.707,0.707,0,verts)
+        if #verts>2 then
+          -- keep verts for wall rendering
+          segs.v_cache=verts
+          local sector=segs.sector
+          
+          polyfill(verts,sector.floor)
+          polyfill(verts,sector.ceil,true)
 
-      -- add to visible set
-      vs[#vs+1]=segs
+          -- add to visible set
+          vs[#vs+1]=segs
+        end
+      end
     end
   end
 end
@@ -298,18 +318,18 @@ function draw_flats(v_cache,node,pos,segs)
   end
 end
 
-function draw_bsp(v_cache,node)
+function draw_bsp_map(v_cache,node)
   if(not node) return
 
   if node.leaf[true] then
     draw_segs2d(v_cache,node.leaf[true])
   else
-    draw_bsp(v_cache,node.child[true])
+    draw_bsp_map(v_cache,node.child[true])
   end
   if node.leaf[false] then
     draw_segs2d(v_cache,node.leaf[false])
   else
-    draw_bsp(v_cache,node.child[false])
+    draw_bsp_map(v_cache,node.child[false])
   end
 end
 
@@ -366,14 +386,16 @@ function _draw()
   _yceil,_yfloor=setmetatable({},top_cls),setmetatable({},bottom_cls)
   local v_cache=setmetatable({m=_cam.m},v_cache_cls)
   -- cull_bsp(v_cache,_bsp,plyr)
-  -- draw_portals(v_cache,_bsp,plyr)
-  --draw_bsp(v_cache,_bsp)
-  local segs={}
-  draw_flats(v_cache,_bsp,plyr,segs)
-  for i=#segs,1,-1 do
-    draw_sub_sector(segs[i])
+  if btn(4) then
+    draw_bsp_map(v_cache,_bsp,plyr)
+    pset(64,64,8)
+  else
+    local segs={}
+    draw_flats(v_cache,_bsp,plyr,segs)
+    for i=#segs,1,-1 do
+      draw_sub_sector(segs[i])
+    end
   end
-    -- pset(64,64,8)
 
   --[[
   local x0,y0=project(plyr)
@@ -403,48 +425,58 @@ end
 
 -->8
 -- 3d functions
+local function v_clip(v0,v1,t)
+  local t_1=1-t
+  local x,y,z=
+    v0[1]*t_1+v1[1]*t,
+    v0[2]*t_1+v1[2]*t,
+    v0[3]*t_1+v1[3]*t
+  local w=128/z
+  return {
+    x,y,z,
+    x=63.5+x*w,
+    y=63.5-y*w,
+    u=v0.u*t_1+v1.u*t,
+    v=v0.v*t_1+v1.v*t,
+    w=w,
+    seg=v0.seg
+  }
+end
+
 function z_poly_clip(znear,v)
-	local res,v0={},v[#v]
+  local res,v0={},v[#v]
 	local d0=v0[3]-znear
 	for i=1,#v do
 		local v1=v[i]
 		local d1=v1[3]-znear
 		if d1>0 then
       if d0<=0 then
-        local t=d0/(d0-d1)
-
-        --local w=128/az
-        --[[
-        local a={ax,ay,az,outcode=outcode,clipcode=outcode&2,seg=seg,
-        u=x/az,
-        v=z/az,
-        x=63.5+ax*w,
-        y=63.5-ay*w,w=w}
-        ]]
-        local nv=v_lerp(v0,v1,t)
-				local w=128/nv[3]
-				nv.x=63.5+nv[1]*w
-        nv.y=63.5-nv[2]*w
-        nv.u=lerp(v0.u,v1.u,t)
-        nv.v=lerp(v0.v,v1.v,t)
-        nv.w=w
-        nv.seg=v0.seg
-        
-				res[#res+1]=nv
-			end
+        res[#res+1]=v_clip(v0,v1,d0/(d0-d1))
+      end
 			res[#res+1]=v1
 		elseif d0>0 then
-      local t=d0/(d0-d1)
-      local nv=v_lerp(v0,v1,t)
-      local w=128/nv[3]
-      nv.x=63.5+nv[1]*w
-      nv.y=63.5-nv[2]*w
-      nv.u=lerp(v0.u,v1.u,t)
-      nv.v=lerp(v0.v,v1.v,t)
-  		nv.w=w        
-      nv.seg=v0.seg
-		  res[#res+1]=nv
-		end
+      res[#res+1]=v_clip(v0,v1,d0/(d0-d1))
+    end
+		v0,d0=v1,d1
+	end
+	return res
+end
+-- generic p plane / v vertex cliping
+function poly_clip(px,pz,d,v)
+  local res,v0={},v[#v]
+  -- x/z plane only
+	local d0=px*v0[1]+pz*v0[3]-d
+	for i=1,#v do
+		local v1=v[i]
+		local d1=px*v1[1]+pz*v1[3]-d
+		if d1>0 then
+      if d0<=0 then
+        res[#res+1]=v_clip(v0,v1,d0/(d0-d1))
+      end
+			res[#res+1]=v1
+		elseif d0>0 then
+      res[#res+1]=v_clip(v0,v1,d0/(d0-d1))
+    end
 		v0,d0=v1,d1
 	end
 	return res
