@@ -160,8 +160,8 @@ class MAPDirectory():
         # actual reference resolved by p8 code
         node.child[1]=header.child1
       # bounding boxes
-      node.aabb[0] = AABB(header.top0,header.bottom0,header.left0,header.right0)
-      node.aabb[1] = AABB(header.top1,header.bottom1,header.left1,header.right1)
+      node.aabb[0] = [header.top0,header.bottom0,header.left0,header.right0]
+      node.aabb[1] = [header.top1,header.bottom1,header.left1,header.right1]
       nodes.append(node)
     return ZMAP(udmf.vertices, vertices, udmf.lines, udmf.sides, udmf.sectors, sub_sectors, nodes)
 
@@ -217,6 +217,10 @@ def pack_zmap(map):
     s += pack_fixed(node.n[0])
     s += pack_fixed(node.n[1])
     s += pack_fixed(node.d)
+    # bounding boxes
+    for aabb in node.aabb:
+      for v in aabb:
+        s += pack_fixed(v)
     s += "{:02X}".format(node.flags)
     # segs reference
     if node.flags & 0x1:
