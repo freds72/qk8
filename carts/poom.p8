@@ -4,7 +4,7 @@ __lua__
 
 -- globals
 _bsp,_verts=nil
-_cam=nil
+_cam,plyr=nil
 _znear=16
 _yceil,_yfloor=nil
 local k_far,k_near=0,2
@@ -37,20 +37,10 @@ for i=0,15 do
   end
 end
 
-local plyr={0,0,height=0,angle=0,av=0,v=0}
 
-function _init()
-  palt(0,false)
-
-  _bsp,_verts=unpack_map()
-  -- start pos
-  --[[
-  local s=find_sector(_bsp,plyr)
-  assert(s,"invalid start position")
-  plyr.sector=s
-  plyr.height=s.floor
-  ]]
-  _cam=make_camera()
+function cam_to_screen2d(v)
+  local x,y=v[1]/32,v[3]/32
+  return 64+x,64-y
 end
 
 function make_camera()
@@ -114,10 +104,11 @@ v_cache_cls={
   end
 }
 
-function v_dot(a,b)
-  return a[1]*b[1]+a[2]*b[2]
+function lerp(a,b,t)
+  return a*(1-t)+b*t
 end
 
+-- 3d vector functions
 function v_lerp(a,b,t)
   local t_1=1-t
   return {
@@ -126,8 +117,10 @@ function v_lerp(a,b,t)
     a[3]*t_1+t*b[3]
   }
 end
-function lerp(a,b,t)
-  return a*(1-t)+b*t
+
+-- 2d vector functions
+function v2_dot(a,b)
+  return a[1]*b[1]+a[2]*b[2]
 end
 
 function v2_normal(v)
@@ -135,16 +128,6 @@ function v2_normal(v)
   local n=min(abs(v[1]),abs(v[2])) / d
   d*=sqrt(n*n + 1)
   return {v[1]/d,v[2]/d}
-end
-
-function cam_to_screen(v,yoffset)
-  local w=128/v[3]
-  return 64+v[1]*w,64-(v[2]+yoffset)*w,w
-end
-
-function cam_to_screen2d(v)
-  local x,y=v[1]/32,v[3]/32
-  return 64+x,64-y
 end
 
 function polyfill(v,offset,top)
@@ -383,74 +366,18 @@ function draw_flats(v_cache,segs,vs)
   end
 end
 -- traverse and renders bsp in back to front order
--- overdraw is a lot less critical on pico
-function draw_bsp(v_cache,node,pos)
+-- calls 'visit' function
+function visit_bsp(node,pos,visitor)
   if(not node) return
 
-  local side=v_dot(node.n,pos)>node.d
-  if node.leaf[side] then
-    draw_flats(v_cache,node.leaf[side])
-  else
-    if _cam:is_visible(node.bbox[side]) then
-      draw_bsp(v_cache,node.child[side],pos)
-    end
-  end
-  side = not side
-  if node.leaf[side] then
-    draw_flats(v_cache,node.leaf[side])
-  else
-    if _cam:is_visible(node.bbox[side]) then
-      draw_bsp(v_cache,node.child[side],pos)
-    end
-  end
-end
-
-function draw_bsp_side(v_cache,node,side,pos)
-  if node.leaf[side] then
-    draw_segs2d(v_cache,node.leaf[side],side and 11 or 8)
-  else
-    -- bounding box
-    local bbox=node.bbox[side]
-    local x0,y0=cam_to_screen2d(_cam:project(bbox[4]))
-    for i=1,4 do
-      local x1,y1=cam_to_screen2d(_cam:project(bbox[i]))
-      line(x0,y0,x1,y1,5)
-      x0,y0=x1,y1
-    end
-    if _cam:is_visible(bbox) then
-      draw_bsp_map(v_cache,node.child[side],pos)
-    end
-  end
-end
-
-function draw_bsp_map(v_cache,node,pos)
-  if(not node) return
-  -- front?
-  local side=v_dot(node.n,pos)<node.d
-
-  -- draw hyperplane
-  --[[
-  local v0={node.d*node.n[1],node.d*node.n[2]}
-  local v1=_cam:project({v0[1]-1280*node.n[2],v0[2]+1280*node.n[1]})
-  local v2=_cam:project({v0[1]+1280*node.n[2],v0[2]-1280*node.n[1]})
-  local x0,y0=cam_to_screen2d(v1)
-  local x1,y1=cam_to_screen2d(v2)
-  if not side then
-    line(x0,y0,x1,y1,skip[side] and 8 or 11)
-    print(angle,(x0+x1)/2,(y0+y1)/2,7)
-  end
-  ]]
-
-  -- side cam is in: don't cull
-  draw_bsp_side(v_cache,node,side,pos)
-
-  -- back facing
-  draw_bsp_side(v_cache,node,not side,pos)
+  local side=v2_dot(node.n,pos)<=node.d
+  visitor(node,side,pos,visitor)
+  visitor(node,not side,pos,visitor)
 end
 
 function find_sector(root,pos)
   -- go down (if possible)
-  local side=v_dot(root.n,pos)<=root.d
+  local side=v2_dot(root.n,pos)<=root.d
   if root.child[side] then
     return find_sector(root.child[side],pos)
   end
@@ -458,18 +385,23 @@ function find_sector(root,pos)
   return root.leaf[side].sector
 end
 
-top_cls={
-  __index=function(t,k)
-    t[k]=0
-    return 0
-  end
-}
-bottom_cls={
-  __index=function(t,k)
-    t[k]=127
-    return 127
-  end
-}
+
+-->8
+-- game loop
+function _init()
+  palt(0,false)
+
+  plyr={0,0,height=0,angle=0,av=0,v=0}
+  _bsp,_verts=unpack_map()
+  -- start pos
+  --[[
+  local s=find_sector(_bsp,plyr)
+  assert(s,"invalid start position")
+  plyr.sector=s
+  plyr.height=s.floor
+  ]]
+  _cam=make_camera()
+end
 
 function _update()
   local da,dv=0,0
@@ -504,11 +436,35 @@ function _draw()
     -- fov
     line(64,64,127,0,2)
     line(64,64,0,0,2)
-    draw_bsp_map(v_cache,_bsp,plyr)
+    visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
+      if node.leaf[side] then
+        draw_segs2d(v_cache,node.leaf[side],side and 11 or 8)
+      else
+        -- bounding box
+        local bbox=node.bbox[side]
+        local x0,y0=cam_to_screen2d(_cam:project(bbox[4]))
+        for i=1,4 do
+          local x1,y1=cam_to_screen2d(_cam:project(bbox[i]))
+          line(x0,y0,x1,y1,5)
+          x0,y0=x1,y1
+        end
+        if _cam:is_visible(bbox) then
+          visit_bsp(node.child[side],pos,visitor)
+        end
+      end
+    end)
     pset(64,64,8)
-    
   else
-    draw_bsp(v_cache,_bsp,plyr)
+    visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
+      side=not side
+      if node.leaf[side] then
+        draw_flats(v_cache,node.leaf[side])
+      else
+        if _cam:is_visible(node.bbox[side]) then
+          visit_bsp(node.child[side],pos,visitor)
+        end
+      end
+    end)
   end
 
   -- restore palette
@@ -703,7 +659,7 @@ function unpack_map()
       local v1=s1.v0
       local n=v2_normal({v1[1]-v0[1],v1[2]-v0[2]})
       n={-n[2],n[1]}
-      s0.n,s0.d=n,v_dot(n,v0)
+      s0.n,s0.d=n,v2_dot(n,v0)
       -- use normal direction to select uv direction
       s0.uv=abs(n[1])>abs(n[2]) and "v" or "u"
 
