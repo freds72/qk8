@@ -145,7 +145,7 @@ function polyfill(v,offset,top)
   local v0,spans,pal0=v[#v],{}
   local x0,w0=v0.x,v0.w
   local y0,u0,v0=v0.y-offset*w0,v0.u*w0,v0.v*w0
-  for i=1,#v do
+  for i,v1 in ipairs(v) do
     local v1=v[i]
     local x1,w1=v1.x,v1.w
     local y1,u1,v1=v1.y-offset*w1,v1.u*w1,v1.v*w1
@@ -180,7 +180,7 @@ function polyfill(v,offset,top)
             --rectfill(ca,y,cb,y,5)
           end
         else
-        spans[y]={x=x0,u=u0,v=v0}
+          spans[y]={x=x0,u=u0,v=v0}
         end
       end
       x0+=dx
@@ -242,15 +242,12 @@ function draw_sub_sector(segs,v_cache)
   -- 
   local sector=segs.sector
   local top,bottom=sector.ceil,sector.floor
-  color((sector.id+2)%15+1)
   local v0,pal0=v_cache[#v_cache]
   local x0,y0,w0=v0.x,v0.y,v0.w
 
   -- todo: test ipairs
-  for i=1,#v_cache do
-    local seg=v0.seg
-    local v1=v_cache[i]
-    local x1,y1,w1=v1.x,v1.y,v1.w
+  for i,v1 in ipairs(v_cache) do
+    local seg,x1,y1,w1=v0.seg,v1.x,v1.y,v1.w
     -- pick correct texture "major"
     local u0,u1=v0[seg.uv]*w0,v1[seg.uv]*w1
 
@@ -335,15 +332,29 @@ end
 
 -- ceil/floor/wal rendering
 function draw_flats(v_cache,segs,vs)
-  local verts,outcode,clipcode,left,right={},0xffff,0,0,0
-  for i=1,#segs do
-    local v0=v_cache[segs[i]]
-    verts[i]=v0
-    outcode&=v0.outcode
-    left+=(v0.outcode&4)
-    right+=(v0.outcode&8)
+  local m,verts,outcode,clipcode,left,right=_cam.m,{},0xffff,0,0,0
+  local m1,m3,m4,m8,m9,m11,m12=m[1],m[3],m[4],m[8],m[9],m[11],m[12]
+  
+  -- to cam space + clipping flags
+  for i,seg in ipairs(segs) do
+    local v=seg.v0
+    local x,z=v[1],v[2]
+    local ax,ay,az=
+      m1*x+m3*z+m4,
+      m8,
+      m9*x+m11*z+m12
+    local code=k_near
+    if(az>_znear) code=k_far
+    if(ax>az) code|=k_right
+    if(-ax>az) code|=k_left
+    
+    local w=128/az
+    verts[i]={ax,ay,az,seg=seg,u=x,v=z,x=63.5+ax*w,y=63.5-ay*w,w=w}
 
-    clipcode+=v0.clipcode
+    outcode&=code
+    left+=(code&4)
+    right+=(code&8)
+    clipcode+=(code&2)
   end
   -- out of screen?
   if outcode==0 then
@@ -429,13 +440,12 @@ end
 
 function _draw()
   cls()
-  -- draw_bsp(bsp)
-  local v_cache=setmetatable({m=_cam.m},v_cache_cls)
   -- cull_bsp(v_cache,_bsp,plyr)
   if btn(4) then
     -- fov
     line(64,64,127,0,2)
     line(64,64,0,0,2)
+    local v_cache=setmetatable({m=_cam.m},v_cache_cls)
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       if node.leaf[side] then
         draw_segs2d(v_cache,node.leaf[side],side and 11 or 8)
@@ -476,11 +486,6 @@ function _draw()
   local s=find_sector(_bsp,plyr)
   if s then
     print("sector: "..s.id,2,8,7)
-    local c=0
-    for _,_ in pairs(v_cache) do
-      c+=1
-    end
-    print("#verts: "..c,2,20,7)
   end
 end
 
