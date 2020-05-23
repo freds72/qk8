@@ -9,7 +9,7 @@ _znear=16
 _yceil,_yfloor=nil
 local k_far,k_near=0,2
 local k_right,k_left=4,8
-local dither_pat={0b1111111111111111,0b0111111111111111,0b0111111111011111,0b0101111111011111,0b0101111101011111,0b0101101101011111,0b0101101101011110,0b0101101001011110,0b0101101001011010,0b0001101001011010,0b0001101001001010,0b0000101001001010,0b0000101000001010,0b0000001000001010,0b0000001000001000,0b0000000000000000}
+
 local fade_ramps={
   {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
   {1,1,1,1,1,1,1,0,0,0,0,0,0,0,0},
@@ -65,6 +65,16 @@ function make_camera()
         ca,0,-sa,-ca*pos[1]+sa*pos[2],
         0, 1,0,-height,
         sa,0,ca,-sa*pos[1]-ca*pos[2]
+      }
+    end,
+    -- debug/map
+    project=function(self,v)
+      local m=self.m
+      local x,z=v[1],v[2]
+      return {
+        m[1]*x+m[3]*z+m[4],
+        m[8],
+        m[9]*x+m[11]*z+m[12]
       }
     end
   }
@@ -135,7 +145,7 @@ function polyfill(v,offset,top)
    poke(0x5f3a,0)
    poke(0x5f3b,0)
   end
-  local v0,spans=v[#v],{}
+  local v0,spans,pal0=v[#v],{}
   local x0,w0=v0.x,v0.w
   local y0,u0,v0=v0.y-offset*w0,v0.u*w0,v0.v*w0
   for i=1,#v do
@@ -153,25 +163,22 @@ function polyfill(v,offset,top)
     v0+=sy*dv
     w0+=sy*dw
 
-    -- initial palette
-    local pal0=-1
     for y=cy0,min(ceil(y1)-1,127) do
       -- limit visibility
       if w0>0.3 then
         local span=spans[y]
         if span then
-          local a,au,av,b,bu,bv,bw=span.x,span.u,span.v,x0,u0,v0
+          local a,au,av,b,bu,bv=span.x,span.u,span.v,x0,u0,v0
           if(a>b) a,au,av,b,bu,bv=b,bu,bv,a,au,av
-          local ca,cb=ceil(a),min(ceil(b)-1,127)
+          local ca,cb=a\1-1,min(b\1,127)
           if ca<=cb then
             -- color shifing
             local pal1=4\w0
-            if(pal0!=pal1) memcpy(0x5f00,0x4300+16*pal1,16) pal0=pal1
+            if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
             -- sub-pix shift
             local dab=b-a
             local dau,dav=(bu-au)/dab,(bv-av)/dab
-            local sa=ca-a
-            local w0=w0<<4
+            local sa,w0=ca-a,w0<<4
             tline(ca,y,cb,y,(au+sa*dau)/w0,(av+sa*dav)/w0,dau/w0,dav/w0)
             --rectfill(ca,y,cb,y,5)
           end
@@ -188,7 +195,7 @@ function polyfill(v,offset,top)
   end
 end
 
-function draw_segs2d(v_cache,segs)
+function draw_segs2d(v_cache,segs,c)
   local verts,outcode,left,right,clipcode={},0xffff,0,0,0
 
   for i=1,#segs do
@@ -227,8 +234,8 @@ function draw_segs2d(v_cache,segs)
   for i=1,#verts do
     local v1=verts[i]
     local x1,y1,w1=cam_to_screen2d(v1)
-    
-    line(x0,y0,x1,y1,v0.seg.partner and 11 or 8)
+    c=c or (v0.seg.partner and 4 or 2)
+    line(x0,y0,x1,y1,c)
     x0,y0=x1,y1
     v0=v1
   end
@@ -239,7 +246,7 @@ function draw_sub_sector(segs,v_cache)
   local sector=segs.sector
   local top,bottom=sector.ceil,sector.floor
   color((sector.id+2)%15+1)
-  local v0=v_cache[#v_cache]
+  local v0,pal0=v_cache[#v_cache]
   local x0,y0,w0=v0.x,v0.y,v0.w
 
   -- todo: test ipairs
@@ -275,14 +282,13 @@ function draw_sub_sector(segs,v_cache)
         poke(0x5f3b,0)
 
         local otherside=ldef.sides[not seg.side]
-        local pal0=-1
         if otherside then
           local otop,obottom=otherside.sector.ceil,otherside.sector.floor
           for x=cx0,cx1 do
             if w0>0.3 then
               -- color shifing
               local pal1=4\w0
-              if(pal0!=pal1) memcpy(0x5f00,0x4300+16*pal1,16) pal0=pal1
+              if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
 
               local t,b=y0-top*w0,y0-bottom*w0
               local ot,ob=y0-otop*w0,y0-obottom*w0
@@ -315,7 +321,7 @@ function draw_sub_sector(segs,v_cache)
           for x=cx0,cx1 do
             if w0>0.3 then
               local pal1=4\w0
-              if(pal0!=pal1) memcpy(0x5f00,0x4300+16*pal1,16) pal0=pal1
+              if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
               local t0,b0,w=y0-top*w0,y0-bottom*w0,w0<<4
               tline(x,t0,x,b0,u0/w,0,0,1/w)
             end
@@ -366,7 +372,7 @@ end
 -- overdraw is a lot less critical on pico
 function draw_bsp(v_cache,node,pos)
   if(not node) return
-  local side=not (v_dot(node.n,pos)<node.d)
+  local side=v_dot(node.n,pos)>node.d
   if node.leaf[side] then
     draw_flats(v_cache,node.leaf[side])
   else
@@ -379,29 +385,47 @@ function draw_bsp(v_cache,node,pos)
   end
 end
 
-function draw_bsp_map(v_cache,node)
-  if(not node) return
+function draw_bsp_side(v_cache,node,side,pos)
+  if node.leaf[side] then
+    draw_segs2d(v_cache,node.leaf[side],side and 11 or 8)
+  else
+    draw_bsp_map(v_cache,node.child[side],pos)
+  end
+end
 
-  if node.leaf[true] then
-    draw_segs2d(v_cache,node.leaf[true])
-  else
-    draw_bsp_map(v_cache,node.child[true])
+function draw_bsp_map(v_cache,node,pos)
+  if(not node) return
+  -- front?
+  local side=v_dot(node.n,pos)<node.d
+
+  -- draw hyperplane
+  --[[
+  local v0={node.d*node.n[1],node.d*node.n[2]}
+  local v1=_cam:project({v0[1]-1280*node.n[2],v0[2]+1280*node.n[1]})
+  local v2=_cam:project({v0[1]+1280*node.n[2],v0[2]-1280*node.n[1]})
+  local x0,y0=cam_to_screen2d(v1)
+  local x1,y1=cam_to_screen2d(v2)
+  if not side then
+    line(x0,y0,x1,y1,skip[side] and 8 or 11)
+    print(angle,(x0+x1)/2,(y0+y1)/2,7)
   end
-  if node.leaf[false] then
-    draw_segs2d(v_cache,node.leaf[false])
-  else
-    draw_bsp_map(v_cache,node.child[false])
-  end
+  ]]
+
+  -- side cam is in: don't cull
+  draw_bsp_side(v_cache,node,side,pos)
+
+  -- back facing
+  draw_bsp_side(v_cache,node,not side,pos)
 end
 
 function find_sector(root,pos)
   -- go down (if possible)
-  local side=v_dot(root.n,pos)<root.d
+  local side=v_dot(root.n,pos)<=root.d
   if root.child[side] then
     return find_sector(root.child[side],pos)
   end
   -- leaf?
-  return root.leaf[side].sector,root.leaf[side]
+  return root.leaf[side].sector
 end
 
 top_cls={
@@ -447,35 +471,25 @@ function _draw()
   local v_cache=setmetatable({m=_cam.m},v_cache_cls)
   -- cull_bsp(v_cache,_bsp,plyr)
   if btn(4) then
-    pal()
+    -- fov
+    line(64,64,127,0,2)
+    line(64,64,0,0,2)
     draw_bsp_map(v_cache,_bsp,plyr)
     pset(64,64,8)
+    
   else
     draw_bsp(v_cache,_bsp,plyr)
   end
 
-  --[[
-  local x0,y0=project(plyr)
-  local ca,sa=cos(plyr.angle),sin(plyr.angle)
-  local x1,y1=project({plyr[1]+2*ca,plyr[2]+2*sa})
-  line(x0,y0,x1,y1,2)
-  pset(x0,y0,8)
-  ]]
-  --[[
-  for x,zb in pairs(_zbuffer) do
-    rectfill(x,zb.b,x,0,6)
-    rectfill(x,zb.t,x,127,5)
-  end
-  ]]
+  -- restore palette
   pal()
 
   local cpu=stat(1)
   print(cpu,2,3,1)
   print(cpu,2,2,7)
-  local s,segs=find_sector(_bsp,plyr)
+  local s=find_sector(_bsp,plyr)
   if s then
     print("sector: "..s.id,2,8,7)
-    print("#sector: "..#segs,2,14,7)
     local c=0
     for _,_ in pairs(v_cache) do
       c+=1
