@@ -76,6 +76,20 @@ function make_camera()
         m[8],
         m[9]*x+m[11]*z+m[12]
       }
+    end,
+    is_visible=function(self,bbox)      
+      local m,outcode=self.m,0xffff
+      for i=1,4 do
+        local v=bbox[i]
+        local x,z=v[1],v[2]
+        local ax,az=m[1]*x+m[3]*z+m[4],m[9]*x+m[11]*z+m[12]
+        local code=k_near
+        if(az>_znear) code=k_far
+        if(ax>az) code+=k_right
+        if(-ax>az) code+=k_left
+        outcode&=code
+      end
+      return outcode==0
     end
   }
 end
@@ -389,7 +403,17 @@ function draw_bsp_side(v_cache,node,side,pos)
   if node.leaf[side] then
     draw_segs2d(v_cache,node.leaf[side],side and 11 or 8)
   else
-    draw_bsp_map(v_cache,node.child[side],pos)
+    -- bounding box
+    local bbox=node.bbox[side]
+    local x0,y0=cam_to_screen2d(_cam:project(bbox[4]))
+    for i=1,4 do
+      local x1,y1=cam_to_screen2d(_cam:project(bbox[i]))
+      line(x0,y0,x1,y1,5)
+      x0,y0=x1,y1
+    end
+    if _cam:is_visible(bbox) then
+      draw_bsp_map(v_cache,node.child[side],pos)
+    end
   end
 end
 
@@ -607,6 +631,14 @@ function unpack_array(fn)
 	end
 end
 
+-- returns an array of 2d vectors 
+function unpack_bbox()
+  local t,b,l,r=unpack_fixed(),unpack_fixed(),unpack_fixed(),unpack_fixed()
+  return {
+    {l,b},{l,t},{r,t},{r,b}
+  }
+end
+
 function unpack_map()
   -- jump to data cart
   cart_id,mem=0,0
@@ -678,12 +710,17 @@ function unpack_map()
   for _,seg in pairs(all_segs) do
     seg.partner=sub_sectors[seg.partner]
   end
-
+  
   local nodes={}
   unpack_array(function()
     local node={
       n={unpack_fixed(),unpack_fixed()},
-      d=unpack_fixed()}
+      d=unpack_fixed(),
+      -- bounding boxes
+      bbox={
+        [true]=unpack_bbox(),
+        [false]=unpack_bbox()
+      }}
     local flags=mpeek()
     local child,leaf={},{}
     if flags&0x1>0 then
