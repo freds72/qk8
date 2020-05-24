@@ -5,6 +5,7 @@ import io
 import math
 from collections import namedtuple
 from udmf_reader import UDMF
+from textures_reader import TEXTURES
 from dotdict import dotdict
 from python2pico import pack_int
 from python2pico import pack_variant
@@ -244,6 +245,7 @@ def load_WAD(filepath,mapname):
     print("WAD type: {}".format(header.type))
 
     maps = {}
+    textures_entry = None
     # go to directory
     file.seek(header.dir_ofs)
     i = 0
@@ -259,9 +261,17 @@ def load_WAD(filepath,mapname):
         maps[lump_name] = map_dir
         # skip map entries + ENDMAP
         i += len(map_dir.lumps) + 1
+      elif lump_name == 'TEXTURES':
+        textures_entry = entry
       else:
         print("skipping: {}".format(lump_name))
       i += 1
+
+    # decode textures
+    if textures_entry is not None:
+      file.seek(textures_entry.lump_ofs)
+      textmap_data = file.read(textures_entry.lump_size).decode('ascii')
+      TEXTURES(textmap_data)
 
     # pick map
     zmap = maps[mapname].read(file)
