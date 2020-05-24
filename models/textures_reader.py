@@ -17,10 +17,10 @@ class TextureWalker(TEXTURESListener):
         patch = ctx.patch()
         # convert to 8x8 map unit
         texture = dotdict({
-          'width':int(ctx.width().getText())/8,
-          'height':int(ctx.height().getText())/8,
-          'mx':-int(patch.xoffset().getText())/8,
-          'my':-int(patch.yoffset().getText())/8
+          'width':int(ctx.width().getText())>>3,
+          'height':int(ctx.height().getText())>>3,
+          'mx':-int(patch.xoffset().getText())>>3,
+          'my':-int(patch.yoffset().getText())>>3
         })
         print(texture)
         self.result[name] = texture

@@ -179,16 +179,31 @@ def pack_segs(segs):
     s += pack_variant(seg.partner+1)
   return s
 
-def pack_zmap(map):
+def pack_texture(owner, textures, name):
+  if name not in owner: return "FFFFFFFF"
+  # de-reference texture name
+  name = owner[name]
+  # no texture/blank texture
+  if name not in textures: return "FFFFFFFF"
+  texture = textures[name]
+  return "{:02X}{:02X}{:02X}{:02X}".format(texture.my,texture.mx,texture.height,texture.width)
+
+def pack_zmap(map, textures):
   # export data
   s = pack_variant(len(map.sectors))
   for sector in map.sectors:
     s += pack_int(sector.heightceiling)
     s += pack_int(sector.heightfloor)
-
+    # sector ceiling/floor textures
+    s += pack_texture(sector, textures, 'textureceiling')
+    s += pack_texture(sector, textures, 'texturefloor')
+            
   s += pack_variant(len(map.sides))
   for side in map.sides:
     s += pack_variant(side.sector+1)
+    s += pack_texture(side, textures, 'texturetop')
+    s += pack_texture(side, textures, 'texturemiddle')
+    s += pack_texture(side, textures, 'texturebottom')
 
   s += pack_variant(len(map.vertices)+len(map.other_vertices))
   for v in map.vertices:
@@ -268,13 +283,14 @@ def load_WAD(filepath,mapname):
       i += 1
 
     # decode textures
+    textures = {}
     if textures_entry is not None:
       file.seek(textures_entry.lump_ofs)
       textmap_data = file.read(textures_entry.lump_size).decode('ascii')
-      TEXTURES(textmap_data)
+      textures = TEXTURES(textmap_data).textures
 
     # pick map
     zmap = maps[mapname].read(file)
-    pack_zmap(zmap)
+    pack_zmap(zmap, textures)
 
 load_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
