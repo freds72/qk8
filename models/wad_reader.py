@@ -188,6 +188,11 @@ def pack_texture(owner, textures, name):
   texture = textures[name]
   return "{:02X}{:02X}{:02X}{:02X}".format(texture.my,texture.mx,texture.height,texture.width)
 
+def pack_lightlevel(owner, name):
+  if name in owner:
+    return "{:02X}".format(4-int(owner[name]))
+  return "04"
+
 def pack_zmap(map, textures):
   # export data
   s = pack_variant(len(map.sectors))
@@ -197,6 +202,9 @@ def pack_zmap(map, textures):
     # sector ceiling/floor textures
     s += pack_texture(sector, textures, 'textureceiling')
     s += pack_texture(sector, textures, 'texturefloor')
+    # lights
+    s += pack_lightlevel(sector, 'lightceiling')
+    s += pack_lightlevel(sector, 'lightfloor')
             
   s += pack_variant(len(map.sides))
   for side in map.sides:

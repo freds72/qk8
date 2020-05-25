@@ -21,7 +21,7 @@ end
 
 
 function cam_to_screen2d(v)
-  local x,y=v[1]/32,v[3]/32
+  local x,y=v[1]/8,v[3]/8
   return 64+x,64-y
 end
 
@@ -112,7 +112,7 @@ function v2_normal(v)
   return {v[1]/d,v[2]/d}
 end
 
-function polyfill(v,offset,tex)
+function polyfill(v,offset,tex,light)
   poke4(0x5f38,tex)
 
   local v0,spans,pal0=v[#v],{}
@@ -139,19 +139,16 @@ function polyfill(v,offset,tex)
         local span=spans[y]
         if span then
           local a,au,av,b,bu,bv=span.x,span.u,span.v,x0,u0,v0
-          if(a>b) a,au,av,b,bu,bv=b,bu,bv,a,au,av
-          local ca,cb=a\1-1,min(b\1,127)
-          if ca<=cb then
-            -- color shifing
-            local pal1=4\w0
-            if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
-            -- sub-pix shift
-            local dab=b-a
-            local dau,dav=(bu-au)/dab,(bv-av)/dab
-            local sa,w0=ca-a,w0<<4
-            tline(ca,y,cb,y,(au+sa*dau)/w0,(av+sa*dav)/w0,dau/w0,dav/w0)
-            --rectfill(ca,y,cb,y,5)
-          end
+          if(a>b) a=x0 au=u0 av=v0 b=span.x bu=span.u bv=span.v
+          local ca=a\1-1
+          -- color shifing
+          local pal1=light\w0
+          if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
+          -- sub-pix shift
+          local dab=b-a
+          local sa,w0,dau,dav=ca-a,w0<<4,(bu-au)/dab,(bv-av)/dab
+          tline(ca,y,b,y,(au+sa*dau)/w0,(av+sa*dav)/w0,dau/w0,dav/w0)
+          -- rectfill(ca,y,cb,y,5)
         else
           spans[y]={x=x0,u=u0,v=v0}
         end
@@ -165,12 +162,27 @@ function polyfill(v,offset,tex)
   end
 end
 
-function draw_segs2d(v_cache,segs,c)
+function draw_segs2d(v_cache,segs,pos,c)
   local verts,outcode,left,right,clipcode={},0xffff,0,0,0
 
+  local pfix={pos[1],pos[2]}
   for i=1,#segs do
     local s0=segs[i]
     local v0=add(verts,v_cache[s0])
+    if not s0.partner then
+      local maxd=s0.d-24
+      local d=v2_dot(s0.n,pos)
+      if d<=maxd then
+        s0.c=3
+      else
+        -- out: fix pos
+        pfix[1]+=(maxd-d)*s0.n[1]
+        pfix[2]+=(maxd-d)*s0.n[2]
+
+        s0.c=12
+      end
+    end
+
     outcode&=v0.outcode
     left+=(v0.outcode&4)
     right+=(v0.outcode&8)
@@ -204,11 +216,13 @@ function draw_segs2d(v_cache,segs,c)
   for i=1,#verts do
     local v1=verts[i]
     local x1,y1,w1=cam_to_screen2d(v1)
-    c=c or (v0.seg.partner and 4 or 2)
-    line(x0,y0,x1,y1,c)
+    line(x0,y0,x1,y1,v0.seg.c or 4)
     x0,y0=x1,y1
     v0=v1
   end
+
+  local x0,y0=cam_to_screen2d(_cam:project(pfix))
+  pset(x0,y0,15)
 end
 
 function draw_sub_sector(segs,v_cache)
@@ -240,8 +254,8 @@ function draw_sub_sector(segs,v_cache)
       local ldef=seg.line
       if ldef then
         -- dual?
-        local facingside=ldef.sides[seg.side]
-        local otherside=ldef.sides[not seg.side]
+        local facingside,otherside=ldef.sides[seg.side],ldef.sides[not seg.side]
+        local toptex,midtex,bottomtex=facingside.toptex,facingside.midtex,facingside.bottomtex
         if otherside then
           local otop,obottom=otherside.sector.ceil,otherside.sector.floor
           for x=cx0,cx1 do
@@ -255,15 +269,17 @@ function draw_sub_sector(segs,v_cache)
               -- top wall side between current sector and back sector
               local w=w0<<4
               if t<ot then   
-                poke4(0x5f38,facingside.toptex)             
-                tline(x,t,x,ot,u0/w,0,0,1/w)
+                poke4(0x5f38,toptex)             
+                local ct=ceil(t)
+                tline(x,ct,x,ot,u0/w,(ct-t)/w,0,1/w)
                 -- new window top
                 t=ot
               end
               -- bottom wall side between current sector and back sector     
               if b>ob then
-                poke4(0x5f38,facingside.bottomtex)             
-                tline(x,ob,x,b,u0/w,0,0,1/w)
+                poke4(0x5f38,bottomtex)             
+                local cob=ceil(ob)
+                tline(x,cob,x,b,u0/w,(cob-ob)/w,0,1/w)
                 -- new window bottom
                 b=ob
               end
@@ -274,14 +290,14 @@ function draw_sub_sector(segs,v_cache)
           end
         else
           -- texture selection
-          poke4(0x5f38,facingside.midtex)             
+          poke4(0x5f38,midtex)             
 
           for x=cx0,cx1 do
             if w0>0.3 then
-              local pal1=4\w0
+              local y,w,pal1=y0-top*w0,w0<<4,4\w0
               if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
-              local t0,b0,w=y0-top*w0,y0-bottom*w0,w0<<4
-              tline(x,t0,x,b0,u0/w,0,0,1/w)
+              local cy=ceil(y)
+              tline(x,cy,x,y0-bottom*w0,u0/w,(cy-y)/w,0,1/w)
             end
             y0+=dy
             u0+=du
@@ -330,8 +346,8 @@ function draw_flats(v_cache,segs,vs)
         if #verts>2 then
           local sector=segs.sector
           
-          polyfill(verts,sector.floor,sector.floortex)
-          polyfill(verts,sector.ceil,sector.ceiltex)
+          polyfill(verts,sector.floor,sector.floortex,sector.floorlight)
+          polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight)
 
           draw_sub_sector(segs,verts)
           -- todo: draw things
@@ -358,6 +374,28 @@ function find_sector(root,pos)
   end
   -- leaf?
   return root.leaf[side].sector
+end
+
+function collide_sector(root,pos,radius,sectors)
+  -- go down (if possible)
+  local maxd=root.d-radius
+  local side=v2_dot(root.n,pos)<=maxd
+  if root.child[side] then
+    return collide_sector(root.child[side],pos,radius,sectors)
+  end
+  -- leaf?
+  local segs=root.leaf[side]
+  for i=1,#segs do
+    local s0=segs[i]
+    -- logical split: ignore
+    if not s0.partner then
+      local d=v2_dot(root.n,pos)-maxd
+      if d>0 then
+        pos[1]+=(maxd-d)*s0.n[1]
+        pos[2]+=(maxd-d)*s0.n[2]
+      end
+    end
+  end
 end
 
 
@@ -399,6 +437,8 @@ function _update()
   if s then
     plyr.sector=s
     plyr.height=s.floor
+    -- collision!
+    -- collide_sector(_bsp,plyr,24)
   end
   _cam:track(plyr,plyr.angle,plyr.height+56)
 end
@@ -410,13 +450,15 @@ function _draw()
   if btn(5) then
     map()
   elseif btn(4) then
+    -- restore palette
+    pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
     -- fov
     line(64,64,127,0,2)
     line(64,64,0,0,2)
     local v_cache=setmetatable({m=_cam.m},v_cache_cls)
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       if node.leaf[side] then
-        draw_segs2d(v_cache,node.leaf[side],side and 11 or 8)
+        draw_segs2d(v_cache,node.leaf[side],pos,side and 11 or 8)
       else
         -- bounding box
         local bbox=node.bbox[side]
@@ -445,6 +487,7 @@ function _draw()
     end)
 
     -- restore palette
+    -- memcpy(0x5f10,0x4300,16)
     pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
 
     local cpu=stat(1)
@@ -587,7 +630,9 @@ function unpack_map()
       ceil=unpack_int(2),
       floor=unpack_int(2),
       ceiltex=unpack_fixed(),
-      floortex=unpack_fixed()
+      floortex=unpack_fixed(),
+      ceillight=mpeek(),
+      floorlight=mpeek()
     })
   end)
   local sides={}
