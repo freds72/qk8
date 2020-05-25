@@ -171,7 +171,7 @@ function draw_segs2d(v_cache,segs,pos,c)
     local v0=add(verts,v_cache[s0])
     if not s0.partner then
       local maxd=s0.d-24
-      local d=v2_dot(s0.n,pos)
+      local d=v2_dot(s0.n,pfix)
       if d<=maxd then
         s0.c=3
       else
@@ -389,8 +389,9 @@ function collide_sector(root,pos,radius,sectors)
     local s0=segs[i]
     -- logical split: ignore
     if not s0.partner then
-      local d=v2_dot(root.n,pos)-maxd
-      if d>0 then
+      local maxd=s0.d-radius
+      local d=v2_dot(s0.n,pos)
+      if d>maxd then
         pos[1]+=(maxd-d)*s0.n[1]
         pos[2]+=(maxd-d)*s0.n[2]
       end
