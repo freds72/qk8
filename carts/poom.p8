@@ -244,6 +244,7 @@ function draw_sub_sector(segs,v_cache)
       -- pick correct texture "major"
       local dx,u0,u1=x1-x0,v0[seg.uv]*w0,v1[seg.uv]*w1
       local dy,du,dw=(y1-y0)/dx,(u1-u0)/dx,(w1-w0)/dx
+      
       if(x0<0) y0-=x0*dy u0-=x0*du w0-=x0*dw x0=0
       local cx0,cx1=ceil(x0),min(ceil(x1)-1,127)
       local sx=cx0-x0
@@ -257,53 +258,51 @@ function draw_sub_sector(segs,v_cache)
         -- dual?
         local facingside,otherside=ldef.sides[seg.side],ldef.sides[not seg.side]
         local toptex,midtex,bottomtex=facingside.toptex,facingside.midtex,facingside.bottomtex
+        local otop,obottom
         if otherside then
-          local otop,obottom=otherside.sector.ceil,otherside.sector.floor
-          for x=cx0,cx1 do
-            if w0>0.3 then
-              -- color shifing
-              local pal1=4\w0
-              if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
+          -- visible other side walls?
+          otop=otherside.sector.ceil
+          obottom=otherside.sector.floor
+          if(top<=otop) otop=nil
+          if(bottom>=obottom) obottom=nil
+        end
 
-              local t,b,ot,ob=y0-top*w0,y0-bottom*w0,y0-otop*w0,y0-obottom*w0
-              -- wall
-              -- top wall side between current sector and back sector
-              local w=w0<<4
-              if t<ot then   
-                poke4(0x5f38,toptex)             
-                local ct=ceil(t)
-                tline(x,ct,x,ot,u0/w,(ct-t)/w,0,1/w)
-                -- new window top
-                t=ot
-              end
-              -- bottom wall side between current sector and back sector     
-              if b>ob then
-                poke4(0x5f38,bottomtex)             
-                local cob=ceil(ob)
-                tline(x,cob,x,b,u0/w,(cob-ob)/w,0,1/w)
-                -- new window bottom
-                b=ob
-              end
+        for x=cx0,cx1 do
+          if w0>0.3 then
+            -- color shifing
+            local pal1=4\w0
+            if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
+            local t,b,w=y0-top*w0,y0-bottom*w0,w0<<4
+            -- wall
+            -- top wall side between current sector and back sector
+            local ct=ceil(t)
+            if otop then
+              poke4(0x5f38,toptex)             
+              local ot=y0-otop*w0
+              tline(x,ct,x,ot,u0/w,(ct-t)/w,0,1/w)
+              -- new window top
+              t=ot
+              ct=ceil(ot)
             end
-            y0+=dy
-            u0+=du
-            w0+=dw
-          end
-        else
-          -- texture selection
-          poke4(0x5f38,midtex)             
-
-          for x=cx0,cx1 do
-            if w0>0.3 then
-              local y,w,pal1=y0-top*w0,w0<<4,4\w0
-              if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
-              local cy=ceil(y)
-              tline(x,cy,x,y0-bottom*w0,u0/w,(cy-y)/w,0,1/w)
+            -- bottom wall side between current sector and back sector     
+            if obottom then
+              poke4(0x5f38,bottomtex)             
+              local ob=y0-obottom*w0
+              local cob=ceil(ob)
+              tline(x,cob,x,b,u0/w,(cob-ob)/w,0,1/w)
+              -- new window bottom
+              b=ob
             end
-            y0+=dy
-            u0+=du
-            w0+=dw
+            -- middle wall?
+            if not otherside then
+              -- texture selection
+              poke4(0x5f38,midtex)             
+              tline(x,ct,x,b,u0/w,(ct-t)/w,0,1/w)
+            end
           end
+          y0+=dy
+          u0+=du
+          w0+=dw
         end
       end
     end
