@@ -119,11 +119,10 @@ function polyfill(v,offset,tex,light)
   local x0,w0=v0.x,v0.w
   local y0,u0,v0=v0.y-offset*w0,v0.u*w0,v0.v*w0
   for i,v1 in ipairs(v) do
-    local v1=v[i]
     local x1,w1=v1.x,v1.w
     local y1,u1,v1=v1.y-offset*w1,v1.u*w1,v1.v*w1
     local _x1,_y1,_u1,_v1,_w1=x1,y1,u1,v1,w1
-    if(y0>y1) x0,y0,u0,v0,w0,x1,y1,u1,v1,w1=x1,y1,u1,v1,w1,x0,y0,u0,v0,w0
+    if(y0>y1) x1=x0 y1=y0 u1=u0 v1=v0 w1=w0 x0=_x1 y0=_y1 u0=_u1 v0=_v1 w0=_w1
     local dy=y1-y0
     local cy0,dx,du,dv,dw=ceil(y0),(x1-x0)/dy,(u1-u0)/dy,(v1-v0)/dy,(w1-w0)/dy
     if(y0<0) x0-=y0*dx u0-=y0*du v0-=y0*dv w0-=y0*dw y0=0
@@ -140,15 +139,13 @@ function polyfill(v,offset,tex,light)
         if span then
           local a,au,av,b,bu,bv=span.x,span.u,span.v,x0,u0,v0
           if(a>b) a=x0 au=u0 av=v0 b=span.x bu=span.u bv=span.v
-          local ca=a\1-1
           -- color shifing
           local pal1=light\w0
           if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
           -- sub-pix shift
-          local dab=b-a
+          local ca,dab=a\1-1,b-a
           local sa,w0,dau,dav=ca-a,w0<<4,(bu-au)/dab,(bv-av)/dab
-          tline(ca,y,b,y,(au+sa*dau)/w0,(av+sa*dav)/w0,dau/w0,dav/w0)
-          -- rectfill(ca,y,cb,y,5)
+          tline(ca,y,b,y,(au+sa*dau)/w0,(av+sa*dav)/w0,dau/w0,dav/w0)          
         else
           spans[y]={x=x0,u=u0,v=v0}
         end
@@ -158,7 +155,11 @@ function polyfill(v,offset,tex,light)
       v0+=dv
       w0+=dw
     end			
-    x0,y0,u0,v0,w0=_x1,_y1,_u1,_v1,_w1
+    x0=_x1
+    y0=_y1
+    u0=_u1
+    v0=_v1
+    w0=_w1
   end
 end
 
@@ -374,6 +375,36 @@ function find_sector(root,pos)
   end
   -- leaf?
   return root.leaf[side].sector
+end
+
+function intersect(node,p,d,tmin,tmax)
+  local nodes={}
+  local tstack={}
+
+  while true do
+    if not node.leaf then
+      local denom=v2_dot(node.n,d)
+      local dist=root.d-v2_dot(node.n,p)
+      local side=dist>0
+      if denom!=0 then
+        local t=dist/denom
+        if 0<=t and t<=tmax then
+          if t>=tmin then
+            nodes.add(node.child[not side])
+            tstack.add(tmax)
+            tmax=t
+          else
+            side=not side
+          end
+        end
+      end
+      node=node.child[side]
+    else
+      -- find closest intersection
+      
+    end
+  end
+
 end
 
 function collide_sector(root,pos,radius,sectors)
