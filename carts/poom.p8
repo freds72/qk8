@@ -174,6 +174,7 @@ function draw_segs2d(v_cache,segs,pos,c)
   for i=1,#segs do
     local s0=segs[i]
     local v0=add(verts,v_cache[s0])
+    --[[
     if not s0.partner then
       local maxd=s0.d-24
       local d=v2_dot(s0.n,pfix)
@@ -187,6 +188,7 @@ function draw_segs2d(v_cache,segs,pos,c)
         s0.c=12
       end
     end
+    ]]
 
     outcode&=v0.outcode
     left+=(v0.outcode&4)
@@ -363,8 +365,6 @@ end
 -- traverse and renders bsp in back to front order
 -- calls 'visit' function
 function visit_bsp(node,pos,visitor)
-  if(not node) return
-
   local side=v2_dot(node.n,pos)<=node.d
   visitor(node,side,pos,visitor)
   visitor(node,not side,pos,visitor)
@@ -380,34 +380,61 @@ function find_sector(root,pos)
   return root.leaf[side].sector
 end
 
-function intersect(node,p,d,tmin,tmax)
-  local nodes={}
-  local tstack={}
+function intersect_sub_sector(segs,p,d,tmin,tmax,res)
+  local hit_t,hit_seg
+  for i=1,#segs do
+    local s0=segs[i]
 
-  while true do
-    if not node.leaf then
-      local denom=v2_dot(node.n,d)
-      local dist=root.d-v2_dot(node.n,p)
-      local side=dist>0
+    local denom=v2_dot(s0.n,d)
+    local dist=s0.d-v2_dot(s0.n,p)
+    if dist>0 then
+      -- not parallel
       if denom!=0 then
         local t=dist/denom
-        if 0<=t and t<=tmax then
-          if t>=tmin then
-            nodes.add(node.child[not side])
-            tstack.add(tmax)
-            tmax=t
-          else
-            side=not side
-          end
+        if tmin<=t and t<=tmax then
+          hit_t=t
+          hit_seg=s0
+          tmax=t
         end
       end
-      node=node.child[side]
-    else
-      -- find closest intersection
-      
     end
   end
 
+  if hit_t then
+    add(res,hit_t)
+  end
+end
+
+function intersect(node,p,d,tmin,tmax,res)
+  local denom=v2_dot(node.n,d)
+  local dist=node.d-v2_dot(node.n,p)
+  local side=dist>0
+  -- not parallel
+  if denom!=0 then
+    local t=dist/denom
+    if 0<=t and t<=tmax then
+      if t>=tmin then
+        if node.leaf[side] then
+          intersect_sub_sector(node.leaf[side],p,d,tmin,t,res)
+        else
+          intersect(node.child[side],p,d,tmin,t,res)
+        end
+        side=not side
+        if node.leaf[side] then
+          intersect_sub_sector(node.leaf[side],p,d,t,tmax,res)
+        else
+          intersect(node.child[side],p,d,t,tmax,res)
+        end
+        return
+      end
+    end
+  end
+  -- go down on current side
+  if node.leaf[side] then
+    intersect_sub_sector(node.leaf[side],p,d,tmin,tmax,res)
+  else
+    intersect(node.child[side],p,d,tmin,tmax,res)
+  end
 end
 
 function collide_sector(root,pos,radius,sectors)
@@ -487,28 +514,46 @@ function _draw()
   elseif btn(4) then
     -- restore palette
     pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
+
+    --[[
     -- fov
     line(64,64,127,0,2)
     line(64,64,0,0,2)
+    ]]
     local v_cache=setmetatable({m=_cam.m},v_cache_cls)
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       if node.leaf[side] then
         draw_segs2d(v_cache,node.leaf[side],pos,side and 11 or 8)
       else
         -- bounding box
+        --[[
         local bbox=node.bbox[side]
-        local x0,y0=cam_to_screen2d(_cam:project(bbox[4]))
-        for i=1,4 do
-          local x1,y1=cam_to_screen2d(_cam:project(bbox[i]))
+        local x0,y0=cam_to_screen2d(_cam:project({bbox[7],bbox[8]}))
+        for i=1,8,2 do
+          local x1,y1=cam_to_screen2d(_cam:project({bbox[i],bbox[i+1]}))
           line(x0,y0,x1,y1,5)
           x0,y0=x1,y1
         end
-        if _cam:is_visible(bbox) then
+        ]]
+        --if _cam:is_visible(bbox) then
           visit_bsp(node.child[side],pos,visitor)
-        end
+        --end
       end
     end)
-    pset(64,64,8)
+    
+    local ca,sa=cos(plyr.angle),sin(plyr.angle)
+    local x0,y0=cam_to_screen2d(_cam:project({plyr[1]+128*ca,plyr[2]+128*sa}))
+    --line(64,64,x0,y0,8)
+
+    local res={}
+    intersect(_bsp,plyr,{ca,sa},0,128,res)
+    for _,t in pairs(res) do
+      local x0,y0=cam_to_screen2d(_cam:project({
+        plyr[1]+t*ca,
+        plyr[2]+t*sa
+      }))
+      pset(x0,y0,15)
+    end
   else
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       side=not side
@@ -746,16 +791,21 @@ function unpack_map()
       }}
     local flags=mpeek()
     local child,leaf={},{}
+    local child_count,leaf_count=0,0
     if flags&0x1>0 then
       leaf[true]=sub_sectors[unpack_variant()]
+      leaf_count+=1
     else
       child[true]=nodes[unpack_variant()]
+      child_count+=1
     end
     -- back
     if flags&0x2>0 then
       leaf[false]=sub_sectors[unpack_variant()]
+      leaf_count+=1
     else
       child[false]=nodes[unpack_variant()]
+      child_count+=1
     end
     node.child=child
     node.leaf=leaf
@@ -769,21 +819,21 @@ end
 
 __gfx__
 41600000bb77bbbb27bbbbbbbbbbbbbbbbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-95d00000bbb77bbb27bbbbbbbbbbbbbb988888881111220000000000000000000000000000000000000000000000000000000000000000000000000000000000
-62700000bbbb777727bbbbbbbbb99bbbbaaaaaaa2222200000000000000000000000000000000000000000000000000000000000000000000000000000000000
-41600000bbbb777727bbbbbbbb9889bbbaaaaaaa3344220000000000000000000000000000000000000000000000000000000000000000000000000000000000
-95d00000bbb77bbb27bbbbbbbb9889bbbaaaaaaa4442200000000000000000000000000000000000000000000000000000000000000000000000000000000000
-62700000bb77bbbb22777777bbb99bbbbaaaaaaa5566770000000000000000000000000000000000000000000000000000000000000000000000000000000000
-41600000777bbbbb22222222bbbbbbbbbaaaaaaa6667700000000000000000000000000000000000000000000000000000000000000000000000000000000000
-95d00000777bbbbb27bbbbbbbbbbbbbbbaaaaaaa7777200000000000000000000000000000000000000000000000000000000000000000000000000000000000
-77777777bbbb77bb27bbbbbb67676766222222228899ab7000000000000000000000000000000000000000000000000000000000000000000000000000000000
-a997a997bbb77bbb27bbbbbb66767676bbbbbbbb99aab70000000000000000000000000000000000000000000000000000000000000000000000000000000000
-aa97aa977777bbbb2277777767676766b9999999aabb700000000000000000000000000000000000000000000000000000000000000000000000000000000000
-aaa7aaa77777bbbb2222222266767676baaaaaaabbb7000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-77777777bbb77bbb27bbbbbb67676766baaaaaaacccdd70000000000000000000000000000000000000000000000000000000000000000000000000000000000
-a997a997bbbb77bb27bbbbbb66767676baaaaaaaddd7700000000000000000000000000000000000000000000000000000000000000000000000000000000000
-aa97aa97bbbbb77727bbbbbb67676766bbbbbbbbee55670000000000000000000000000000000000000000000000000000000000000000000000000000000000
-aaa7aaa7bbbbb77727bbbbbb66767676bbbbbbbbfffe567000000000000000000000000000000000000000000000000000000000000000000000000000000000
+95d00000bbb77bbb27bbbbbbbbbbbbbb988888881111122000000000000000000000000000000000000000000000000000000000000000000000000000000000
+62700000bbbb777727bbbbbbbbb99bbbbaaaaaaa2222220000000000000000000000000000000000000000000000000000000000000000000000000000000000
+41600000bbbb777727bbbbbbbb9889bbbaaaaaaa3334422000000000000000000000000000000000000000000000000000000000000000000000000000000000
+95d00000bbb77bbb27bbbbbbbb9889bbbaaaaaaa4444220000000000000000000000000000000000000000000000000000000000000000000000000000000000
+62700000bb77bbbb22777777bbb99bbbbaaaaaaa5556677000000000000000000000000000000000000000000000000000000000000000000000000000000000
+41600000777bbbbb22222222bbbbbbbbbaaaaaaa6666770000000000000000000000000000000000000000000000000000000000000000000000000000000000
+95d00000777bbbbb27bbbbbbbbbbbbbbbaaaaaaa7777722000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77777777bbbb77bb27bbbbbb676767662222222288899ab700000000000000000000000000000000000000000000000000000000000000000000000000000000
+a997a997bbb77bbb27bbbbbb66767676bbbbbbbb999aab7000000000000000000000000000000000000000000000000000000000000000000000000000000000
+aa97aa977777bbbb2277777767676766b9999999aaabb70000000000000000000000000000000000000000000000000000000000000000000000000000000000
+aaa7aaa77777bbbb2222222266767676baaaaaaabbbb700000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77777777bbb77bbb27bbbbbb67676766baaaaaaaccccdd7000000000000000000000000000000000000000000000000000000000000000000000000000000000
+a997a997bbbb77bb27bbbbbb66767676baaaaaaadddd770000000000000000000000000000000000000000000000000000000000000000000000000000000000
+aa97aa97bbbbb77727bbbbbb67676766bbbbbbbbeee5567000000000000000000000000000000000000000000000000000000000000000000000000000000000
+aaa7aaa7bbbbb77727bbbbbb66767676bbbbbbbbffffe56700000000000000000000000000000000000000000000000000000000000000000000000000000000
 bbbbbbbb433333443333333399999999ffff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 bbbbbbbb4343334433433333aaaaaaaa0ffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 bb7dd7bb3333333333333333aaaaaaaa00ffff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
