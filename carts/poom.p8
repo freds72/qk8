@@ -49,12 +49,16 @@ function make_camera()
         m[9]*x+m[11]*z+m[12]
       }
     end,
-    is_visible=function(self,bbox)      
+    is_visible=function(self,bbox)    
+      -- todo: validate if called multiple times?  
       local m,outcode=self.m,0xffff
+      local m1,m3,m4,m9,m11,m12=m[1],m[3],m[4],m[9],m[11],m[12]
       for i=1,4 do
+        -- todo: pack bbox as x,y,x,y,...
         local v=bbox[i]
         local x,z=v[1],v[2]
-        local ax,az=m[1]*x+m[3]*z+m[4],m[9]*x+m[11]*z+m[12]
+        local ax,az=m1*x+m3*z+m4,m9*x+m11*z+m12
+        -- todo: optimize
         local code=k_near
         if(az>_znear) code=k_far
         if(ax>az) code|=k_right
@@ -226,7 +230,41 @@ function draw_segs2d(v_cache,segs,pos,c)
   pset(x0,y0,15)
 end
 
-function draw_sub_sector(segs,v_cache)
+function draw_ceiling(offset,toptex,x0,y0,w0,x1,y1,w1)
+  local ca,sa=cos(plyr.angle+0.25),-sin(plyr.angle+0.25)
+  local t0,t1=y0-offset*w0,y1-offset*w1
+  if(t0>t1) x0,t0,w0,x1,t1,w1=x1,t1,w1,x0,t0,w0
+  local dt=t1-t0
+  local dx,dw=(x1-x0)/dt,(w1-w0)/dt
+  if(t0<0) x0-=t0*dx w0-=t0*dw t0=0
+  poke4(0x5f38,toptex)
+  local cx,cy,cz=plyr[1]/16,(plyr.height+56-offset)/16,plyr[2]/16
+  for y=ceil(t0),min(ceil(t1)-1,127) do
+    -- color shifing
+    --local pal1=4\w0
+    --if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
+    -- sub-pix shift
+    local w=w0<<6
+    local rz=(cy*128)/(y-64)
+    -- todo: optimize
+    local _x0=x0
+    if(x0>x1) x0,x1=x1,x0
+		local rx=rz*(x0-64)/128
+		local x,z=ca*rx+sa*rz+cx,-sa*rx+ca*rz+cz
+	
+    tline(x0,y,x1,y,x,z,ca*rz/128,-sa*rz/128)          
+    x0=_x0
+    x0+=dx
+    w0+=dw  
+  end
+end
+
+function draw_sub_sector(viz,idx,xmin,xmax,clips)
+  if(xmax-xmin<=0) return
+  local vs=viz[idx]
+  -- nothing else to draw
+  if(not vs) return
+  local segs,v_cache=vs[1],vs[2]
   -- get heights
   local sector=segs.sector
   local top,bottom=sector.ceil,sector.floor
@@ -245,8 +283,8 @@ function draw_sub_sector(segs,v_cache)
       local dx,u0,u1=x1-x0,v0[seg.uv]*w0,v1[seg.uv]*w1
       local dy,du,dw=(y1-y0)/dx,(u1-u0)/dx,(w1-w0)/dx
       
-      if(x0<0) y0-=x0*dy u0-=x0*du w0-=x0*dw x0=0
-      local cx0,cx1=ceil(x0),min(ceil(x1)-1,127)
+      if(x0<xmin) x0-=xmin y0-=x0*dy u0-=x0*du w0-=x0*dw x0=xmin
+      local cx0,cx1=ceil(x0),min(ceil(x1)-1,xmax)
       local sx=cx0-x0
       y0+=sx*dy
       u0+=sx*du
@@ -265,13 +303,20 @@ function draw_sub_sector(segs,v_cache)
           obottom=otherside.sector.floor
           if(top<=otop) otop=nil
           if(bottom>=obottom) obottom=nil
+
+          -- clip & draw otherside
+          -- draw_sub_sector(viz,idx+1,cx0,cx1)
+          add(clips,{cx0,cx1})
         end
 
+        -- ceiling
+        -- draw_ceiling(bottom,sector.floortex,x0,y0,w0,x1,y1,w1)
+
         for x=cx0,cx1 do
-          if w0>0.3 then
+          --if w0>0.3 then
             -- color shifing
             local pal1=4\w0
-            if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
+            --if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
             local t,b,w=y0-top*w0,y0-bottom*w0,w0<<4
             -- wall
             -- top wall side between current sector and back sector
@@ -299,15 +344,19 @@ function draw_sub_sector(segs,v_cache)
               poke4(0x5f38,midtex)             
               tline(x,ct,x,b,u0/w,(ct-t)/w,0,1/w)
             end
-          end
+          --end
           y0+=dy
           u0+=du
           w0+=dw
         end
+      else
+        --draw_sub_sector(viz,idx+1,cx0,cx1)
+        add(clips,{cx0,cx1})
       end
     end
     v0,x0,y0,w0=v1,x1,y1,w1
   end
+  return clips
 end
 
 -- ceil/floor/wal rendering
@@ -344,12 +393,13 @@ function draw_flats(v_cache,segs,vs)
       if #verts>2 then
         if(right!=0) verts=poly_clip(0.707,0.707,0,verts)
         if #verts>2 then
-          local sector=segs.sector
+          -- local sector=segs.sector
           
-          polyfill(verts,sector.floor,sector.floortex,sector.floorlight)
-          polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight)
+          --polyfill(verts,sector.floor,sector.floortex,sector.floorlight)
+          --polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight)
 
-          draw_sub_sector(segs,verts)
+          add(vs,{segs,verts})
+          -- draw_sub_sector(segs,verts)
           -- todo: draw things
         end
       end
@@ -506,20 +556,40 @@ function _draw()
     end)
     pset(64,64,8)
   else
+    local viz={}
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
-      side=not side
       if node.leaf[side] then
-        draw_flats(v_cache,node.leaf[side])
+        draw_flats(v_cache,node.leaf[side],viz)
       else
         if _cam:is_visible(node.bbox[side]) then
           visit_bsp(node.child[side],pos,visitor)
         end
       end
     end)
+  
+    -- front to back rendering
+    -- collect first level clips
+    local clips={{0,127}}
+    
+    for i=1,#viz do
+      local new_clips={}
+      -- use previous clip set to render this level
+      for _,c in pairs(clips) do
+        local tmp=draw_sub_sector(viz,i,c[1],c[2],{})
+        
+        -- collect
+        for _,c in pairs(tmp) do
+          add(new_clips,c)
+          rect(c[1],-1,c[2],128,15)
+        end
+      end
+      -- replace current clip set
+      clips=new_clips
+    end
 
     -- restore palette
-    -- memcpy(0x5f10,0x4300,16)
     pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
+
 
     local cpu=stat(1)
     print(cpu,2,3,3)
