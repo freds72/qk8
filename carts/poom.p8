@@ -30,8 +30,12 @@ function make_camera()
     m={
       1,0,0,
       0,1,0},
+    u=1,
+    v=0,
     track=function(self,pos,angle,height)
       local ca,sa=cos(angle+0.25),-sin(angle+0.25)
+      self.u=ca
+      self.v=sa
       -- world to cam matrix
       self.m={
         ca,0,-sa,-ca*pos[1]+sa*pos[2],
@@ -50,13 +54,10 @@ function make_camera()
       }
     end,
     is_visible=function(self,bbox)    
-      -- todo: validate if called multiple times?  
       local m,outcode=self.m,0xffff
       local m1,m3,m4,m9,m11,m12=m[1],m[3],m[4],m[9],m[11],m[12]
-      for i=1,4 do
-        -- todo: pack bbox as x,y,x,y,...
-        local v=bbox[i]
-        local x,z=v[1],v[2]
+      for i=1,8,2 do
+        local x,z=bbox[i],bbox[i+1]
         local ax,az=m1*x+m3*z+m4,m9*x+m11*z+m12
         -- todo: optimize
         local code=k_near
@@ -119,50 +120,49 @@ end
 function polyfill(v,offset,tex,light)
   poke4(0x5f38,tex)
 
+  local ca,sa,cx,cy,cz=_cam.u,_cam.v,plyr[1]>>4,(plyr.height+56-offset)<<3,plyr[2]>>4
+
   local v0,spans,pal0=v[#v],{}
   local x0,w0=v0.x,v0.w
-  local y0,u0,v0=v0.y-offset*w0,v0.u*w0,v0.v*w0
+  local y0=v0.y-offset*w0
   for i,v1 in ipairs(v) do
     local x1,w1=v1.x,v1.w
-    local y1,u1,v1=v1.y-offset*w1,v1.u*w1,v1.v*w1
-    local _x1,_y1,_u1,_v1,_w1=x1,y1,u1,v1,w1
-    if(y0>y1) x1=x0 y1=y0 u1=u0 v1=v0 w1=w0 x0=_x1 y0=_y1 u0=_u1 v0=_v1 w0=_w1
+    local y1=v1.y-offset*w1
+    local _x1,_y1,_w1=x1,y1,w1
+    if(y0>y1) x1=x0 y1=y0 w1=w0 x0=_x1 y0=_y1 w0=_w1
     local dy=y1-y0
-    local cy0,dx,du,dv,dw=ceil(y0),(x1-x0)/dy,(u1-u0)/dy,(v1-v0)/dy,(w1-w0)/dy
-    if(y0<0) x0-=y0*dx u0-=y0*du v0-=y0*dv w0-=y0*dw y0=0
+    local cy0,dx,dw=ceil(y0),(x1-x0)/dy,(w1-w0)/dy
+    if(y0<0) x0-=y0*dx w0-=y0*dw y0=0
     local sy=cy0-y0
     x0+=sy*dx
-    u0+=sy*du
-    v0+=sy*dv
     w0+=sy*dw
 
     for y=cy0,min(ceil(y1)-1,127) do
+      local span=spans[y]
+      if span then
       -- limit visibility
-      if w0>0.3 then
-        local span=spans[y]
-        if span then
-          local a,au,av,b,bu,bv=span.x,span.u,span.v,x0,u0,v0
-          if(a>b) a=x0 au=u0 av=v0 b=span.x bu=span.u bv=span.v
+        if w0>0.3 then
+          local a,b=x0,span
+          if(a>b) a=span b=x0
           -- color shifing
           local pal1=light\w0
           if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
-          -- sub-pix shift
-          local ca,dab=a\1-1,b-a
-          local sa,w0,dau,dav=ca-a,w0<<4,(bu-au)/dab,(bv-av)/dab
-          tline(ca,y,b,y,(au+sa*dau)/w0,(av+sa*dav)/w0,dau/w0,dav/w0)          
-        else
-          spans[y]={x=x0,u=u0,v=v0}
-        end
+          
+          local rz=cy/(y-63.5)
+          local rx=rz*(a-63.5)>>7
+          local x,z=ca*rx+sa*rz+cx,-sa*rx+ca*rz+cz
+        
+          tline(a,y,b,y,x,z,ca*rz>>7,-sa*rz>>7)   
+        end       
+      else
+        spans[y]=x0
       end
+
       x0+=dx
-      u0+=du
-      v0+=dv
       w0+=dw
     end			
     x0=_x1
     y0=_y1
-    u0=_u1
-    v0=_v1
     w0=_w1
   end
 end
@@ -230,41 +230,7 @@ function draw_segs2d(v_cache,segs,pos,c)
   pset(x0,y0,15)
 end
 
-function draw_ceiling(offset,toptex,x0,y0,w0,x1,y1,w1)
-  local ca,sa=cos(plyr.angle+0.25),-sin(plyr.angle+0.25)
-  local t0,t1=y0-offset*w0,y1-offset*w1
-  if(t0>t1) x0,t0,w0,x1,t1,w1=x1,t1,w1,x0,t0,w0
-  local dt=t1-t0
-  local dx,dw=(x1-x0)/dt,(w1-w0)/dt
-  if(t0<0) x0-=t0*dx w0-=t0*dw t0=0
-  poke4(0x5f38,toptex)
-  local cx,cy,cz=plyr[1]/16,(plyr.height+56-offset)/16,plyr[2]/16
-  for y=ceil(t0),min(ceil(t1)-1,127) do
-    -- color shifing
-    --local pal1=4\w0
-    --if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
-    -- sub-pix shift
-    local w=w0<<6
-    local rz=(cy*128)/(y-64)
-    -- todo: optimize
-    local _x0=x0
-    if(x0>x1) x0,x1=x1,x0
-		local rx=rz*(x0-64)/128
-		local x,z=ca*rx+sa*rz+cx,-sa*rx+ca*rz+cz
-	
-    tline(x0,y,x1,y,x,z,ca*rz/128,-sa*rz/128)          
-    x0=_x0
-    x0+=dx
-    w0+=dw  
-  end
-end
-
-function draw_sub_sector(viz,idx,xmin,xmax,clips)
-  if(xmax-xmin<=0) return
-  local vs=viz[idx]
-  -- nothing else to draw
-  if(not vs) return
-  local segs,v_cache=vs[1],vs[2]
+function draw_sub_sector(segs,v_cache)
   -- get heights
   local sector=segs.sector
   local top,bottom=sector.ceil,sector.floor
@@ -283,8 +249,8 @@ function draw_sub_sector(viz,idx,xmin,xmax,clips)
       local dx,u0,u1=x1-x0,v0[seg.uv]*w0,v1[seg.uv]*w1
       local dy,du,dw=(y1-y0)/dx,(u1-u0)/dx,(w1-w0)/dx
       
-      if(x0<xmin) x0-=xmin y0-=x0*dy u0-=x0*du w0-=x0*dw x0=xmin
-      local cx0,cx1=ceil(x0),min(ceil(x1)-1,xmax)
+      if(x0<0) y0-=x0*dy u0-=x0*du w0-=x0*dw x0=0
+      local cx0,cx1=ceil(x0),min(ceil(x1)-1,127)
       local sx=cx0-x0
       y0+=sx*dy
       u0+=sx*du
@@ -303,20 +269,13 @@ function draw_sub_sector(viz,idx,xmin,xmax,clips)
           obottom=otherside.sector.floor
           if(top<=otop) otop=nil
           if(bottom>=obottom) obottom=nil
-
-          -- clip & draw otherside
-          -- draw_sub_sector(viz,idx+1,cx0,cx1)
-          add(clips,{cx0,cx1})
         end
 
-        -- ceiling
-        -- draw_ceiling(bottom,sector.floortex,x0,y0,w0,x1,y1,w1)
-
         for x=cx0,cx1 do
-          --if w0>0.3 then
+          if w0>0.3 then
             -- color shifing
             local pal1=4\w0
-            --if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
+            if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
             local t,b,w=y0-top*w0,y0-bottom*w0,w0<<4
             -- wall
             -- top wall side between current sector and back sector
@@ -344,19 +303,15 @@ function draw_sub_sector(viz,idx,xmin,xmax,clips)
               poke4(0x5f38,midtex)             
               tline(x,ct,x,b,u0/w,(ct-t)/w,0,1/w)
             end
-          --end
+          end
           y0+=dy
           u0+=du
           w0+=dw
         end
-      else
-        --draw_sub_sector(viz,idx+1,cx0,cx1)
-        add(clips,{cx0,cx1})
       end
     end
     v0,x0,y0,w0=v1,x1,y1,w1
   end
-  return clips
 end
 
 -- ceil/floor/wal rendering
@@ -393,13 +348,12 @@ function draw_flats(v_cache,segs,vs)
       if #verts>2 then
         if(right!=0) verts=poly_clip(0.707,0.707,0,verts)
         if #verts>2 then
-          -- local sector=segs.sector
+          local sector=segs.sector
           
-          --polyfill(verts,sector.floor,sector.floortex,sector.floorlight)
-          --polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight)
+          polyfill(verts,sector.floor,sector.floortex,sector.floorlight)
+          polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight)
 
-          add(vs,{segs,verts})
-          -- draw_sub_sector(segs,verts)
+          draw_sub_sector(segs,verts)
           -- todo: draw things
         end
       end
@@ -556,40 +510,20 @@ function _draw()
     end)
     pset(64,64,8)
   else
-    local viz={}
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
+      side=not side
       if node.leaf[side] then
-        draw_flats(v_cache,node.leaf[side],viz)
+        draw_flats(v_cache,node.leaf[side])
       else
         if _cam:is_visible(node.bbox[side]) then
           visit_bsp(node.child[side],pos,visitor)
         end
       end
     end)
-  
-    -- front to back rendering
-    -- collect first level clips
-    local clips={{0,127}}
-    
-    for i=1,#viz do
-      local new_clips={}
-      -- use previous clip set to render this level
-      for _,c in pairs(clips) do
-        local tmp=draw_sub_sector(viz,i,c[1],c[2],{})
-        
-        -- collect
-        for _,c in pairs(tmp) do
-          add(new_clips,c)
-          rect(c[1],-1,c[2],128,15)
-        end
-      end
-      -- replace current clip set
-      clips=new_clips
-    end
 
     -- restore palette
+    -- memcpy(0x5f10,0x4300,16)
     pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
-
 
     local cpu=stat(1)
     print(cpu,2,3,3)
@@ -713,9 +647,7 @@ end
 -- returns an array of 2d vectors 
 function unpack_bbox()
   local t,b,l,r=unpack_fixed(),unpack_fixed(),unpack_fixed(),unpack_fixed()
-  return {
-    {l,b},{l,t},{r,t},{r,b}
-  }
+  return {l,b,l,t,r,t,r,b}
 end
 
 function unpack_map()
