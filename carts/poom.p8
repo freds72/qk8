@@ -167,7 +167,7 @@ function polyfill(v,offset,tex,light)
   end
 end
 
-function draw_segs2d(v_cache,segs,pos,c)
+function draw_segs2d(v_cache,segs,pos,txt)
   local verts,outcode,left,right,clipcode={},0xffff,0,0,0
 
   local pfix={pos[1],pos[2]}
@@ -220,17 +220,23 @@ function draw_segs2d(v_cache,segs,pos,c)
   ]]
   local v0=verts[#verts]
   local x0,y0,w0=cam_to_screen2d(v0)
+  local xc,yc=0,0
   for i=1,#verts do
     local v1=verts[i]
     local x1,y1,w1=cam_to_screen2d(v1)
-    line(x0,y0,x1,y1,rnd(15))--v0.seg.partner and 10 or 4)
+    xc+=x1
+    yc+=y1
+    line(x0,y0,x1,y1,5)
+    if(v0.seg.c) line(x0,y0,x1,y1,rnd(15))
     if(v0.seg.msg) print(v0.seg.msg,(x0+x1)/2,(y0+y1)/2,7)
     x0,y0=x1,y1
     v0=v1
   end
-
+  if(txt) print(txt,xc/#verts,yc/#verts,10)
+  --[[
   local x0,y0=cam_to_screen2d(_cam:project(pfix))
   pset(x0,y0,15)
+  ]]
 end
 
 function draw_sub_sector(segs,v_cache)
@@ -422,7 +428,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
   for i=1,#segs do
     local s0=segs[i]
     local n=s0.n
-
+    s0.c=nil
     local denom=v2_dot(s0.n,d)
     local dist=s0.d-v2_dot(s0.n,p)
     if denom==0 then
@@ -441,8 +447,8 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
   end
 
   if tmin<=tmax then
-    add(res,tmin)
-    add(res,tmax)
+    if(tmin_seg) add(res,tmin) tmin_seg.c=true
+    if(tmax_seg) add(res,tmax) tmax_seg.c=true
   end
 end
 
@@ -450,24 +456,26 @@ function intersect(node,p,d,tmin,tmax,res)
   local denom=v2_dot(node.n,d)
   local dist=node.d-v2_dot(node.n,p)
   local side=dist>0
-  -- not parallel
+  -- not parallel?
   if denom!=0 then
     local t=dist/denom
     if 0<=t and t<=tmax then
       if t>=tmin then
         if node.leaf[side] then
-          intersect_sub_sector(node.leaf[side],p,d,tmin,t,res)
+          add(res,node.leaf[side])
+          --intersect_sub_sector(node.leaf[side],p,d,tmin,t,res)
         else
           intersect(node.child[side],p,d,tmin,t,res)
         end
         tmin=t
-        side=not side
       end
+      side=not side
     end
   end
   -- go down on current side
   if node.leaf[side] then
-    intersect_sub_sector(node.leaf[side],p,d,tmin,tmax,res)
+    add(res,node.leaf[side])
+    --intersect_sub_sector(node.leaf[side],p,d,tmin,tmax,res)
   else
     intersect(node.child[side],p,d,tmin,tmax,res)
   end
@@ -558,7 +566,7 @@ function _draw()
     local v_cache=setmetatable({m=_cam.m},v_cache_cls)
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       if node.leaf[side] then
-        draw_segs2d(v_cache,node.leaf[side],pos,side and 11 or 8)
+        -- draw_segs2d(v_cache,node.leaf[side],pos,side and 11 or 8)
       else
         -- bounding box
         --[[
@@ -570,9 +578,23 @@ function _draw()
           x0,y0=x1,y1
         end
         ]]
+  
         --if _cam:is_visible(bbox) then
           visit_bsp(node.child[side],pos,visitor)
         --end
+
+        --[[
+        -- draw hyperplane	
+        local v0={node.d*node.n[1],node.d*node.n[2]}	
+        local v1=_cam:project({v0[1]-1280*node.n[2],v0[2]+1280*node.n[1]})	
+        local v2=_cam:project({v0[1]+1280*node.n[2],v0[2]-1280*node.n[1]})	
+        local x0,y0=cam_to_screen2d(v1)	
+        local x1,y1=cam_to_screen2d(v2)	
+        if not side then	
+          line(x0,y0,x1,y1,8)	
+          -- print(angle,(x0+x1)/2,(y0+y1)/2,7)	
+        end	
+        ]]
       end
     end)
     
@@ -580,21 +602,35 @@ function _draw()
     local x0,y0=cam_to_screen2d(_cam:project({plyr[1]+128*ca,plyr[2]+128*sa}))
     --line(64,64,x0,y0,8)
 
-    local res={}
+    local res,hits={},{0}
     intersect(_bsp,plyr,{ca,sa},0,128,res)
+    for i,leaf in ipairs(res) do
+      draw_segs2d(v_cache,leaf,plyr,i)
+
+      -- 
+      intersect_sub_sector(leaf,plyr,{ca,sa},0,128,hits)
+    end
+
     --[[
     local s,ss=find_sector(_bsp,plyr)
     if ss then
       intersect_portals(ss,plyr,{ca,sa},0,128,res)
     end
     ]]
-    for _,t in pairs(res) do
+    
+    for i,t in pairs(hits) do
       local x0,y0=cam_to_screen2d(_cam:project({
         plyr[1]+t*ca,
         plyr[2]+t*sa
       }))
       pset(x0,y0,15)
+      if i%2==0 then
+        print(i,x0+3,y0-2,15)
+      else
+        print(i,x0-9,y0-2,15)
+      end
     end
+    
   else
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       side=not side
