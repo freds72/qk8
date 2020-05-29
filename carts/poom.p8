@@ -387,52 +387,14 @@ function find_sector(root,pos)
   return root.leaf[side].sector,root.leaf[side]
 end
 
-function intersect_portals(segs,p,d,tmin,tmax,res)
-  local hits={}
-  for i=1,#segs do
-    local s0=segs[i]
-    local denom=v2_dot(s0.n,d)
-    -- not parallel
-    -- not away
-    s0.msg=nil
-    if denom!=0 then
-      local dist=s0.d-v2_dot(s0.n,p)
-      local t=dist/denom
-      if tmin<t and t<=tmax then
-        s0.msg=t
-        if(s0.partner) s0.msg=s0.msg.."(p)"
-        add(hits,{t=t,seg=s0,partner=s0.partner})
-        tmax=t
-      end
-    end
-  end
-
-  for _,hit in pairs(hits) do
-    hit.seg.msg=hit.seg.msg.."*"    
-    if hit.partner then
-      -- if hit is portal, try other side
-      intersect_portals(hit.partner,p,d,hit.t,128,res)
-      add(res,hit.t)
-    else
-      -- solid wall
-      -- record hit
-      add(res,hit.t)
-    end
-  end
-  return #hits
-end
-
 -- http://geomalgorithms.com/a13-_intersect-4.html
-function intersect_sub_sector(segs,p,d,tmin,tmax,side,res)
-  local tmin_seg,tmax_seg
-  local px,pz,dx,dz=p[1],p[2],d[1],d[2]
+function intersect_sub_sector(segs,p,d,tmin,tmax,res)
+  local _tmax=tmax
+  local px,pz,dx,dz,tmax_seg=p[1],p[2],d[1],d[2]
   for i=1,#segs do
     local s0=segs[i]
     local n=s0.n
-    -- debug
-    s0.c=nil
-    local denom=v2_dot(s0.n,d)
-    local dist=s0.d-v2_dot(s0.n,p)
+    local denom,dist=v2_dot(s0.n,d),s0.d-v2_dot(s0.n,p)
     if denom==0 then
       -- parallel and outside
       if(dist<0) return
@@ -446,7 +408,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,side,res)
       local d=v2_dot(s0.dir,pt)-s0.ddir
       if d>=0 and d<s0.len then
         if denom<0 then
-          if(t>tmin) tmin=t --tmin_seg=s0
+          if(t>tmin) tmin=t
           if(tmin>tmax) return
         else
           if(t<tmax) tmax=t tmax_seg=s0
@@ -456,39 +418,11 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,side,res)
     end
   end
 
-  if tmin<=tmax then
-    -- don't record technical lines
-    if(tmin_seg and tmin_seg.line) add(res,{t=tmin,seg=tmin_seg}) tmin_seg.c=true
-    if(tmax_seg and tmax_seg.line) add(res,{t=tmax,seg=tmax_seg}) tmax_seg.c=true
-  end
-end
-
-function intersect(node,p,d,tmin,tmax,res)
-  local denom=v2_dot(node.n,d)
-  local dist=node.d-v2_dot(node.n,p)
-  local side=dist>0
-  -- not parallel?
-  if denom!=0 then
-    local t=dist/denom
-    if 0<=t and t<=tmax then
-      if t>=tmin then
-        if node.leaf[side] then
-          add(res,{leaf=node.leaf[side]})
-          --intersect_sub_sector(node.leaf[side],p,d,tmin,t,res)
-        else
-          intersect(node.child[side],p,d,tmin,t,res)
-        end
-        tmin=t
-      end
-      side=not side
-    end
-  end
-  -- go down on current side
-  if node.leaf[side] then
-    add(res,{leaf=node.leaf[side],side=side})
-    --intersect_sub_sector(node.leaf[side],p,d,tmin,tmax,res)
-  else
-    intersect(node.child[side],p,d,tmin,tmax,res)
+  if tmin<=tmax and tmax_seg then
+    -- don't record node compiler lines
+    if(tmax_seg.line) add(res,{t=tmax,seg=tmax_seg})
+    -- any remaining segment to check?
+    if(tmax<_tmax and tmax_seg.partner) intersect_sub_sector(tmax_seg.partner,p,d,tmax,_tmax,res)
   end
 end
 
@@ -542,21 +476,54 @@ function _update()
   plyr.angle+=plyr.av
   plyr.v+=dv*4
   local ca,sa=cos(plyr.angle),sin(plyr.angle)
-  plyr[1]+=plyr.v*ca
-  plyr[2]+=plyr.v*sa
-  -- damping
-  plyr.v*=0.8
-  plyr.av*=0.8
-  if(abs(plyr.av)<0.001) plyr.av=0
+  local move_dir,move_len={ca,sa},plyr.v
+  if(move_len<0) move_dir={-ca,-sa} move_len=-move_len
 
-  local s=find_sector(_bsp,plyr)
+  -- check collision with world
+  local s,ss=find_sector(_bsp,plyr)
   if s then
+    -- 
+    if move_len!=0 then
+      local hits={}
+      local radius=32
+      intersect_sub_sector(ss,plyr,move_dir,0,move_len+radius,hits)
+
+      -- move
+      plyr[1]+=move_len*move_dir[1]
+      plyr[2]+=move_len*move_dir[2]
+
+      -- fix position
+      for _,hit in ipairs(hits) do
+        local ldef=hit.seg.line
+        local facingside,otherside=ldef.sides[hit.seg.side],ldef.sides[not hit.seg.side]
+        local fix_move
+        if otherside==nil then
+          fix_move=true
+        elseif abs(facingside.sector.floor-otherside.sector.floor)>24 then
+          fix_move=true
+        end
+        if fix_move and hit.t<move_len+radius then
+          -- clip move
+          local fix=-(move_len+radius-hit.t)*v2_dot(hit.seg.n,move_dir)
+          -- fix positino
+          plyr[1]+=fix*hit.seg.n[1]
+          plyr[2]+=fix*hit.seg.n[2]
+        end
+      end
+    end
+
+    s=find_sector(_bsp,plyr)
     plyr.sector=s
     plyr.height=s.floor
     -- collision!
     -- collide_sector(_bsp,plyr,24)
   end
   _cam:track(plyr,plyr.angle,plyr.height+56)
+
+  -- damping
+  plyr.v*=0.8
+  plyr.av*=0.8
+  if(abs(plyr.av)<0.001) plyr.av=0
 end
 
 function _draw()
@@ -585,7 +552,7 @@ function _draw()
     local v_cache=setmetatable({m=_cam.m},v_cache_cls)
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       if node.leaf[side] then
-        -- draw_segs2d(v_cache,node.leaf[side],pos,side and 11 or 8)
+        draw_segs2d(v_cache,node.leaf[side],pos,side and 11 or 8)
       else
         -- bounding box
         --[[
@@ -621,21 +588,13 @@ function _draw()
     local x0,y0=cam_to_screen2d(_cam:project({plyr[1]+128*ca,plyr[2]+128*sa}))
     --line(64,64,x0,y0,8)
 
-    local res,hits={},{}
-    intersect(_bsp,plyr,{ca,sa},0,128,res)
-    for i,hit in ipairs(res) do
-      draw_segs2d(v_cache,hit.leaf,plyr,i)
+    local hits={}
+    -- intersect(_bsp,plyr,{ca,sa},0,128,hits)
 
-      -- 
-      intersect_sub_sector(hit.leaf,plyr,{ca,sa},0,128,hit.side,hits)
-    end
-
-    --[[
     local s,ss=find_sector(_bsp,plyr)
     if ss then
-      intersect_portals(ss,plyr,{ca,sa},0,128,res)
+      intersect_sub_sector(ss,plyr,{ca,sa},0,1024,hits)
     end
-    ]]
     
     local lines={}
     for i,hit in pairs(hits) do
@@ -659,7 +618,7 @@ function _draw()
         if otherside then
           print(i..":"..otherside.sector.id,x0-20,y0-2,15)
         end
-        --lines[ldef]=true
+        lines[ldef]=true
       end
     end
     pset(64,64,15)
