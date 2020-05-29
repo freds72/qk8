@@ -114,7 +114,7 @@ function v2_normal(v)
   local d=max(abs(v[1]),abs(v[2]))
   local n=min(abs(v[1]),abs(v[2])) / d
   d*=sqrt(n*n + 1)
-  return {v[1]/d,v[2]/d}
+  return {v[1]/d,v[2]/d},d
 end
 
 function polyfill(v,offset,tex,light)
@@ -223,7 +223,8 @@ function draw_segs2d(v_cache,segs,pos,c)
   for i=1,#verts do
     local v1=verts[i]
     local x1,y1,w1=cam_to_screen2d(v1)
-    line(x0,y0,x1,y1,v0.seg.c or 4)
+    line(x0,y0,x1,y1,rnd(15))--v0.seg.partner and 10 or 4)
+    if(v0.seg.msg) print(v0.seg.msg,(x0+x1)/2,(y0+y1)/2,7)
     x0,y0=x1,y1
     v0=v1
   end
@@ -377,31 +378,71 @@ function find_sector(root,pos)
     return find_sector(root.child[side],pos)
   end
   -- leaf?
-  return root.leaf[side].sector
+  return root.leaf[side].sector,root.leaf[side]
 end
 
-function intersect_sub_sector(segs,p,d,tmin,tmax,res)
-  local hit_t,hit_seg
+function intersect_portals(segs,p,d,tmin,tmax,res)
+  local hits={}
   for i=1,#segs do
     local s0=segs[i]
-
     local denom=v2_dot(s0.n,d)
-    local dist=s0.d-v2_dot(s0.n,p)
-    if dist>0 then
-      -- not parallel
-      if denom!=0 then
-        local t=dist/denom
-        if tmin<=t and t<=tmax then
-          hit_t=t
-          hit_seg=s0
-          tmax=t
-        end
+    -- not parallel
+    -- not away
+    s0.msg=nil
+    if denom!=0 then
+      local dist=s0.d-v2_dot(s0.n,p)
+      local t=dist/denom
+      if tmin<t and t<=tmax then
+        s0.msg=t
+        if(s0.partner) s0.msg=s0.msg.."(p)"
+        add(hits,{t=t,seg=s0,partner=s0.partner})
+        tmax=t
       end
     end
   end
 
-  if hit_t then
-    add(res,hit_t)
+  for _,hit in pairs(hits) do
+    hit.seg.msg=hit.seg.msg.."*"    
+    if hit.partner then
+      -- if hit is portal, try other side
+      intersect_portals(hit.partner,p,d,hit.t,128,res)
+      add(res,hit.t)
+    else
+      -- solid wall
+      -- record hit
+      add(res,hit.t)
+    end
+  end
+  return #hits
+end
+
+-- http://geomalgorithms.com/a13-_intersect-4.html
+function intersect_sub_sector(segs,p,d,tmin,tmax,res)
+  local tmin_seg,tmax_seg
+  for i=1,#segs do
+    local s0=segs[i]
+    local n=s0.n
+
+    local denom=v2_dot(s0.n,d)
+    local dist=s0.d-v2_dot(s0.n,p)
+    if denom==0 then
+      -- parallel and outside
+      if(dist<0) return
+    else
+      local t=dist/denom
+      if denom<0 then
+        if(t>tmin) tmin=t tmin_seg=s0
+        if(tmin>tmax) return
+      else
+        if(t<tmax) tmax=t tmax_seg=s0
+        if(tmax<tmin) return 
+      end 
+    end
+  end
+
+  if tmin<=tmax then
+    add(res,tmin)
+    add(res,tmax)
   end
 end
 
@@ -419,13 +460,8 @@ function intersect(node,p,d,tmin,tmax,res)
         else
           intersect(node.child[side],p,d,tmin,t,res)
         end
+        tmin=t
         side=not side
-        if node.leaf[side] then
-          intersect_sub_sector(node.leaf[side],p,d,t,tmax,res)
-        else
-          intersect(node.child[side],p,d,t,tmax,res)
-        end
-        return
       end
     end
   end
@@ -448,7 +484,6 @@ function collide_sector(root,pos,radius,sectors)
   local segs=root.leaf[side]
   for i=1,#segs do
     local s0=segs[i]
-    -- logical split: ignore
     if not s0.partner then
       local maxd=s0.d-radius
       local d=v2_dot(s0.n,pos)
@@ -547,6 +582,12 @@ function _draw()
 
     local res={}
     intersect(_bsp,plyr,{ca,sa},0,128,res)
+    --[[
+    local s,ss=find_sector(_bsp,plyr)
+    if ss then
+      intersect_portals(ss,plyr,{ca,sa},0,128,res)
+    end
+    ]]
     for _,t in pairs(res) do
       local x0,y0=cam_to_screen2d(_cam:project({
         plyr[1]+t*ca,
@@ -763,7 +804,8 @@ function unpack_map()
     for i=1,#segs do
       local s1=segs[i]
       local v1=s1.v0
-      local n=v2_normal({v1[1]-v0[1],v1[2]-v0[2]})
+      local n,len=v2_normal({v1[1]-v0[1],v1[2]-v0[2]})
+      -- normal
       n={-n[2],n[1]}
       s0.n,s0.d=n,v2_dot(n,v0)
       -- use normal direction to select uv direction
