@@ -19,6 +19,16 @@ class TEXTURESVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by TEXTURESParser#xscale.
+    def visitXscale(self, ctx:TEXTURESParser.XscaleContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by TEXTURESParser#yscale.
+    def visitYscale(self, ctx:TEXTURESParser.YscaleContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by TEXTURESParser#patch.
     def visitPatch(self, ctx:TEXTURESParser.PatchContext):
         return self.visitChildren(ctx)

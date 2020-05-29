@@ -26,6 +26,24 @@ class TEXTURESListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by TEXTURESParser#xscale.
+    def enterXscale(self, ctx:TEXTURESParser.XscaleContext):
+        pass
+
+    # Exit a parse tree produced by TEXTURESParser#xscale.
+    def exitXscale(self, ctx:TEXTURESParser.XscaleContext):
+        pass
+
+
+    # Enter a parse tree produced by TEXTURESParser#yscale.
+    def enterYscale(self, ctx:TEXTURESParser.YscaleContext):
+        pass
+
+    # Exit a parse tree produced by TEXTURESParser#yscale.
+    def exitYscale(self, ctx:TEXTURESParser.YscaleContext):
+        pass
+
+
     # Enter a parse tree produced by TEXTURESParser#patch.
     def enterPatch(self, ctx:TEXTURESParser.PatchContext):
         pass

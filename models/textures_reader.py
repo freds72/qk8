@@ -19,8 +19,8 @@ class TextureWalker(TEXTURESListener):
         texture = dotdict({
           'width':int(ctx.width().getText())>>3,
           'height':int(ctx.height().getText())>>3,
-          'mx':patch.xoffset() and (-int(patch.xoffset().getText())>>3) or 0,
-          'my':patch.yoffset() and (-int(patch.yoffset().getText())>>3) or 0
+          'mx':-int(patch.xoffset().getText())>>3,
+          'my':-int(patch.yoffset().getText())>>3
         })
         print(texture)
         self.result[name] = texture

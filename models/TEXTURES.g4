@@ -1,3 +1,4 @@
+// set CLASSPATH=antlr-4.8-complete.jar
 // java org.antlr.v4.Tool -Dlanguage=Python3 -visitor -listener TEXTURES.g4
 grammar TEXTURES;
 
@@ -7,8 +8,16 @@ textures:
   ;
 
 block:
-  'Texture' name ',' height ',' width '{' patch '}' |
-  'Flat' name ',' height ',' width '{' patch '}'
+  'Texture' name ',' height ',' width '{' xscale? yscale? patch '}' |
+  'Flat' name ',' height ',' width '{' xscale? yscale? patch '}'
+  ;
+
+xscale:
+  'XScale' NUMBER
+  ;
+
+yscale:
+	'YScale' NUMBER
   ;
 
 patch:
@@ -20,20 +29,20 @@ name:
   ;
 
 width:
-  INTEGER_NUMBER
+  NUMBER
   ;
 height:
-  INTEGER_NUMBER
+  NUMBER
   ;
 xoffset:
-  INTEGER_NUMBER
+  NUMBER
   ;
 yoffset:
-  INTEGER_NUMBER
+  NUMBER
   ;
 
 // lexer
-INTEGER_NUMBER
+NUMBER
   : '-'? DIGIT+ ('.' DIGIT+)?
   ;
 
