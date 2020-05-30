@@ -7,3 +7,6 @@ activity_log.txt
 /cdata
 *.blend1
 sdl_controllers.txt
+/models/.antlr
+/models/__pycache__
+
