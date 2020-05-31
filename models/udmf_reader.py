@@ -40,9 +40,9 @@ class LinedefWalker(udmfListener):
             value = pair.value().getText()
             if attribute == 'v1' or attribute == 'v2':
               value = int(value)
-            elif attribute == 'twosided':
+            elif attribute in ['twosided','dontpegtop']:
               value = value=='true'
-            elif attribute == 'sidefront' or attribute == 'sideback':
+            elif attribute in ['sidefront','sideback','special','arg0','arg1','arg2','arg3']:
               value = int(value)
             linedef[attribute] = value
           self.result.append(linedef)
@@ -75,7 +75,7 @@ class SectorWalker(udmfListener):
           for pair in ctx.pair():
             attribute = pair.keyword().getText()
             value = pair.value().getText()
-            if attribute == 'heightfloor' or attribute == 'heightceiling':
+            if attribute in ['heightfloor','heightceiling','id']:
               value = int(value)
             sector[attribute] = value
           self.result.append(sector)

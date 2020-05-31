@@ -118,12 +118,10 @@ class MAPDirectory():
     subsector_by_seg= {}
     seg_id=0
     for n in segs:
-      print("seg#: {}".format(n))
       segs = []
       for i in range(0,n):
         header_data = file.read(struct.calcsize(fmt_SEGHeader))
         header = SEGHeader._make(struct.unpack(fmt_SEGHeader, header_data))
-        print("{}: {} -> {} ({})".format(seg_id, header.v1, header.partner, header.side))
         segs.append(SEG(seg_id, header.v1, header.lineword==0xFFFF and -1 or header.lineword, header.side, header.partner))
         subsector_by_seg[seg_id] = len(sub_sectors)
         seg_id += 1
@@ -172,7 +170,7 @@ def pack_segs(segs):
   for seg in segs:
     s += pack_variant(seg.v1+1)
     # get single byte value
-    s += "{:02X}".format(seg.side[0])
+    s += "{:02x}".format(seg.side[0])
     # linedef ref (or none)
     s += pack_variant(seg.line+1)
     # reference to connected sub-sector
@@ -186,12 +184,29 @@ def pack_texture(owner, textures, name):
   # no texture/blank texture
   if name not in textures: return "FFFFFFFF"
   texture = textures[name]
-  return "{:02X}{:02X}{:02X}{:02X}".format(texture.my,texture.mx,texture.height,texture.width)
+  return "{:02x}{:02x}{:02x}{:02x}".format(texture.my,texture.mx,texture.height,texture.width)
 
 def pack_lightlevel(owner, name):
   if name in owner:
-    return "{:02X}".format(4-int(owner[name]))
+    return "{:02x}".format(4-int(owner[name]))
   return "04"
+
+def pack_special(line, sectors):
+  special = line.special
+  s = "{:02x}".format(11)
+  # door open
+  if special==11:
+    print("door open special")
+    # tag
+    tag = line.arg0
+    # find all sectors
+    ids = [i for i,sector in enumerate(sectors) if 'id' in sector and sector.id==tag]
+    s += pack_variant(len(ids))
+    for id in ids:
+      s += pack_variant(id+1)
+    # speed
+    s += "{:02x}".format(line.arg1)
+  return s
 
 def pack_zmap(map, textures):
   # export data
@@ -228,8 +243,15 @@ def pack_zmap(map, textures):
     flags = 0
     if line.twosided==True:
       flags |= 1
-    # todo: other game flags
-    s += "{:02X}".format(flags)
+    if 'dontpegtop' in line:
+      flags |= 4
+    # pack other game flags
+    special_data = ""
+    if 'special' in line:
+      flags |= 2
+      special_data += pack_special(line, map.sectors)
+    s += "{:02x}".format(flags)
+    s += special_data
   
   s += pack_variant(len(map.sub_sectors))
   for segs in map.sub_sectors:
@@ -245,7 +267,7 @@ def pack_zmap(map, textures):
     for aabb in node.aabb:
       for v in aabb:
         s += pack_fixed(v)
-    s += "{:02X}".format(node.flags)
+    s += "{:02x}".format(node.flags)
     # segs reference
     if node.flags & 0x1:
       s += pack_variant(node.child[0]+1)

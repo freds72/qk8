@@ -10,7 +10,7 @@ _yceil,_yfloor=nil
 local k_far,k_near=0,2
 local k_right,k_left=4,8
 
--- copy table to memory
+-- copy color ramps to memory
 local mem=0x4300
 for i=0,15 do 
   for c=0,15 do
@@ -103,6 +103,23 @@ function v_lerp(a,b,t)
     a[2]*t_1+t*b[2],
     a[3]*t_1+t*b[3]
   }
+end
+
+-- coroutine helpers
+local _futures,_co_id={},0
+-- registers a new coroutine
+function do_async(fn)
+	_futures[_co_id]=cocreate(fn)
+	-- no more than 64 co-routines active at any one time
+	-- allow safe fast delete
+	_co_id=(_co_id+1)%64
+end
+-- wait until timer
+function wait_async(t,fn)
+	for i=1,t do
+		if(fn) fn(i)
+		yield()
+	end
 end
 
 -- 2d vector functions
@@ -270,6 +287,8 @@ function draw_sub_sector(segs,v_cache)
       if ldef then
         -- dual?
         local facingside,otherside=ldef.sides[seg.side],ldef.sides[not seg.side]
+        -- peg bottom?
+        local rev=ldef.flags&0x4!=0
         local toptex,midtex,bottomtex=facingside.toptex,facingside.midtex,facingside.bottomtex
         local otop,obottom
         if otherside then
@@ -292,7 +311,11 @@ function draw_sub_sector(segs,v_cache)
             if otop then
               poke4(0x5f38,toptex)             
               local ot=y0-otop*w0
-              tline(x,ct,x,ot,u0/w,(ct-t)/w,0,1/w)
+              if rev then
+                tline(x,ot,x,ct,u0/w,(ct-t)/w,0,-1/w)
+              else
+                tline(x,ct,x,ot,u0/w,(ct-t)/w,0,1/w)
+              end
               -- new window top
               t=ot
               ct=ceil(ot)
@@ -467,6 +490,16 @@ function _init()
 end
 
 function _update()
+  	-- any futures?
+	for k,f in pairs(_futures) do
+		local cs=costatus(f)
+		if cs=="suspended" then
+			assert(coresume(f))
+		elseif cs=="dead" then
+			_futures[k]=nil
+		end
+	end
+
   local da,dv=0,0
   if(btn(0)) da-=1
   if(btn(1)) da+=1
@@ -501,7 +534,11 @@ function _update()
           fix_move=true
         elseif abs(facingside.sector.floor-otherside.sector.floor)>24 then
           fix_move=true
+        elseif ldef.trigger then
+          -- special?
+          ldef.trigger()
         end
+
         if fix_move and hit.t<move_len+radius then
           -- clip move
           local fix=-(move_len+radius-hit.t)*v2_dot(hit.seg.n,move_dir)
@@ -638,7 +675,7 @@ function _draw()
     -- memcpy(0x5f10,0x4300,16)
     pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
 
-    local cpu=stat(1)
+    local cpu=stat(1).."|"..stat(0)
     print(cpu,2,3,3)
     print(cpu,2,2,8)
     local s=find_sector(_bsp,plyr)
@@ -763,6 +800,37 @@ function unpack_bbox()
   return {l,b,l,t,r,t,r,b}
 end
 
+function unpack_special(special,line,sectors)
+  -- door
+  if special==11 then
+    -- initial heights
+    local ceilings={}
+    unpack_array(function()
+      local sector=sectors[unpack_variant()]
+      ceilings[sector]=sector.ceil
+      -- close door
+      sector.ceil=sector.floor
+    end)
+    local speed,active=4*mpeek()
+    return function()
+      -- avoid reentrancy
+      if(active) return
+      -- lock
+      active=true
+      do_async(function()
+        for i=0,speed do
+          for sector,ceil in pairs(ceilings) do
+            sector.ceil=lerp(sector.floor,ceil,i/speed)
+          end
+          yield()
+        end
+        -- debug
+        active=nil
+      end)
+    end
+  end
+end
+
 function unpack_map()
   -- jump to data cart
   cart_id,mem=0,0
@@ -773,6 +841,7 @@ function unpack_map()
   unpack_array(function(i)
     add(sectors,{
       id=i,
+      -- ceiling/floor height
       ceil=unpack_int(2),
       floor=unpack_int(2),
       ceiltex=unpack_fixed(),
@@ -803,6 +872,10 @@ function unpack_map()
         [false]=sides[unpack_variant()]
       },
       flags=mpeek()}
+    -- special actions
+    if line.flags&0x2!=0 then
+      line.trigger=unpack_special(mpeek(),line,sectors)
+    end
     add(lines,line)
   end)
 
