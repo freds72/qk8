@@ -191,19 +191,33 @@ def pack_lightlevel(owner, name):
     return "{:02x}".format(4-int(owner[name]))
   return "04"
 
+def pack_sectors_by_tag(tag, sectors):
+  # find all sectors
+  ids = [i for i,sector in enumerate(sectors) if 'id' in sector and sector.id==tag]
+  s = pack_variant(len(ids))
+  for id in ids:
+    s += pack_variant(id+1)
+  return s
+
 def pack_special(line, sectors):
   special = line.special
-  s = "{:02x}".format(11)
+  s = "{:02x}".format(special)
   # door open
   if special==11:
     print("door open special")
-    # tag
-    tag = line.arg0
-    # find all sectors
-    ids = [i for i,sector in enumerate(sectors) if 'id' in sector and sector.id==tag]
-    s += pack_variant(len(ids))
-    for id in ids:
-      s += pack_variant(id+1)
+    s += pack_sectors_by_tag(line.arg0, sectors)
+    # speed
+    s += "{:02x}".format(line.arg1)
+  elif special==245:
+    print("elevator raise special")
+    s += pack_sectors_by_tag(line.arg0, sectors)
+    # todo: find target sector
+    # speed
+    s += "{:02x}".format(line.arg1)
+  elif special==247:
+    print("elevator lower special")
+    s += pack_sectors_by_tag(line.arg0, sectors)
+    # todo: find target sector
     # speed
     s += "{:02x}".format(line.arg1)
   return s

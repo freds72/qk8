@@ -804,8 +804,8 @@ function unpack_bbox()
 end
 
 function unpack_special(special,line,sectors)
-  -- door
   if special==11 then
+    -- door open
     -- initial heights
     local ceilings={}
     unpack_array(function()
@@ -814,7 +814,7 @@ function unpack_special(special,line,sectors)
       -- close door
       sector.ceil=sector.floor
     end)
-    local speed,active=4*mpeek()
+    local speed,active=mpeek()
     return function()
       -- avoid reentrancy
       if(active) return
@@ -827,9 +827,35 @@ function unpack_special(special,line,sectors)
           end
           yield()
         end
-        -- debug
-        active=nil
       end)
+    end
+  elseif special==245 or special==247 then
+    -- elevator raise
+    local elevators={}
+    unpack_array(function()
+      local sector=sectors[unpack_variant()]
+      elevators[sector]=sector
+    end)
+    -- hack: to get from map
+    local target_floor=208
+    if special==247 then
+      target_floor=64
+    end
+    local speed,active=16*mpeek()
+    return function()
+      -- avoid reentrancy
+      if(active) return
+      -- lock
+      active=true
+      do_async(function()
+        for i=0,speed do
+          for sector,_ in pairs(elevators) do
+            sector.floor=lerp(sector.floor,target_floor,i/speed)
+          end
+          yield()
+        end
+      end)
+      active=nil
     end
   end
 end
