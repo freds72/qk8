@@ -288,13 +288,17 @@ function draw_sub_sector(segs,v_cache)
         -- dual?
         local facingside,otherside=ldef.sides[seg.side],ldef.sides[not seg.side]
         -- peg bottom?
-        local rev=ldef.flags&0x4!=0
+        local offsety=(bottom-top)>>4
         local toptex,midtex,bottomtex=facingside.toptex,facingside.midtex,facingside.bottomtex
         local otop,obottom
         if otherside then
           -- visible other side walls?
           otop=otherside.sector.ceil
           obottom=otherside.sector.floor
+          -- offset animated walls  
+          if ldef.flags&0x4!=0 then
+            offsety=(otop-top)>>4
+          end
           if(top<=otop) otop=nil
           if(bottom>=obottom) obottom=nil
         end
@@ -311,11 +315,7 @@ function draw_sub_sector(segs,v_cache)
             if otop then
               poke4(0x5f38,toptex)             
               local ot=y0-otop*w0
-              if rev then
-                tline(x,ot,x,ct,u0/w,(ct-t)/w,0,-1/w)
-              else
-                tline(x,ct,x,ot,u0/w,(ct-t)/w,0,1/w)
-              end
+              tline(x,ct,x,ot,u0/w,(ct-t)/w+offsety,0,1/w)
               -- new window top
               t=ot
               ct=ceil(ot)
@@ -332,8 +332,9 @@ function draw_sub_sector(segs,v_cache)
             -- middle wall?
             if not otherside then
               -- texture selection
-              poke4(0x5f38,midtex)             
-              tline(x,ct,x,b,u0/w,(ct-t)/w,0,1/w)
+              poke4(0x5f38,midtex)
+
+              tline(x,ct,x,b,u0/w,(ct-t)/w+offsety,0,1/w)
             end
           end
           y0+=dy
@@ -382,8 +383,8 @@ function draw_flats(v_cache,segs,vs)
         if #verts>2 then
           local sector=segs.sector
           
-          polyfill(verts,sector.floor,sector.floortex,sector.floorlight)
-          polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight)
+          if(sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,sector.floorlight)
+          if(sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight)
 
           draw_sub_sector(segs,verts)
           -- todo: draw things
@@ -534,6 +535,8 @@ function _update()
           fix_move=true
         elseif abs(facingside.sector.floor-otherside.sector.floor)>24 then
           fix_move=true
+        elseif abs(facingside.sector.floor-otherside.sector.ceil)<64 then
+          fix_move=true
         elseif ldef.trigger then
           -- special?
           ldef.trigger()
@@ -542,7 +545,7 @@ function _update()
         if fix_move and hit.t<move_len+radius then
           -- clip move
           local fix=-(move_len+radius-hit.t)*v2_dot(hit.seg.n,move_dir)
-          -- fix positino
+          -- fix position
           plyr[1]+=fix*hit.seg.n[1]
           plyr[2]+=fix*hit.seg.n[2]
         end
