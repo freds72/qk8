@@ -276,7 +276,7 @@ function draw_sub_sector(segs,v_cache)
       local dy,du,dw=(y1-y0)/dx,(u1-u0)/dx,(w1-w0)/dx
       
       if(x0<0) y0-=x0*dy u0-=x0*du w0-=x0*dw x0=0
-      local cx0,cx1=ceil(x0),min(ceil(x1)-1,127)
+      local cx0=ceil(x0)
       local sx=cx0-x0
       y0+=sx*dy
       u0+=sx*du
@@ -288,8 +288,7 @@ function draw_sub_sector(segs,v_cache)
         -- dual?
         local facingside,otherside=ldef.sides[seg.side],ldef.sides[not seg.side]
         -- peg bottom?
-        local offsety=(bottom-top)>>4
-        local toptex,midtex,bottomtex=facingside.toptex,facingside.midtex,facingside.bottomtex
+        local offsety,toptex,midtex,bottomtex=(bottom-top)>>4,facingside.toptex,facingside.midtex,facingside.bottomtex
         local otop,obottom
         if otherside then
           -- visible other side walls?
@@ -299,11 +298,14 @@ function draw_sub_sector(segs,v_cache)
           if ldef.flags&0x4!=0 then
             offsety=(otop-top)>>4
           end
+          -- make sure bottom is not crossing this side top
+          obottom=min(top,obottom)
+          otop=max(bottom,otop)
           if(top<=otop) otop=nil
           if(bottom>=obottom) obottom=nil
         end
 
-        for x=cx0,cx1 do
+        for x=cx0,min(ceil(x1)-1,127) do
           if w0>0.3 then
             -- color shifing
             local pal1=4\w0
@@ -409,6 +411,25 @@ function find_sector(root,pos)
   end
   -- leaf?
   return root.leaf[side].sector,root.leaf[side]
+end
+
+function find_sector_thick(root,pos,radius,res)
+  -- go down (if possible)
+  local side=v2_dot(root.n,pos)<=root.d-radius
+  local otherside=v2_dot(root.n,pos)<=root.d+radius
+  -- leaf?
+  if root.leaf[side] then
+    add(res,root.leaf[side].sector.id)
+  else
+    find_sector_thick(root.child[side],pos,radius,res)
+  end
+  if side!=otherside then
+    if root.leaf[otherside] then
+      add(res,root.leaf[otherside].sector.id)
+    else
+      find_sector_thick(root.child[otherside],pos,radius,res)
+    end
+  end
 end
 
 -- http://geomalgorithms.com/a13-_intersect-4.html
@@ -662,6 +683,15 @@ function _draw()
       end
     end
     pset(64,64,15)
+
+    local res={}
+    find_sector_thick(_bsp,plyr,32,res)
+    sectors=""
+    for i,id in ipairs(res) do
+      sectors=sectors.."|"..id
+    end
+    print("sectors: "..sectors,2,8,8)
+
   else
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       side=not side

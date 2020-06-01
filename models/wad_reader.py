@@ -102,12 +102,10 @@ class MAPDirectory():
  
     # sub sectors
     subs_size = int.from_bytes(file.read(4), 'little')
-    print("subs: {}".format(subs_size))
     segs_total = 0
     segs = []
     for i in range(0, subs_size):
       segs_size = int.from_bytes(file.read(4), 'little')
-      print("segs: {}".format(segs_size))
       segs_total += segs_size
       segs.append(segs_size)
     segs_size = int.from_bytes(file.read(4), 'little')
@@ -136,7 +134,6 @@ class MAPDirectory():
       
     # bsp nodes
     num_nodes = int.from_bytes(file.read(4), 'little')
-    print("znodes: {}".format(num_nodes))
     nodes = []
     for i in range(0, num_nodes):
       header_data = file.read(struct.calcsize(fmt_ZNODEHeader))
