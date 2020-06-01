@@ -63,7 +63,7 @@ fmt_ZNODEHeader = '<4h4h4h2i'
 SEG = namedtuple('SEG',['id','v1','line','side','partner'])
 AABB = namedtuple('AABB',['top','bottom','left','right'])
 ZNODE = namedtuple('ZNODE',['n','d','flags','child','aabb'])
-ZMAP = namedtuple('ZMAP',['vertices','other_vertices','lines','sides','sectors','sub_sectors', 'nodes'])
+ZMAP = namedtuple('ZMAP',['vertices','other_vertices','lines','sides','sectors','things', 'sub_sectors', 'nodes'])
 
 class MAPDirectory():
   def __init__(self,file, name, entry):
@@ -159,7 +159,7 @@ class MAPDirectory():
       node.aabb[0] = [header.top0,header.bottom0,header.left0,header.right0]
       node.aabb[1] = [header.top1,header.bottom1,header.left1,header.right1]
       nodes.append(node)
-    return ZMAP(udmf.vertices, vertices, udmf.lines, udmf.sides, udmf.sectors, sub_sectors, nodes)
+    return ZMAP(udmf.vertices, vertices, udmf.lines, udmf.sides, udmf.sectors, udmf.things, sub_sectors, nodes)
 
 # ZMAP export to pico8 format
 def pack_segs(segs):
@@ -217,6 +217,14 @@ def pack_special(line, sectors):
     # todo: find target sector
     # speed
     s += "{:02x}".format(line.arg1)
+  return s
+
+def pack_thing(thing):
+  print("thing: {}".format(thing.type))
+  # id
+  s = pack_variant(thing.type)
+  s += pack_fixed(thing.x)
+  s += pack_fixed(thing.y)
   return s
 
 def pack_zmap(map, textures):
@@ -289,6 +297,10 @@ def pack_zmap(map, textures):
       s += pack_variant(node.child[1]+1)
     else:
       s += pack_variant(node.child[1]+1)
+
+  s += pack_variant(len(map.things))
+  for thing in map.things:
+    s += pack_thing(thing)
 
   to_multicart(s, "poom")
 

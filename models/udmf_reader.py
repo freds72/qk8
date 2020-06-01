@@ -80,6 +80,24 @@ class SectorWalker(udmfListener):
             sector[attribute] = value
           self.result.append(sector)
 
+class ThingWalker(udmfListener):    
+    def __init__(self):
+      self.result=[]    
+    def exitBlock(self, ctx):  
+        block = ctx.keyword().getText()  
+        if block=='thing':
+          # default
+          thing = dotdict()
+          for pair in ctx.pair():
+            attribute = pair.keyword().getText()
+            value = pair.value().getText()
+            if attribute in ['x','y']:
+              value = float(value)
+            elif attribute in ['type']:
+              value = int(value)
+            thing[attribute] = value
+          self.result.append(thing)
+
 class UDMF():
   def __init__(self, data):
     lexer = udmfLexer(InputStream(data))
@@ -92,7 +110,8 @@ class UDMF():
       'vertices':VertexWalker(),
       'lines':LinedefWalker(),
       'sides':SideWalker(),
-      'sectors':SectorWalker()
+      'sectors':SectorWalker(),
+      'things':ThingWalker()
     })
     for k,w in walkers.items(): 
       walker.walk(w, tree)
@@ -100,3 +119,4 @@ class UDMF():
     self.lines = walkers.lines.result
     self.sides = walkers.sides.result
     self.sectors = walkers.sectors.result
+    self.things = walkers.things.result

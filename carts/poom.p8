@@ -4,7 +4,7 @@ __lua__
 
 -- globals
 _bsp,_verts=nil
-_cam,plyr=nil
+_cam,plyr,_things=nil
 _znear=16
 _yceil,_yfloor=nil
 local k_far,k_near=0,2
@@ -389,7 +389,25 @@ function draw_flats(v_cache,segs,vs)
           if(sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight)
 
           draw_sub_sector(segs,verts)
-          -- todo: draw things
+          -- draw things (if any)
+          local pal0
+          for _,thing in pairs(segs.things) do
+            local x,z=thing[1],thing[2]
+            local ax,ay,az=
+              m1*x+m3*z+m4,
+              m8,
+              m9*x+m11*z+m12
+            if az>_znear and az<420 then
+              local w0=128/az
+              local x0,y0=63.5+ax*w0,63.5-(ay+sector.floor)*w0
+              -- todo: use sector ambiant light
+              local pal1=4\w0
+              if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1    
+              palt(0,true)
+              w0*=16
+              sspr(64,16,8,8,x0-(w0>>1),y0-w0,w0,w0)
+            end
+          end
         end
       end
     end
@@ -413,21 +431,22 @@ function find_sector(root,pos)
   return root.leaf[side].sector,root.leaf[side]
 end
 
-function find_sector_thick(root,pos,radius,res)
+function find_ssector_thick(root,pos,radius,res)
   -- go down (if possible)
-  local side=v2_dot(root.n,pos)<=root.d-radius
-  local otherside=v2_dot(root.n,pos)<=root.d+radius
+  local dist=v2_dot(root.n,pos)
+  local side,otherside=dist<=root.d-radius,dist<=root.d+radius
   -- leaf?
   if root.leaf[side] then
-    add(res,root.leaf[side].sector.id)
+    add(res,root.leaf[side])
   else
-    find_sector_thick(root.child[side],pos,radius,res)
+    find_ssector_thick(root.child[side],pos,radius,res)
   end
+  -- straddling?
   if side!=otherside then
     if root.leaf[otherside] then
-      add(res,root.leaf[otherside].sector.id)
+      add(res,root.leaf[otherside])
     else
-      find_sector_thick(root.child[otherside],pos,radius,res)
+      find_ssector_thick(root.child[otherside],pos,radius,res)
     end
   end
 end
@@ -500,7 +519,24 @@ function _init()
   palt(0,false)
 
   plyr={0,0,height=0,angle=0,av=0,v=0}
-  _bsp,_verts=unpack_map()
+  _bsp,_things=unpack_map()
+  -- todo: attach behaviors to things
+  for _,thing in pairs(_things) do 
+    if thing.id==1 then
+      plyr[1]=thing[1]
+      plyr[2]=thing[2]
+    else
+      -- attach static things to sub-sectors
+      local subs={}
+      find_ssector_thick(_bsp,thing,20,subs)
+      for _,sub in pairs(subs) do
+        local things=sub.things or {}
+        add(things, thing)
+        sub.things=things  
+      end
+    end
+  end
+
   -- start pos
   --[[
   local s=find_sector(_bsp,plyr)
@@ -576,8 +612,6 @@ function _update()
     s=find_sector(_bsp,plyr)
     plyr.sector=s
     plyr.height=s.floor
-    -- collision!
-    -- collide_sector(_bsp,plyr,24)
   end
   _cam:track(plyr,plyr.angle,plyr.height+56)
 
@@ -587,6 +621,7 @@ function _update()
   if(abs(plyr.av)<0.001) plyr.av=0
 end
 
+_screen_pal={140,1,3,131,4,132,133,7,6,134,5,8,2,9,10}
 function _draw()
   
   cls()
@@ -599,11 +634,15 @@ function _draw()
   ]]
 
   -- cull_bsp(v_cache,_bsp,plyr)
-  if btn(5) then
+  if btn(4) and btn(5) then
+    pal(_screen_pal,1)
+    spr(0,0,0,16,16)
+  elseif btn(5) then
+    pal(_screen_pal,1)
     map()
   elseif btn(4) then
     -- restore palette
-    pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
+    pal(_screen_pal,1)
 
     --[[
     -- fov
@@ -685,7 +724,7 @@ function _draw()
     pset(64,64,15)
 
     local res={}
-    find_sector_thick(_bsp,plyr,32,res)
+    find_ssector_thick(_bsp,plyr,32,res)
     sectors=""
     for i,id in ipairs(res) do
       sectors=sectors.."|"..id
@@ -706,7 +745,8 @@ function _draw()
 
     -- restore palette
     -- memcpy(0x5f10,0x4300,16)
-    pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
+    -- pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
+    pal(_screen_pal,1)
 
     local cpu=stat(1).."|"..stat(0)
     print(cpu,2,3,3)
@@ -1015,9 +1055,19 @@ function unpack_map()
     add(nodes,node)
   end)
 
+  -- things
+  local things={}
+  unpack_array(function()
+    add(things,{
+      flags=unpack_variant(),
+      unpack_fixed(),
+      unpack_fixed()
+    })
+  end)
+
   -- restore main cart
   reload()
-  return nodes[#nodes],verts
+  return nodes[#nodes],things
 end
 
 __gfx__
@@ -1037,14 +1087,14 @@ aaa7aaa77777bbbb2222222266767676baaaaaaabbbb700000000000aaaaaaaabbbbbbb7777bbbbb
 a997a997bbbb77bb27bbbbbb66767676baaaaaaadddd77000000000088888888bbbbbbbbbbbbbbbb000000000000000000000000000000000000000000000000
 aa97aa97bbbbb77727bbbbbb67676766bbbbbbbbeee5567000000000eeeeeeeebbbbbbbbbbbbbbbb000000000000000000000000000000000000000000000000
 aaa7aaa7bbbbb77727bbbbbb66767676bbbbbbbbffffe56700000000ccccccccbbbbbbbbbbbbbbbb000000000000000000000000000000000000000000000000
-bbbbbbbb433333443333333399999999eeee00002222222222222222cdcdcdcd0000000000000000000000000000000000000000000000000000000000000000
-bbbbbbbb4343334433433333aaaaaaaa0ffff000aaaaaaaaaaaaaaaadddddddd0000000000000000000000000000000000000000000000000000000000000000
-bb7dd7bb3333333333333333aaaaaaaa00ffff00a444444aadadadaadddddddd0000000000000000000000000000000000000000000000000000000000000000
-bbdccdbb333333333333333377777777000ffff0a333333aaeadacaadddddddd0000000000000000000000000000000000000000000000000000000000000000
-bbdccdbb3344333333333443bbbbbbbb0000ffffa434433aaeaeacaadddddddd0000000000000000000000000000000000000000000000000000000000000000
-bb7dd7bb434433333333344322222222f0000fffa333333aaeaeacaadddddddd0000000000000000000000000000000000000000000000000000000000000000
-bbbbbbbb3333333434333333ddddddddff0000ffaaaaaaaaaaaaaaaadddddddd0000000000000000000000000000000000000000000000000000000000000000
-bbbbbbbb4333334433333333cdcdcdcdeee0000e99999999999999997d7d7d7d0000000000000000000000000000000000000000000000000000000000000000
+bbbbbbbb433333443333333399999999eeee00002222222222222222cdcdcdcd0230023000000000000000000000000000000000000000000000000000000000
+bbbbbbbb4343334433433333aaaaaaaa0ffff000aaaaaaaaaaaaaaaadddddddd2443444300000000000000000000000000000000000000000000000000000000
+bb7dd7bb3333333333333333aaaaaaaa00ffff00a444444aadadadaadddddddd4447744400000000000000000000000000000000000000000000000000000000
+bbdccdbb333333333333333377777777000ffff0a333333aaeadacaadddddddd2474474200000000000000000000000000000000000000000000000000000000
+bbdccdbb3344333333333443bbbbbbbb0000ffffa434433aaeaeacaadddddddd0223322000000000000000000000000000000000000000000000000000000000
+bb7dd7bb434433333333344322222222f0000fffa333333aaeaeacaadddddddd0044440000000000000000000000000000000000000000000000000000000000
+bbbbbbbb3333333434333333ddddddddff0000ffaaaaaaaaaaaaaaaadddddddd0023320000000000000000000000000000000000000000000000000000000000
+bbbbbbbb4333334433333333cdcdcdcdeee0000e99999999999999997d7d7d7d0044440000000000000000000000000000000000000000000000000000000000
 00000000ddccdcccccccccccabaaaabaaaaaaaaaaaaaaaaa9999999a777777770000000000000000000000000000000000000000000000000000000000000000
 00000000dcccdddcccccccccaaaaaaaaa9bbb77aaa8888aaaaaaaaaa777777770000000000000000000000000000000000000000000000000000000000000000
 00000000ddddccddcccccccca6aaaabaa966aa7aaa9dd9aaaaaaaaaa777777770000000000000000000000000000000000000000000000000000000000000000
