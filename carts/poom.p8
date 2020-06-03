@@ -250,12 +250,16 @@ function draw_sub_sector(segs,v_cache)
         local facingside,otherside=ldef.sides[seg.side],ldef.sides[not seg.side]
         -- peg bottom?
         local offsety,toptex,midtex,bottomtex=(bottom-top)>>4,facingside.toptex,facingside.midtex,facingside.bottomtex
+        -- fix animated side walls (elevators)
+        if ldef.flags&0x4!=0 then
+          offsety=0
+        end
         local otop,obottom
         if otherside then
           -- visible other side walls?
           otop=otherside.sector.ceil
           obottom=otherside.sector.floor
-          -- offset animated walls  
+          -- offset animated walls (doors)
           if ldef.flags&0x4!=0 then
             offsety=(otop-top)>>4
           end
