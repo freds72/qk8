@@ -45,8 +45,7 @@ function make_camera()
     end,
     -- debug/map
     project=function(self,v)
-      local m=self.m
-      local x,z=v[1],v[2]
+      local m,x,z=self.m,v[1],v[2]
       return {
         m[1]*x+m[3]*z+m[4],
         m[8],
@@ -70,26 +69,6 @@ function make_camera()
     end
   }
 end
-
-v_cache_cls={
-  __index=function(t,seg)
-    local m,v=t.m,seg.v0
-    local x,z=v[1],v[2]
-    local ax,ay,az=
-      m[1]*x+m[3]*z+m[4],
-      m[8],
-      m[9]*x+m[11]*z+m[12]
-    local outcode=k_near
-    if(az>_znear) outcode=k_far
-    if(ax>az) outcode+=k_right
-    if(-ax>az) outcode+=k_left
-    
-    local w=128/az
-    local a={ax,ay,az,outcode=outcode,clipcode=outcode&2,seg=seg,u=x,v=z,x=63.5+ax*w,y=63.5-ay*w,w=w}
-    t[v]=a
-    return a
-  end
-}
 
 function lerp(a,b,t)
   return a*(1-t)+b*t
@@ -161,6 +140,8 @@ function polyfill(v,offset,tex,light)
         if w0>0.3 then
           local a,b=x0,span
           if(a>b) a=span b=x0
+          -- collect boundaries
+          -- spans[y]={a,b}
           -- color shifing
           local pal1=light\w0
           if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
@@ -182,35 +163,15 @@ function polyfill(v,offset,tex,light)
     y0=_y1
     w0=_w1
   end
+  --return spans
 end
 
-function draw_segs2d(v_cache,segs,pos,txt)
-  local verts,outcode,left,right,clipcode={},0xffff,0,0,0
+function draw_segs2d(segs,pos,txt)
+  local verts={}
 
-  local pfix={pos[1],pos[2]}
   for i=1,#segs do
     local s0=segs[i]
-    local v0=add(verts,v_cache[s0])
-    --[[
-    if not s0.partner then
-      local maxd=s0.d-24
-      local d=v2_dot(s0.n,pfix)
-      if d<=maxd then
-        s0.c=3
-      else
-        -- out: fix pos
-        pfix[1]+=(maxd-d)*s0.n[1]
-        pfix[2]+=(maxd-d)*s0.n[2]
-
-        s0.c=12
-      end
-    end
-    ]]
-
-    outcode&=v0.outcode
-    left+=(v0.outcode&4)
-    right+=(v0.outcode&8)
-    clipcode+=v0.clipcode
+    local v0=add(verts,_cam:project(s0.v0))
   end
   --[[
   if outcode==0 then
@@ -403,9 +364,9 @@ function draw_flats(v_cache,segs,vs)
               -- todo: use sector ambiant light
               local pal1=4\w0
               if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1    
-              palt(0,true)
-              w0*=16
-              sspr(64,16,8,8,x0-(w0>>1),y0-w0,w0,w0)
+              palt(15,true)
+              w0*=64
+              sspr(0,32,16,32,x0-(w0>>2),y0-w0,w0>>1,w0)
             end
           end
         end
@@ -489,29 +450,6 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
     if(tmax<_tmax and tmax_seg.partner) intersect_sub_sector(tmax_seg.partner,p,d,tmax,_tmax,res)
   end
 end
-
-function collide_sector(root,pos,radius,sectors)
-  -- go down (if possible)
-  local maxd=root.d-radius
-  local side=v2_dot(root.n,pos)<=maxd
-  if root.child[side] then
-    return collide_sector(root.child[side],pos,radius,sectors)
-  end
-  -- leaf?
-  local segs=root.leaf[side]
-  for i=1,#segs do
-    local s0=segs[i]
-    if not s0.partner then
-      local maxd=s0.d-radius
-      local d=v2_dot(s0.n,pos)
-      if d>maxd then
-        pos[1]+=(maxd-d)*s0.n[1]
-        pos[2]+=(maxd-d)*s0.n[2]
-      end
-    end
-  end
-end
-
 
 -->8
 -- game loop
@@ -649,10 +587,9 @@ function _draw()
     line(64,64,127,0,2)
     line(64,64,0,0,2)
     ]]
-    local v_cache=setmetatable({m=_cam.m},v_cache_cls)
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       if node.leaf[side] then
-        draw_segs2d(v_cache,node.leaf[side],pos,side and 11 or 8)
+        draw_segs2d(node.leaf[side],pos,side and 11 or 8)
       else
         -- bounding box
         --[[
@@ -901,31 +838,27 @@ function unpack_special(special,line,sectors)
     end
   elseif special==245 or special==247 then
     -- elevator raise
-    local elevators={}
-    unpack_array(function()
-      local sector=sectors[unpack_variant()]
-      elevators[sector]=sector
-    end)
-    -- hack: to get from map
-    local target_floor=208
-    if special==247 then
-      target_floor=64
-    end
-    local speed,active=16*mpeek()
+    local sector,target_floor,speed=sectors[unpack_variant()],unpack_fixed(),4*mpeek()
+    -- backup initial height
+    local orig_floor=sector.floor
     return function()
       -- avoid reentrancy
-      if(active) return
-      -- lock
-      active=true
+      if(sector.moving) return
+      -- lock (inc. platform)
+      sector.moving=true
       do_async(function()
+        wait_async(30)
         for i=0,speed do
-          for sector,_ in pairs(elevators) do
-            sector.floor=lerp(sector.floor,target_floor,i/speed)
-          end
+          sector.floor=lerp(orig_floor,target_floor,i/speed)
           yield()
         end
+        wait_async(60)
+        for i=0,speed do
+          sector.floor=lerp(target_floor,orig_floor,i/speed)
+          yield()
+        end
+        sector.moving=nil
       end)
-      active=nil
     end
   end
 end
@@ -983,12 +916,14 @@ function unpack_map()
     local segs={}
     unpack_array(function()
       local s=add(segs,{
-        -- debug
         v0=verts[unpack_variant()],
-        side=mpeek()==0,
-        line=lines[unpack_variant()],
-        partner=unpack_variant()
       })
+      local flags=mpeek()
+      s.side=flags&0x1==0
+      -- optional links
+      if(flags&0x2>0) s.line=lines[unpack_variant()]
+      if(flags&0x4>0) s.partner=unpack_variant()
+     
       -- direct link to sector (if not already set)
       if s.line and not segs.sector then
         segs.sector=s.line.sides[s.side].sector
@@ -1024,35 +959,24 @@ function unpack_map()
   
   local nodes={}
   unpack_array(function()
-    local node={
+    local node=add(nodes,{
       n={unpack_fixed(),unpack_fixed()},
       d=unpack_fixed(),
-      -- bounding boxes
-      bbox={
-        [true]=unpack_bbox(),
-        [false]=unpack_bbox()
-      }}
+      bbox={},
+      leaf={},
+      child={}})
     local flags=mpeek()
-    local child,leaf={},{}
-    local child_count,leaf_count=0,0
-    if flags&0x1>0 then
-      leaf[true]=sub_sectors[unpack_variant()]
-      leaf_count+=1
-    else
-      child[true]=nodes[unpack_variant()]
-      child_count+=1
+    local function unpack_node(side,leaf)
+      if leaf then
+        node.leaf[side]=sub_sectors[unpack_variant()]
+      else
+        -- bounding box
+        node.bbox[side]=unpack_bbox()
+        node.child[side]=nodes[unpack_variant()]
+      end
     end
-    -- back
-    if flags&0x2>0 then
-      leaf[false]=sub_sectors[unpack_variant()]
-      leaf_count+=1
-    else
-      child[false]=nodes[unpack_variant()]
-      child_count+=1
-    end
-    node.child=child
-    node.leaf=leaf
-    add(nodes,node)
+    unpack_node(true,flags&0x1>0)
+    unpack_node(false,flags&0x2>0)
   end)
 
   -- things
@@ -1076,9 +1000,9 @@ __gfx__
 62700000bbbb777727bbbbbbbbb99bbbbaaaaaaa2222220000000000bbbbbbbbbbbbbbbaaaabbbbb000000000000000000000000000000000000000000000000
 41600000bbbb777727bbbbbbbb9889bbbaaaaaaa3334422000000000bbbbbbbbbbbbb7aaaaaaabbb000000000000000000000000000000000000000000000000
 95d00000bbb77bbb27bbbbbbbb9889bbbaaaaaaa4444220000000000bbbbbbbbbbbbb7aaaaaaabbb000000000000000000000000000000000000000000000000
-62700000bb77bbbb22777777bbb99bbbbaaaaaaa5556677000000000bbbbbbbbbbbb77aaaaaaaabb000000000000000000000000000000000000000000000000
-41600000777bbbbb22222222bbbbbbbbbaaaaaaa6666770000000000bbbbbbbbbbbb77aaaaaaaabb000000000000000000000000000000000000000000000000
-95d00000777bbbbb27bbbbbbbbbbbbbbbaaaaaaa7777722000000000bbbbbbbbbbbb777aaaaaaabb000000000000000000000000000000000000000000000000
+62700000bb77bbbb22777777bbb99bbbbaaaaaaa5556672200000000bbbbbbbbbbbb77aaaaaaaabb000000000000000000000000000000000000000000000000
+41600000777bbbbb22222222bbbbbbbbbaaaaaaa6666722000000000bbbbbbbbbbbb77aaaaaaaabb000000000000000000000000000000000000000000000000
+95d00000777bbbbb27bbbbbbbbbbbbbbbaaaaaaa7777220000000000bbbbbbbbbbbb777aaaaaaabb000000000000000000000000000000000000000000000000
 77777777bbbb77bb27bbbbbb676767662222222288899ab700000000bbbbbbbbbbbb7777aaaaaabb000000000000000000000000000000000000000000000000
 a997a997bbb77bbb27bbbbbb66767676bbbbbbbb999aab7000000000bbbbbbbbbbbbb7777aaaabbb000000000000000000000000000000000000000000000000
 aa97aa977777bbbb2277777767676766b9999999aaabb70000000000bbbbbbbbbbbbb77777777bbb000000000000000000000000000000000000000000000000
@@ -1103,6 +1027,38 @@ bbbbbbbb4333334433333333cdcdcdcdeee0000e99999999999999997d7d7d7d0044440000000000
 00000000ccdddddcccccccccaaa66aaaa8aaaabaaa9cc9aaaaaaaaaa777777770000000000000000000000000000000000000000000000000000000000000000
 00000000cccdccdcccccccccaba5aa5aa889989aaaaaaaaaaaaaaaaa777777770000000000000000000000000000000000000000000000000000000000000000
 00000000cddddccdccccccccaaaaaaaaaaaaaaaaaabbbbaabbbbbbbb777777770000000000000000000000000000000000000000000000000000000000000000
+fffff6766fffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+fffff6666fffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ffffd757bdffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+fffff65b7fffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+fff7072707ffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+fbb7bb7777b7ffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+bbbb5bbbbbbbbfff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+7b7666bbbbbbb7ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+7b7766bbbb7777ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+bb076bbbb700777f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+bbf7bbb6777f075f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+7457b7bb77ff577f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0077777707ff57ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000777777766fff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff777000700677ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f0777757075677ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f07bb7077b00f0ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f77bb7077777ffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff7bb0077707ffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff7bb0f0077fffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f7777ff0707fffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f7077ff0007fffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f0000ff7077fffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f7770ff7000fffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff700ff070ffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff770ff000ffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff070fff00ffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff070fff000fffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff070ffff00fffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff000fffffffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f0000fffffffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f000ffffffffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 0111021220240404313104040000000007070707070707070707070707070707000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0111021200001414313104040000000007070707070707070707070707070707000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

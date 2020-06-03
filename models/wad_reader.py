@@ -166,12 +166,19 @@ def pack_segs(segs):
   s = pack_variant(len(segs))
   for seg in segs:
     s += pack_variant(seg.v1+1)
-    # get single byte value
-    s += "{:02x}".format(seg.side[0])
-    # linedef ref (or none)
-    s += pack_variant(seg.line+1)
-    # reference to connected sub-sector
-    s += pack_variant(seg.partner+1)
+    # side? + extra flags
+    flags = seg.side[0]
+    extra_data = ""
+    if seg.line!=-1:
+      flags |= 2
+      # linedef ref
+      extra_data += pack_variant(seg.line+1)
+    if seg.partner!=-1:
+      flags |= 4
+      # reference to connected sub-sector
+      extra_data += pack_variant(seg.partner+1)
+    s += "{:02x}".format(flags)
+    s += extra_data
   return s
 
 def pack_texture(owner, textures, name):
@@ -188,33 +195,54 @@ def pack_lightlevel(owner, name):
     return "{:02x}".format(4-int(owner[name]))
   return "04"
 
-def pack_sectors_by_tag(tag, sectors):
-  # find all sectors
-  ids = [i for i,sector in enumerate(sectors) if 'id' in sector and sector.id==tag]
+def pack_aabb(aabb):
+  s = ""
+  for v in aabb:
+    s += pack_fixed(v)
+  return s
+
+# find all sectors
+def find_sectors_by_tag(tag, sectors):
+  return [i for i,sector in enumerate(sectors) if 'id' in sector and sector.id==tag]
+
+def pack_sectors_by_tag(ids):
   s = pack_variant(len(ids))
   for id in ids:
     s += pack_variant(id+1)
   return s
 
-def pack_special(line, sectors):
+def find_other_sectors(id, lines, sides, sectors):
+  # find sector sides
+  all_sides = [i for i,side in enumerate(sides) if side.sector==id]
+  other_sectors = [sectors[sides[line.sidefront].sector] for line in lines if line.sideback in all_sides and line.sidefront!=-1] + [sectors[sides[line.sideback].sector] for line in lines if line.sidefront in all_sides and line.sideback!=-1]
+  if len(other_sectors)<1:
+    raise Exception("Sector: {} missing reference sector".format(id))
+  return other_sectors
+
+def pack_special(line, lines, sides, sectors):
   special = line.special
   s = "{:02x}".format(special)
   # door open
   if special==11:
-    print("door open special")
-    s += pack_sectors_by_tag(line.arg0, sectors)
+    print("door open/stay special")
+    sector_ids = find_sectors_by_tag(line.arg0, sectors)
+    s += pack_sectors_by_tag(sector_ids)
     # speed
     s += "{:02x}".format(line.arg1)
-  elif special==245:
-    print("elevator raise special")
-    s += pack_sectors_by_tag(line.arg0, sectors)
-    # todo: find target sector
-    # speed
-    s += "{:02x}".format(line.arg1)
-  elif special==247:
-    print("elevator lower special")
-    s += pack_sectors_by_tag(line.arg0, sectors)
-    # todo: find target sector
+  elif special==245 or special==247:
+    print("elevator up/stay/down special")
+    sector_ids = find_sectors_by_tag(line.arg0, sectors)
+    if len(sector_ids)>1:
+      raise Exception("Not supported - multiple elevators for 1 trigger")
+    sector_id = sector_ids[0]
+    sector = sectors[sector_id]
+    other_sectors = find_other_sectors(sector_id, lines, sides, sectors)
+    # find floor just above elevator floor
+    other_floor = min([other_sector.heightfloor for other_sector in other_sectors if other_sector.heightfloor>sector.heightfloor])
+    # elevator sector
+    s += pack_variant(sector_id + 1)
+    # target height
+    s += pack_fixed(other_floor)
     # speed
     s += "{:02x}".format(line.arg1)
   return s
@@ -268,7 +296,7 @@ def pack_zmap(map, textures):
     special_data = ""
     if 'special' in line:
       flags |= 2
-      special_data += pack_special(line, map.sectors)
+      special_data += pack_special(line, map.lines, map.sides, map.sectors)
     s += "{:02x}".format(flags)
     s += special_data
   
@@ -282,20 +310,18 @@ def pack_zmap(map, textures):
     s += pack_fixed(node.n[0])
     s += pack_fixed(node.n[1])
     s += pack_fixed(node.d)
-    # bounding boxes
-    for aabb in node.aabb:
-      for v in aabb:
-        s += pack_fixed(v)
     s += "{:02x}".format(node.flags)
     # segs reference
     if node.flags & 0x1:
       s += pack_variant(node.child[0]+1)
     else:
+      s += pack_aabb(node.aabb[0])
       s += pack_variant(node.child[0]+1)
     # segs reference
     if node.flags & 0x2:
       s += pack_variant(node.child[1]+1)
     else:
+      s += pack_aabb(node.aabb[1])
       s += pack_variant(node.child[1]+1)
 
   s += pack_variant(len(map.things))
