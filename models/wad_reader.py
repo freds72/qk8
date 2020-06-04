@@ -229,8 +229,8 @@ def pack_special(line, lines, sides, sectors):
     s += pack_sectors_by_tag(sector_ids)
     # speed
     s += "{:02x}".format(line.arg1)
-  elif special==245 or special==247:
-    print("elevator up/stay/down special")
+  elif special==64:
+    print("platform up/stay/down special")
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
     if len(sector_ids)>1:
       raise Exception("Not supported - multiple elevators for 1 trigger")
@@ -244,6 +244,12 @@ def pack_special(line, lines, sides, sectors):
     # target height
     s += pack_fixed(other_floor)
     # speed
+    s += "{:02x}".format(line.arg1)
+  elif special==80:
+    # script execute
+    # function ID
+    s += "{:02x}".format(line.arg0)
+    # arg1
     s += "{:02x}".format(line.arg1)
   return s
 
@@ -297,6 +303,10 @@ def pack_zmap(map, textures):
     if 'special' in line:
       flags |= 2
       special_data += pack_special(line, map.lines, map.sides, map.sectors)
+    if 'playeruse' in line and line.playeruse==True:
+      flags |= 8
+    if 'playercross' in line and line.playercross==True:
+      flags |= 16
     s += "{:02x}".format(flags)
     s += special_data
   

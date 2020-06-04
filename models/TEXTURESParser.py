@@ -24,12 +24,12 @@ def serializedATN():
         buf.write("\2\20Q\3\2\2\2\22S\3\2\2\2\24U\3\2\2\2\26\30\5\4\3\2\27")
         buf.write("\26\3\2\2\2\30\33\3\2\2\2\31\27\3\2\2\2\31\32\3\2\2\2")
         buf.write("\32\34\3\2\2\2\33\31\3\2\2\2\34\35\7\2\2\3\35\3\3\2\2")
-        buf.write("\2\36\37\7\3\2\2\37 \5\f\7\2 !\7\4\2\2!\"\5\20\t\2\"#")
-        buf.write("\7\4\2\2#$\5\16\b\2$&\7\5\2\2%\'\5\6\4\2&%\3\2\2\2&\'")
+        buf.write("\2\36\37\7\3\2\2\37 \5\f\7\2 !\7\4\2\2!\"\5\16\b\2\"#")
+        buf.write("\7\4\2\2#$\5\20\t\2$&\7\5\2\2%\'\5\6\4\2&%\3\2\2\2&\'")
         buf.write("\3\2\2\2\')\3\2\2\2(*\5\b\5\2)(\3\2\2\2)*\3\2\2\2*+\3")
         buf.write("\2\2\2+,\5\n\6\2,-\7\6\2\2-?\3\2\2\2./\7\7\2\2/\60\5\f")
-        buf.write("\7\2\60\61\7\4\2\2\61\62\5\20\t\2\62\63\7\4\2\2\63\64")
-        buf.write("\5\16\b\2\64\66\7\5\2\2\65\67\5\6\4\2\66\65\3\2\2\2\66")
+        buf.write("\7\2\60\61\7\4\2\2\61\62\5\16\b\2\62\63\7\4\2\2\63\64")
+        buf.write("\5\20\t\2\64\66\7\5\2\2\65\67\5\6\4\2\66\65\3\2\2\2\66")
         buf.write("\67\3\2\2\2\679\3\2\2\28:\5\b\5\298\3\2\2\29:\3\2\2\2")
         buf.write(":;\3\2\2\2;<\5\n\6\2<=\7\6\2\2=?\3\2\2\2>\36\3\2\2\2>")
         buf.write(".\3\2\2\2?\5\3\2\2\2@A\7\b\2\2AB\7\13\2\2B\7\3\2\2\2C")
@@ -172,12 +172,12 @@ class TEXTURESParser ( Parser ):
             return self.getTypedRuleContext(TEXTURESParser.NameContext,0)
 
 
-        def height(self):
-            return self.getTypedRuleContext(TEXTURESParser.HeightContext,0)
-
-
         def width(self):
             return self.getTypedRuleContext(TEXTURESParser.WidthContext,0)
+
+
+        def height(self):
+            return self.getTypedRuleContext(TEXTURESParser.HeightContext,0)
 
 
         def patch(self):
@@ -230,11 +230,11 @@ class TEXTURESParser ( Parser ):
                 self.state = 30
                 self.match(TEXTURESParser.T__1)
                 self.state = 31
-                self.height()
+                self.width()
                 self.state = 32
                 self.match(TEXTURESParser.T__1)
                 self.state = 33
-                self.width()
+                self.height()
                 self.state = 34
                 self.match(TEXTURESParser.T__2)
                 self.state = 36
@@ -267,11 +267,11 @@ class TEXTURESParser ( Parser ):
                 self.state = 46
                 self.match(TEXTURESParser.T__1)
                 self.state = 47
-                self.height()
+                self.width()
                 self.state = 48
                 self.match(TEXTURESParser.T__1)
                 self.state = 49
-                self.width()
+                self.height()
                 self.state = 50
                 self.match(TEXTURESParser.T__2)
                 self.state = 52

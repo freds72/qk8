@@ -22,7 +22,6 @@ class TextureWalker(TEXTURESListener):
           'mx':-int(patch.xoffset().getText())>>3,
           'my':-int(patch.yoffset().getText())>>3
         })
-        print(texture)
         self.result[name] = texture
 
 class TEXTURES():

@@ -8,8 +8,8 @@ textures:
   ;
 
 block:
-  'Texture' name ',' height ',' width '{' xscale? yscale? patch '}' |
-  'Flat' name ',' height ',' width '{' xscale? yscale? patch '}'
+  'Texture' name ',' width ',' height '{' xscale? yscale? patch '}' |
+  'Flat' name ',' width ',' height '{' xscale? yscale? patch '}'
   ;
 
 xscale:

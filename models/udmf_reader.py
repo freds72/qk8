@@ -40,7 +40,7 @@ class LinedefWalker(udmfListener):
             value = pair.value().getText()
             if attribute == 'v1' or attribute == 'v2':
               value = int(value)
-            elif attribute in ['twosided','dontpegtop']:
+            elif attribute in ['twosided','dontpegtop','playercross','playeruse']:
               value = value=='true'
             elif attribute in ['sidefront','sideback','special','arg0','arg1','arg2','arg3']:
               value = int(value)
