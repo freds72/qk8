@@ -890,7 +890,8 @@ function unpack_special(special,line,sectors)
       if btn(4) then
         active=true
         do_async(function()
-          sfx(0)
+          --sfx(0)
+          line.sides[true].midtex=14|8>>8|2>>16
           wait_async(30)
           active=nil
         end)
@@ -935,6 +936,7 @@ function unpack_map()
   local lines={}
   unpack_array(function()
     local line={
+      -- todo: merge array into self
       sides={
         [true]=sides[unpack_variant()],
         [false]=sides[unpack_variant()]
