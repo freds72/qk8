@@ -74,6 +74,10 @@ end
 function lerp(a,b,t)
   return a*(1-t)+b*t
 end
+function smoothstep(t)
+	t=mid(t,0,1)
+	return t*t*(3-2*t)
+end
 
 -- 3d vector functions
 function v_lerp(a,b,t)
@@ -520,41 +524,31 @@ function _update()
   local s,ss=find_sector(_bsp,plyr)
   if s then
     -- 
+    local hits={}
+    local radius=32
+    intersect_sub_sector(ss,plyr,move_dir,0,move_len+radius+24,hits)
     if move_len!=0 then
-      local hits={}
-      local radius=32
-      intersect_sub_sector(ss,plyr,move_dir,0,move_len+radius+24,hits)
-
       -- move
       plyr[1]+=move_len*move_dir[1]
       plyr[2]+=move_len*move_dir[2]
 
       -- fix position
       for _,hit in ipairs(hits) do
-        local ldef=hit.seg.line
-        local facingside,otherside=ldef.sides[hit.seg.side],ldef.sides[not hit.seg.side]
-        local fix_move
+        local ldef,fix_move=hit.seg.line
         -- 
         if hit.t<move_len+radius then
+          local facingside,otherside=ldef.sides[hit.seg.side],ldef.sides[not hit.seg.side]
           if otherside==nil then
             fix_move=true
           elseif abs(facingside.sector.floor-otherside.sector.floor)>24 then
             fix_move=true
           elseif abs(facingside.sector.floor-otherside.sector.ceil)<64 then
             fix_move=true
-          elseif ldef.trigger and ldef.flags&0x10>0 then
-            -- cross special?
-            ldef.trigger()
           end
-        end
-
-        -- buttons
-        if ldef.flags&0x8>0 then
-          -- use special?
-          if btn(4) then
+          
+          -- cross special?
+          if ldef.trigger and ldef.flags&0x10>0 then
             ldef.trigger()
-          else
-            _msg="press (x) to activate"
           end
         end
 
@@ -565,6 +559,22 @@ function _update()
           plyr[1]+=fix*hit.seg.n[1]
           plyr[2]+=fix*hit.seg.n[2]
         end
+      end
+    end
+
+    -- check triggers/bumps/...
+    for _,hit in ipairs(hits) do
+      local ldef=hit.seg.line
+      -- buttons
+      if ldef.trigger and ldef.flags&0x8>0 then
+        -- use special?
+        if btn(4) then
+          ldef.trigger()
+        else
+          _msg="press (x) to activate"
+        end
+        -- trigger/message only closest hit
+        break
       end
     end
 
@@ -834,69 +844,98 @@ function unpack_bbox()
 end
 
 function unpack_special(special,line,sectors)
-  if special==11 then
-    -- door open
-    -- initial heights
-    local ceilings={}
+  -- helper function - handles lock & repeat
+  local function trigger_async(fn)
+    local trigger
+    trigger=function()
+      -- avoid reentrancy
+      line.trigger=nil
+      do_async(fn)
+      -- unlock (if repeatable)
+      if(line.flags&32>0) line.trigger=trigger
+    end
+    return trigger
+  end
+
+  if special==202 then
+    -- sectors
+    local doors={}
+    -- backup heights
     unpack_array(function()
       local sector=sectors[unpack_variant()]
-      ceilings[sector]=sector.ceil
-      -- close door
-      sector.ceil=sector.floor
+      -- safe for replay init values
+      sector.close=sector.close or sector.floor
+      sector.open=sector.open or sector.ceil
+      add(doors,sector)
     end)
-    local speed,active=mpeek()
-    return function()
-      -- avoid reentrancy
-      if(active) return
-      -- lock
-      active=true
-      do_async(function()
-        for i=0,speed do
-          for sector,ceil in pairs(ceilings) do
-            sector.ceil=lerp(sector.floor,ceil,i/speed)
-          end
-          yield()
+    local speed,kind,delay=mpeek(),mpeek(),mpeek()
+    local function move_async(to,speed)
+      -- take current values
+      local ceils={}
+      for _,sector in pairs(doors) do
+        ceils[sector]=sector.ceil
+      end
+      -- lerp from current values
+      for i=0,speed do
+        for _,sector in pairs(doors) do
+          sector.ceil=lerp(ceils[sector],sector[to],i/speed)
         end
-      end)
+        yield()
+      end
     end
+    -- init
+    if kind&2==0 then
+      move_async("close",1)
+    else
+      move_async("open",1)
+    end
+    return trigger_async(function()  
+      if kind&2==0 then
+        move_async("open",speed)
+      else
+        move_async("close",speed)
+      end
+      if kind==0 then
+        wait_async(delay)
+        move_async("close",speed)
+      elseif kind==2 then
+        wait_async(delay)
+        move_async("open",speed)
+      end
+    end)         
   elseif special==64 then
     -- elevator raise
-    local sector,target_floor,speed=sectors[unpack_variant()],unpack_fixed(),4*mpeek()
+    local sector,target_floor,speed=sectors[unpack_variant()],unpack_fixed(),128-mpeek()
     -- backup initial height
     local orig_floor=sector.floor
+    local function move_async(from,to)
+      wait_async(30)
+      for i=0,speed do
+        sector.floor=lerp(from,to,smoothstep(i/speed))
+        yield()
+      end
+      -- avoid drift
+      sector.floor=to
+    end
     return function()
       -- avoid reentrancy
       if(sector.moving) return
-      -- lock (inc. platform)
+      -- lock (from any other trigger)
       sector.moving=true
       do_async(function()
-        wait_async(30)
-        for i=0,speed do
-          sector.floor=lerp(orig_floor,target_floor,i/speed)
-          yield()
-        end
-        wait_async(60)
-        for i=0,speed do
-          sector.floor=lerp(target_floor,orig_floor,i/speed)
-          yield()
-        end
+        move_async(orig_floor,target_floor)
+        move_async(target_floor,orig_floor)
         sector.moving=nil
       end)
     end
   elseif special==80 then
-    local arg0,arg1,active=mpeek(),mpeek()
-    return function()
-      if(active) return
-      if btn(4) then
-        active=true
-        do_async(function()
-          --sfx(0)
-          line.sides[true].midtex=14|8>>8|2>>16
-          wait_async(30)
-          active=nil
-        end)
-      end
-    end
+    local arg0,arg1=mpeek(),mpeek()
+    return trigger_async(function()
+      --sfx(0)
+      -- todo: trigger action
+      -- test: switch texture
+      line.sides[true].midtex=14|8>>8|2>>16
+    end)
   end
 end
 

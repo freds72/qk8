@@ -219,16 +219,23 @@ def find_other_sectors(id, lines, sides, sectors):
     raise Exception("Sector: {} missing reference sector".format(id))
   return other_sectors
 
+def get_or_default(owner, name, default):
+  return name in owner and owner[name] or default
+
 def pack_special(line, lines, sides, sectors):
   special = line.special
   s = "{:02x}".format(special)
   # door open
-  if special==11:
-    print("door open/stay special")
+  if special==202:
+    print("generic door")
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
     s += pack_sectors_by_tag(sector_ids)
     # speed
     s += "{:02x}".format(line.arg1)
+    # door type
+    s += "{:02x}".format(get_or_default(line,'arg2',0)) 
+    # delay
+    s += "{:02x}".format(get_or_default(line,'arg3',10)) 
   elif special==64:
     print("platform up/stay/down special")
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
@@ -307,6 +314,8 @@ def pack_zmap(map, textures):
       flags |= 8
     if 'playercross' in line and line.playercross==True:
       flags |= 16
+    if 'repeatspecial' in line and line.repeatspecial==True:
+      flags |= 32
     s += "{:02x}".format(flags)
     s += special_data
   
