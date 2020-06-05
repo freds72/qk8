@@ -252,7 +252,7 @@ function draw_sub_sector(segs,v_cache)
       local ldef=seg.line
       if ldef then
         -- dual?
-        local facingside,otherside=ldef.sides[seg.side],ldef.sides[not seg.side]
+        local facingside,otherside=ldef[seg.side],ldef[not seg.side]
         -- peg bottom?
         local offsety,toptex,midtex,bottomtex=(bottom-top)>>4,facingside.toptex,facingside.midtex,facingside.bottomtex
         -- fix animated side walls (elevators)
@@ -537,7 +537,7 @@ function _update()
         local ldef,fix_move=hit.seg.line
         -- 
         if hit.t<move_len+radius then
-          local facingside,otherside=ldef.sides[hit.seg.side],ldef.sides[not hit.seg.side]
+          local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
           if otherside==nil then
             fix_move=true
           elseif abs(facingside.sector.floor-otherside.sector.floor)>24 then
@@ -679,7 +679,7 @@ function _draw()
       pset(x0,y0,c)
       local ldef=hit.seg.line
       if not lines[ldef] then
-        local facingside,otherside=ldef.sides[hit.seg.side],ldef.sides[not hit.seg.side]
+        local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
         if facingside then
           print(i..":"..facingside.sector.id,x0+3,y0-2,15)
         end
@@ -937,7 +937,7 @@ function unpack_special(special,line,sectors)
       --sfx(0)
       -- todo: trigger action
       -- test: switch texture
-      line.sides[true].midtex=14|8>>8|2>>16
+      line[true].midtex=14|8>>8|2>>16
     end)
   end
 end
@@ -978,11 +978,9 @@ function unpack_map()
   local lines={}
   unpack_array(function()
     local line={
-      -- todo: merge array into self
-      sides={
-        [true]=sides[unpack_variant()],
-        [false]=sides[unpack_variant()]
-      },
+      -- sides
+      [true]=sides[unpack_variant()],
+      [false]=sides[unpack_variant()],
       flags=mpeek()}
     -- special actions
     if line.flags&0x2>0 then
@@ -1006,7 +1004,7 @@ function unpack_map()
      
       -- direct link to sector (if not already set)
       if s.line and not segs.sector then
-        segs.sector=s.line.sides[s.side].sector
+        segs.sector=s.line[s.side].sector
       end
       assert(s.v0,"invalid seg")
       assert(segs.sector,"missing sector")
