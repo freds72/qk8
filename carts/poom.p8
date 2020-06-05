@@ -846,15 +846,17 @@ end
 function unpack_special(special,line,sectors)
   -- helper function - handles lock & repeat
   local function trigger_async(fn)
-    local trigger
-    trigger=function()
+    return function()
+      -- backup trigger
+      local trigger=line.trigger
       -- avoid reentrancy
       line.trigger=nil
-      do_async(fn)
-      -- unlock (if repeatable)
-      if(line.flags&32>0) line.trigger=trigger
+      do_async(function()
+        fn()
+        -- unlock (if repeatable)
+        if(line.flags&32>0) line.trigger=trigger
+      end)
     end
-    return trigger
   end
 
   if special==202 then
@@ -904,6 +906,7 @@ function unpack_special(special,line,sectors)
       end
     end)         
   elseif special==64 then
+    -- todo: unify with doors??
     -- elevator raise
     local sector,target_floor,speed=sectors[unpack_variant()],unpack_fixed(),128-mpeek()
     -- backup initial height
