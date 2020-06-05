@@ -210,7 +210,7 @@ function draw_segs2d(segs,pos,txt)
     xc+=x1
     yc+=y1
     line(x0,y0,x1,y1,5)
-    if(v0.seg.c) line(x0,y0,x1,y1,rnd(15))
+    --if(v0.seg.c) line(x0,y0,x1,y1,rnd(15))
     -- if(v0.seg.msg) print(v0.seg.sector.id,(x0+x1)/2,(y0+y1)/2,7)
     x0,y0=x1,y1
     v0=v1
@@ -392,13 +392,15 @@ function visit_bsp(node,pos,visitor)
 end
 
 function find_sector(root,pos)
+  if(not root) return
   -- go down (if possible)
   local side=v2_dot(root.n,pos)<=root.d
-  if root.child[side] then
-    return find_sector(root.child[side],pos)
+  if root.leaf[side] then
+    -- leaf?
+    return root[side].sector,root[side]
   end
-  -- leaf?
-  return root.leaf[side].sector,root.leaf[side]
+    
+  return find_sector(root[side],pos)
 end
 
 function find_ssector_thick(root,pos,radius,res)
@@ -407,16 +409,16 @@ function find_ssector_thick(root,pos,radius,res)
   local side,otherside=dist<=root.d-radius,dist<=root.d+radius
   -- leaf?
   if root.leaf[side] then
-    add(res,root.leaf[side])
+    add(res,root[side])
   else
-    find_ssector_thick(root.child[side],pos,radius,res)
+    find_ssector_thick(root[side],pos,radius,res)
   end
   -- straddling?
   if side!=otherside then
     if root.leaf[otherside] then
-      add(res,root.leaf[otherside])
+      add(res,root[otherside])
     else
-      find_ssector_thick(root.child[otherside],pos,radius,res)
+      find_ssector_thick(root[otherside],pos,radius,res)
     end
   end
 end
@@ -609,7 +611,7 @@ function _draw()
   elseif false then --btn(5) then
     pal(_screen_pal,1)
     map()
-  elseif false then -- btn(4) then
+  elseif btn(4) then
     -- restore palette
     pal(_screen_pal,1)
 
@@ -620,7 +622,7 @@ function _draw()
     ]]
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       if node.leaf[side] then
-        draw_segs2d(node.leaf[side],pos,side and 11 or 8)
+        draw_segs2d(node[side],pos,side and 11 or 8)
       else
         -- bounding box
         --[[
@@ -634,7 +636,7 @@ function _draw()
         ]]
   
         --if _cam:is_visible(bbox) then
-          visit_bsp(node.child[side],pos,visitor)
+          visit_bsp(node[side],pos,visitor)
         --end
 
         --[[
@@ -694,8 +696,8 @@ function _draw()
     local res={}
     find_ssector_thick(_bsp,plyr,32,res)
     sectors=""
-    for i,id in ipairs(res) do
-      sectors=sectors.."|"..id
+    for i,sub in ipairs(res) do
+      sectors=sectors.."|"..sub.sector.id
     end
     print("sectors: "..sectors,2,8,8)
 
@@ -703,10 +705,10 @@ function _draw()
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       side=not side
       if node.leaf[side] then
-        draw_flats(v_cache,node.leaf[side])
+        draw_flats(v_cache,node[side])
       else
         if _cam:is_visible(node.bbox[side]) then
-          visit_bsp(node.child[side],pos,visitor)
+          visit_bsp(node[side],pos,visitor)
         end
       end
     end)
@@ -1041,16 +1043,16 @@ function unpack_map()
       n={unpack_fixed(),unpack_fixed()},
       d=unpack_fixed(),
       bbox={},
-      leaf={},
-      child={}})
+      leaf={}})
     local flags=mpeek()
     local function unpack_node(side,leaf)
       if leaf then
-        node.leaf[side]=sub_sectors[unpack_variant()]
+        node.leaf[side]=true
+        node[side]=sub_sectors[unpack_variant()]
       else
         -- bounding box
         node.bbox[side]=unpack_bbox()
-        node.child[side]=nodes[unpack_variant()]
+        node[side]=nodes[unpack_variant()]
       end
     end
     unpack_node(true,flags&0x1>0)
