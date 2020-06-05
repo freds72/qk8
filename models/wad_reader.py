@@ -181,14 +181,17 @@ def pack_segs(segs):
     s += extra_data
   return s
 
-def pack_texture(owner, textures, name):
-  if name not in owner: return "FFFFFFFF"
+def pack_texture(texture):
+  return "{:02x}{:02x}{:02x}{:02x}".format(texture.my,texture.mx,texture.height,texture.width)
+
+def pack_named_texture(owner, textures, name):
+  # unknown texture
+  if name not in owner: return "04080202"
   # de-reference texture name
   name = owner[name]
   # no texture/blank texture
-  if name not in textures: return "FFFFFFFF"
-  texture = textures[name]
-  return "{:02x}{:02x}{:02x}{:02x}".format(texture.my,texture.mx,texture.height,texture.width)
+  if name not in textures: return "04080202"
+  return pack_texture(textures[name])
 
 def pack_lightlevel(owner, name):
   if name in owner:
@@ -275,8 +278,8 @@ def pack_zmap(map, textures):
     s += pack_int(sector.heightceiling)
     s += pack_int(sector.heightfloor)
     # sector ceiling/floor textures
-    s += pack_texture(sector, textures, 'textureceiling')
-    s += pack_texture(sector, textures, 'texturefloor')
+    s += pack_named_texture(sector, textures, 'textureceiling')
+    s += pack_named_texture(sector, textures, 'texturefloor')
     # lights
     s += pack_lightlevel(sector, 'lightceiling')
     s += pack_lightlevel(sector, 'lightfloor')
@@ -284,9 +287,9 @@ def pack_zmap(map, textures):
   s += pack_variant(len(map.sides))
   for side in map.sides:
     s += pack_variant(side.sector+1)
-    s += pack_texture(side, textures, 'texturetop')
-    s += pack_texture(side, textures, 'texturemiddle')
-    s += pack_texture(side, textures, 'texturebottom')
+    s += pack_named_texture(side, textures, 'texturetop')
+    s += pack_named_texture(side, textures, 'texturemiddle')
+    s += pack_named_texture(side, textures, 'texturebottom')
 
   s += pack_variant(len(map.vertices)+len(map.other_vertices))
   for v in map.vertices:
@@ -346,6 +349,24 @@ def pack_zmap(map, textures):
   s += pack_variant(len(map.things))
   for thing in map.things:
     s += pack_thing(thing)
+
+  # pack texture switches
+  texture_pairs = {}
+  for name,texture in textures.items():
+    other_texture = None 
+    if '_ON' in name:
+      other_texture = textures.get(name.replace('_ON','_OFF'))
+    elif '_OFF' in name:
+      other_texture = textures.get(name.replace('_OFF','_ON'))
+    
+    if other_texture is not None:
+      texture_pairs[name] = other_texture
+
+  s += pack_variant(len(textures))
+  for name,texture in textures.items():
+    s+= pack_texture(texture)
+    # get pair or self
+    s+= pack_texture(texture_pairs.get(name, texture))
 
   to_multicart(s, "poom")
 
