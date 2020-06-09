@@ -12,7 +12,11 @@ block:
   ;
 
 pair:
-   (parent '.')?keyword value
+  (parent '.')? keyword value
+  ;
+  
+keyword:
+  KEYWORD
   ;
 
 states:
@@ -29,7 +33,7 @@ state_block:
   ;
 
 image:
-  STRING
+  KEYWORD
   ;
 
 variant:
@@ -37,62 +41,50 @@ variant:
   ;
 
 ticks:
-  SIGNED_INTEGER
+  NUMBER
   ;
 
 name:
-  STRING
+  KEYWORD
   ;
 
 function:
   QUOTED_STRING
   ;
 
-parent:
-  STRING
-  ;
-
 uid:
-  INTEGER
+  NUMBER
   ;
 
-keyword:
-  STRING
+parent:
+  KEYWORD
   ;
 
 value:
-  NUMBER
-  | BOOLEAN_VALUE
-  | QUOTED_STRING
+  NUMBER |
+  BOOLEAN_VALUE |
+  QUOTED_STRING
   ;
 
 // lexer
-INTEGER
-  : DIGIT+
-  ;
-
-SIGNED_INTEGER
-  : '-'? DIGIT+
-  ;
-
 NUMBER
   : '-'? DIGIT+ ('.' DIGIT+)?
   ;
 
-BOOLEAN_VALUE
-  : BOOLEAN
+BOOLEAN_VALUE:
+  BOOLEAN
   ;
 
 SINGLE_CHAR:
   CHAR
   ;
 
-STRING:
-  ('a'..'z'|'A'..'Z'|'0'..'9'|'_')+
-  ;
-
 QUOTED_STRING:
   '"' (~('"' | '\\' | '\r' | '\n') )+ '"'
+  ;
+
+KEYWORD:
+  CHAR (CHAR|DIGIT)+
   ;
 
 fragment CHAR:

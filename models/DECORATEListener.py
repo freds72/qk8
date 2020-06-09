@@ -35,6 +35,15 @@ class DECORATEListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by DECORATEParser#keyword.
+    def enterKeyword(self, ctx:DECORATEParser.KeywordContext):
+        pass
+
+    # Exit a parse tree produced by DECORATEParser#keyword.
+    def exitKeyword(self, ctx:DECORATEParser.KeywordContext):
+        pass
+
+
     # Enter a parse tree produced by DECORATEParser#states.
     def enterStates(self, ctx:DECORATEParser.StatesContext):
         pass
@@ -107,15 +116,6 @@ class DECORATEListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by DECORATEParser#parent.
-    def enterParent(self, ctx:DECORATEParser.ParentContext):
-        pass
-
-    # Exit a parse tree produced by DECORATEParser#parent.
-    def exitParent(self, ctx:DECORATEParser.ParentContext):
-        pass
-
-
     # Enter a parse tree produced by DECORATEParser#uid.
     def enterUid(self, ctx:DECORATEParser.UidContext):
         pass
@@ -125,12 +125,12 @@ class DECORATEListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by DECORATEParser#keyword.
-    def enterKeyword(self, ctx:DECORATEParser.KeywordContext):
+    # Enter a parse tree produced by DECORATEParser#parent.
+    def enterParent(self, ctx:DECORATEParser.ParentContext):
         pass
 
-    # Exit a parse tree produced by DECORATEParser#keyword.
-    def exitKeyword(self, ctx:DECORATEParser.KeywordContext):
+    # Exit a parse tree produced by DECORATEParser#parent.
+    def exitParent(self, ctx:DECORATEParser.ParentContext):
         pass
 
 

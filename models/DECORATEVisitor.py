@@ -24,6 +24,11 @@ class DECORATEVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by DECORATEParser#keyword.
+    def visitKeyword(self, ctx:DECORATEParser.KeywordContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by DECORATEParser#states.
     def visitStates(self, ctx:DECORATEParser.StatesContext):
         return self.visitChildren(ctx)
@@ -64,18 +69,13 @@ class DECORATEVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by DECORATEParser#parent.
-    def visitParent(self, ctx:DECORATEParser.ParentContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by DECORATEParser#uid.
     def visitUid(self, ctx:DECORATEParser.UidContext):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by DECORATEParser#keyword.
-    def visitKeyword(self, ctx:DECORATEParser.KeywordContext):
+    # Visit a parse tree produced by DECORATEParser#parent.
+    def visitParent(self, ctx:DECORATEParser.ParentContext):
         return self.visitChildren(ctx)
 
 

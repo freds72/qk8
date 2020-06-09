@@ -9,11 +9,24 @@ from dotdict import dotdict
 
 class DecorateWalker(DECORATEListener):     
     def __init__(self):
-      self.result = {}   
+      self.result = {}
     def exitBlock(self, ctx):  
-      name = ctx.name().getText()
-      parent = ctx.parent() and ctx.parent().STRING().getText()
-      print("{}:{} ({})".format(name,parent,ctx.uid().getText()))
+      name = ctx.name().KEYWORD().getText()
+      parent = ctx.parent() and ctx.parent().KEYWORD().getText()
+      properties = dotdict()
+
+      for pair in ctx.pair():
+        parent = ctx.parent() and ctx.parent().getText()
+        # todo: check if parent is valid
+        attribute = pair.keyword().getText()
+        value = pair.value().getText()
+        if attribute in []:
+          value = value=='true'
+        elif attribute.lower() in ['height','radius','slotnumber','amount','maxamount']:
+          value = int(value)
+        # else string
+        properties[attribute] = value
+      self.result[name] = properties
 
 class ACTORS():
   def __init__(self, data):
