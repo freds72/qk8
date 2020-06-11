@@ -6,6 +6,7 @@ __lua__
 _bsp,_verts=nil
 _cam,plyr,_things=nil
 _onoff_textures={}
+_inventory,_selected_wp,_wp_frame={},1,2
 _znear=16
 _yceil,_yfloor=nil
 _msg=nil
@@ -113,10 +114,18 @@ function v2_dot(a,b)
 end
 
 function v2_normal(v)
-  local d=max(abs(v[1]),abs(v[2]))
-  local n=min(abs(v[1]),abs(v[2])) / d
+  local x,y=abs(v[1]),abs(v[2])
+  local d=max(x,y)
+  local n=min(x,y)/d
   d*=sqrt(n*n + 1)
   return {v[1]/d,v[2]/d},d
+end
+
+function v2_dist(a,b)
+  local dx,dy=abs(b[1]-a[1]),abs(b[2]-a[2])
+  local d=max(dx,dy)
+  local n=min(dx,dy)/d
+  return d*sqrt(n*n + 1)
 end
 
 function polyfill(v,offset,tex,light)
@@ -152,6 +161,7 @@ function polyfill(v,offset,tex,light)
           local pal1=light\w0
           if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
           
+          -- mode7 texturing
           local rz=cy/(y-63.5)
           local rx=rz*(a-63.5)>>7
           local x,z=ca*rx+sa*rz+cx,-sa*rx+ca*rz+cz
@@ -376,7 +386,10 @@ function draw_flats(v_cache,segs,vs)
               if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1    
               palt(15,true)
               w0*=64
-              sspr(0,32,16,32,x0-(w0>>2),y0-w0,w0>>1,w0)
+              if thing.actor then
+                print(tostr(thing.actor.kind,true),x0,y0,15)
+              end
+              --sspr(0,32,16,32,x0-(w0>>2),y0-w0,w0>>1,w0)
             end
           end
         end
@@ -469,7 +482,9 @@ function _init()
   palt(0,false)
 
   plyr={0,0,height=0,angle=0,av=0,v=0}
-  _bsp,_things=unpack_map()
+
+  _bsp,_things,_inventory=unpack_map()
+
   -- todo: attach behaviors to things
   for _,thing in pairs(_things) do 
     if thing.id==1 then
@@ -581,12 +596,39 @@ function _update()
       end
     end
 
+    -- things collision
+    -- todo: optimize (sector..)
+    for k,thing in pairs(_things) do
+      local actor=thing.actor
+      -- note: no actor should not happen...
+      if actor and v2_dist(plyr,thing)<actor.radius then
+        if actor.trigger then
+          actor.trigger(plyr)
+          -- todo: optimize?
+          do_async(function()
+            -- remove from world
+            _things[k]=nil
+          end)
+        else
+        end
+        -- todo: check if blocking
+      end
+    end
+
     s=find_sector(_bsp,plyr)
     plyr.sector=s
     plyr.height=s.floor
   end
   _cam:track(plyr,plyr.angle,plyr.height+56)
 
+  if btnp(4) then
+    do_async(function()
+      wait_async(2)
+      _wp_frame=2
+      wait_async(15)
+      _wp_frame=1
+    end)
+  end
   -- damping
   plyr.v*=0.8
   plyr.av*=0.8
@@ -612,7 +654,7 @@ function _draw()
   elseif false then --btn(5) then
     pal(_screen_pal,1)
     map()
-  elseif btn(4) then
+  elseif false then --btn(4) then
     -- restore palette
     pal(_screen_pal,1)
 
@@ -719,6 +761,14 @@ function _draw()
     -- pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
     pal(_screen_pal,1)
 
+    --[[
+    palt(0,false)
+    palt(15,true)
+    -- inventory/weapon
+    sspr(unpack(_weapons[_selected_wp].sprite[_wp_frame]))
+    palt()
+    ]]
+    
     if(_msg) print(_msg,64-#_msg*2,120,15)
 
     local cpu=stat(1).."|"..stat(0)
@@ -727,6 +777,11 @@ function _draw()
     local s=find_sector(_bsp,plyr)
     if s then
       print("sector: "..s.id,2,8,8)
+    end
+    local y=12
+    for id,amount in pairs(_inventory) do
+      print(id..":"..amount,2,y,8)
+      y+=6
     end  
   end
 end
@@ -942,10 +997,12 @@ function unpack_special(special,line,sectors)
   elseif special==80 then
     local arg0,arg1=mpeek(),mpeek()
     return trigger_async(function()
-      --sfx(0)
+      -- sfx(0)
       -- todo: trigger action
-      -- test: switch texture
-      line[true].midtex=14|8>>8|2>>16
+
+      do_async(function()
+        
+      end)
     end)
   end
 end
@@ -975,7 +1032,8 @@ function unpack_map()
       sector=sectors[unpack_variant()],
       toptex=unpack_fixed(),
       midtex=unpack_fixed(),
-      bottomtex=unpack_fixed()})
+      bottomtex=unpack_fixed()
+    })
   end)
 
   local verts={}
@@ -1065,11 +1123,59 @@ function unpack_map()
     unpack_node(false,flags&0x2>0)
   end)
 
+  -- inventory
+  local actors,inventory={},{}
+  unpack_array(function()
+    local kind=unpack_variant()
+    local id,amount,maxamount=unpack_fixed(),unpack_variant(),unpack_variant()
+    local item={
+      kind=kind,
+      radius=unpack_fixed()
+    }
+    -- apply amount and other item properties to actor
+    local function apply(actor,qty)
+      actor[qty]=min(actor[qty]+amount,maxamount)
+      if(sound) sfx(sound)
+    end
+    if kind==0 then
+      -- default value
+      inventory[id]=0
+      -- lock (or any quest item)
+      item.trigger=function(actor)
+        apply(inventory,id)
+      end
+    elseif kind==1 then
+      -- ammo
+      local ammotype=unpack_variant()
+      -- default value
+      -- !!! clash with actor id !!!
+      inventory[ammotype]=0
+      item.trigger=function()
+        -- ex: clip / clipbox shares same ammo type
+        apply(inventory,ammotype)
+      end
+    elseif kind==3 then
+      -- health
+      item.trigger=function(actor)
+        apply(actor,"health")
+      end
+    elseif kind==4 then
+      -- armor
+      item.trigger=function(actor)
+        apply(actor,"armor")
+      end
+    end
+
+    -- register
+    actors[id]=item
+  end)
+
   -- things
   local things={}
   unpack_array(function()
     add(things,{
-      flags=unpack_variant(),
+      -- link to underlying actor
+      actor=actors[unpack_variant()],
       unpack_fixed(),
       unpack_fixed()
     })
@@ -1082,7 +1188,7 @@ function unpack_map()
 
   -- restore main cart
   reload()
-  return nodes[#nodes],things
+  return nodes[#nodes],things,inventory
 end
 
 __gfx__
@@ -1150,6 +1256,36 @@ ff070ffff00fffff0000000000000000000000000000000000000000000000000000000000000000
 ff000fffffffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 f0000fffffffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 f000ffffffffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ffffffffffbffffffffffffffffffffff70bffffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+fffffffffbbbfffffffffffffffffffff000bfffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+ffffffffb7b7fffffffffffffffffffffb07bfffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+ffffffff7777bffffffffffffffffffff707bfffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+fffffffb7777bffffffffffffffffffff707bfffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+ffff55b000b00bbffffffffffffffffff7077fffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff65abb00000000ffffffffffffffffff707b07fffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff75a0b000000bbbfffffffffffffffff007b0bfffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff65ab7000000b70fffffffffffffffff000bb7bffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+f755000b700070076ffffffffffffffff000ddb5b56fffffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+f6576600000000007ffffffffffffffff000b6257b22ffffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+f5760000000000000ffffffffffffffff000bbb50bb70fffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+65b00000000000000ffffffffffffffff0077077725070ffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+66600000000000000fffffffffffff666007077727775b7fff000000000000000000000000000000000000000000000000000000000000000000000000000000
+aaa00000000000000576fffffff5566670070b6b57077576ff000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000ffffffb66666b0b00a7256700775ff000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000fffff7b5566660000990766000076f000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000fffff7bb666660000aa0006700007f000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000fffff6b6bbb6b0700709b00500007f000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000fffff67766bb70b0707aa00000077f000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000fffff566676b0000600000007707ff000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000fffffb5666b60000777bb0000007ff000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000ffff66b7656b000006070d707770ff000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000fff5b76b767b00a0bb060bb7077fff000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000fffb5aa67b760ba0a00077b0a0ffff000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000fff5aaa996670000000070ba0affff000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000ff7aaa9aaa57000000000bba7a5fff000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000f75aaaaa9aa60000007000bb7aafff000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000f5aaaaaaa9950000000000bbbbbfff000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000024aaaaa99aa57000000000bbb0bbff000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 0111021220240404313104040404040407070707070707070707070707070707000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0111021200001414313114141414141407070707070707070707070707070707000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

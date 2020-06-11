@@ -7,6 +7,7 @@ from collections import namedtuple
 from udmf_reader import UDMF
 from textures_reader import TEXTURES
 from decorate_reader import ACTORS
+from decorate_reader import ACTOR_KIND
 from dotdict import dotdict
 from python2pico import pack_int
 from python2pico import pack_variant
@@ -272,7 +273,7 @@ def pack_thing(thing):
   s += pack_fixed(thing.y)
   return s
 
-def pack_zmap(map, textures):
+def pack_zmap(map, textures, actors):
   # export data
   s = pack_variant(len(map.sectors))
   for sector in map.sectors:
@@ -347,6 +348,27 @@ def pack_zmap(map, textures):
       s += pack_aabb(node.aabb[1])
       s += pack_variant(node.child[1]+1)
 
+  # inventory (e.g. items with assigned unique id)
+  inventory = [actor for actor in actors.values() if actor.id!=-1]
+  
+  s += pack_variant(len(inventory))
+  for properties in inventory:
+    print(properties)
+    # actor "class"
+    s += pack_variant(properties.kind)
+    s += pack_fixed(properties.id)
+    # shared inventory properties
+    s += pack_variant(properties.amount)
+    s += pack_variant(properties.maxamount)
+    s += pack_fixed(properties.radius)
+    # todo: pickup sound
+    # specific entries
+    if properties.kind==ACTOR_KIND.AMMO:
+      # all ammo child classes are bound to their parent
+      # ex: clipbox -> clip
+      s += pack_variant(properties.parent)
+  
+  # things
   s += pack_variant(len(map.things))
   for thing in map.things:
     s += pack_thing(thing)
@@ -418,9 +440,10 @@ def load_WAD(filepath,mapname):
       file.seek(decorate_entry.lump_ofs)
       textmap_data = file.read(decorate_entry.lump_size).decode('ascii')
       actors = ACTORS(textmap_data).actors
+      print(actors)
 
     # pick map
     zmap = maps[mapname].read(file)
-    pack_zmap(zmap, textures)
+    pack_zmap(zmap, textures, actors)
 
 load_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
