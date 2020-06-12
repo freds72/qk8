@@ -240,7 +240,9 @@ def pack_special(line, lines, sides, sectors):
     # door type
     s += "{:02x}".format(get_or_default(line,'arg2',0)) 
     # delay
-    s += "{:02x}".format(get_or_default(line,'arg3',10)) 
+    s += "{:02x}".format(get_or_default(line,'arg3',10))
+    # lock
+    s += pack_variant(get_or_default(line,'arg4',0))
   elif special==64:
     print("platform up/stay/down special")
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
@@ -265,8 +267,10 @@ def pack_special(line, lines, sides, sectors):
     s += "{:02x}".format(line.arg1)
   return s
 
-def pack_thing(thing):
-  print("thing: {}".format(thing.type))
+def pack_thing(thing, actors):
+  if thing.type not in [actor.id for actor in actors]:
+    raise Exception("Thing: {} references unknown actor: {}".format(thing, thing.type))
+
   # id
   s = pack_variant(thing.type)
   s += pack_fixed(thing.x)
@@ -280,8 +284,8 @@ def pack_zmap(map, textures, actors):
     s += pack_int(sector.heightceiling)
     s += pack_int(sector.heightfloor)
     # sector ceiling/floor textures
-    s += pack_named_texture(sector, textures, 'textureceiling')
-    s += pack_named_texture(sector, textures, 'texturefloor')
+    s += pack_named_texture(sector, textures.flats, 'textureceiling')
+    s += pack_named_texture(sector, textures.flats, 'texturefloor')
     # lights
     s += pack_lightlevel(sector, 'lightceiling')
     s += pack_lightlevel(sector, 'lightfloor')
@@ -289,9 +293,9 @@ def pack_zmap(map, textures, actors):
   s += pack_variant(len(map.sides))
   for side in map.sides:
     s += pack_variant(side.sector+1)
-    s += pack_named_texture(side, textures, 'texturetop')
-    s += pack_named_texture(side, textures, 'texturemiddle')
-    s += pack_named_texture(side, textures, 'texturebottom')
+    s += pack_named_texture(side, textures.flats, 'texturetop')
+    s += pack_named_texture(side, textures.flats, 'texturemiddle')
+    s += pack_named_texture(side, textures.flats, 'texturebottom')
 
   s += pack_variant(len(map.vertices)+len(map.other_vertices))
   for v in map.vertices:
@@ -348,45 +352,58 @@ def pack_zmap(map, textures, actors):
       s += pack_aabb(node.aabb[1])
       s += pack_variant(node.child[1]+1)
 
-  # inventory (e.g. items with assigned unique id)
-  inventory = [actor for actor in actors.values() if actor.id!=-1]
+  # actors/inventory (e.g. items with assigned unique id)
+  concrete_actors = [actor for actor in actors.values() if actor.id!=-1]
   
-  s += pack_variant(len(inventory))
-  for properties in inventory:
-    print(properties)
+  # actor images
+  sprites = textures.sprites
+
+  s += pack_variant(len(concrete_actors))
+  for actor in concrete_actors:
     # actor "class"
-    s += pack_variant(properties.kind)
-    s += pack_fixed(properties.id)
-    # shared inventory properties
-    s += pack_variant(properties.amount)
-    s += pack_variant(properties.maxamount)
-    s += pack_fixed(properties.radius)
-    # todo: pickup sound
+    s += pack_variant(actor.kind)
+    s += pack_variant(actor.id)
+    # other shared properties
+    s += pack_fixed(actor.radius)
+    # frames
+    s += pack_variant(len(actor.frames))
+    for frame in actor.frames:
+      name = "{}{}0".format(frame.image,frame.variant)
+      if name not in sprites:
+        raise Exception("Unknown frame: {} in TEXTURES".format(name))
+      s += pack_texture(sprites[name])
+      s += pack_fixed(frame.ticks)
+    if actor.kind!=ACTOR_KIND.DEFAULT:
+      # shared inventory properties
+      s += pack_variant(actor.amount)
+      s += pack_variant(actor.maxamount)
+      # todo: pickup sound
     # specific entries
-    if properties.kind==ACTOR_KIND.AMMO:
+    if actor.kind==ACTOR_KIND.AMMO:
       # all ammo child classes are bound to their parent
       # ex: clipbox -> clip
-      s += pack_variant(properties.parent)
-  
+      s += pack_variant(actor.parent)
+
   # things
   s += pack_variant(len(map.things))
   for thing in map.things:
-    s += pack_thing(thing)
+    s += pack_thing(thing, concrete_actors)
 
   # pack texture switches
   texture_pairs = {}
-  for name,texture in textures.items():
+  flats = textures.flats
+  for name,texture in flats.items():
     other_texture = None 
     if '_ON' in name:
-      other_texture = textures.get(name.replace('_ON','_OFF'))
+      other_texture = flats.get(name.replace('_ON','_OFF'))
     elif '_OFF' in name:
-      other_texture = textures.get(name.replace('_OFF','_ON'))
+      other_texture = flats.get(name.replace('_OFF','_ON'))
     
     if other_texture is not None:
       texture_pairs[name] = other_texture
 
-  s += pack_variant(len(textures))
-  for name,texture in textures.items():
+  s += pack_variant(len(flats))
+  for name,texture in flats.items():
     s+= pack_texture(texture)
     # get pair or self
     s+= pack_texture(texture_pairs.get(name, texture))
@@ -428,11 +445,11 @@ def load_WAD(filepath,mapname):
       i += 1
 
     # decode textures
-    textures = {}
+    textures = TEXTURES()
     if textures_entry is not None:
       file.seek(textures_entry.lump_ofs)
       textmap_data = file.read(textures_entry.lump_size).decode('ascii')
-      textures = TEXTURES(textmap_data).textures
+      textures.read(textmap_data)
 
     # decode actors
     actors = {}

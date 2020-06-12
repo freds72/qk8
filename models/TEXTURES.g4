@@ -8,8 +8,11 @@ textures:
   ;
 
 block:
-  'Texture' name ',' width ',' height '{' xscale? yscale? patch '}' |
-  'Flat' name ',' width ',' height '{' xscale? yscale? patch '}'
+  namespace name ',' width ',' height '{' xscale? yscale? patch '}'
+  ;
+
+namespace:
+  STRING
   ;
 
 xscale:

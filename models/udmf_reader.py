@@ -42,7 +42,7 @@ class LinedefWalker(udmfListener):
               value = int(value)
             elif attribute in ['twosided','dontpegtop','playercross','playeruse','repeatspecial']:
               value = value=='true'
-            elif attribute in ['sidefront','sideback','special','arg0','arg1','arg2','arg3']:
+            elif attribute in ['sidefront','sideback','special','arg0','arg1','arg2','arg3','arg4']:
               value = int(value)
             linedef[attribute] = value
           self.result.append(linedef)

@@ -9,11 +9,14 @@ from dotdict import dotdict
 from enum import IntFlag
 
 class ACTOR_KIND(IntFlag):
+  # inventory items
   KEY = 0
   AMMO = 1
   WEAPON = 2
   HEALTH = 3
   ARMOR = 4
+  # generic class
+  DEFAULT = 5
 
 builtin_actors = {
   'key':{
@@ -39,20 +42,36 @@ builtin_actors = {
     'kind': ACTOR_KIND.ARMOR,
     'radius': 20,
     'maxamount': 200
-  }}
-  
+  },
+  'player':{
+    'radius': 32,
+    'armor': 100,
+    'health': 100
+  }
+}
+
 class DecorateWalker(DECORATEListener):     
     def __init__(self):
       self.result = {}
+      self.frames = []
+
+    def enterBlock(self, ctx):
+      # clear frames
+      self.frames = []
+
     def exitBlock(self, ctx):  
       name = ctx.name().KEYWORD().getText().lower()
+      print("end of actor: {}".format(name))
+
       if name in builtin_actors:
         raise Exception("Cannot redefine base actor: {}".format(name))
+      # -1 = not exported
       id = -1
       if ctx.uid():
         id = int(ctx.uid().getText())
       properties = dotdict({
-        'id': id
+        'id': id,
+        'kind': ACTOR_KIND.DEFAULT
       })
       if ctx.parent():
         parent = ctx.parent().KEYWORD().getText().lower()
@@ -79,7 +98,24 @@ class DecorateWalker(DECORATEListener):
           value = int(value)
         # else string
         properties[attribute] = value
+      
+      # add sprite frames
+      frames = []
+      print(self.frames)
+      for frame in self.frames:
+        frames.append(frame)
+      properties['frames'] = frames
       self.result[name] = properties
+
+    def exitState_block(self, ctx):
+      state = ctx.name().KEYWORD().getText().lower()
+      if state=='spawn':
+        for i in range(len(ctx.image())):
+          self.frames.append(dotdict({
+            'image': ctx.image(i).getText(),
+            'variant': ctx.variant(i).getText(),
+            'ticks': int(ctx.ticks(i).getText())
+          }))
 
 class ACTORS():
   def __init__(self, data):

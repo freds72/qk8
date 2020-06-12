@@ -26,6 +26,15 @@ class TEXTURESListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by TEXTURESParser#namespace.
+    def enterNamespace(self, ctx:TEXTURESParser.NamespaceContext):
+        pass
+
+    # Exit a parse tree produced by TEXTURESParser#namespace.
+    def exitNamespace(self, ctx:TEXTURESParser.NamespaceContext):
+        pass
+
+
     # Enter a parse tree produced by TEXTURESParser#xscale.
     def enterXscale(self, ctx:TEXTURESParser.XscaleContext):
         pass

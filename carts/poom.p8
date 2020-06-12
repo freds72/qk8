@@ -381,15 +381,19 @@ function draw_flats(v_cache,segs,vs)
             if az>_znear and az<420 then
               local w0=128/az
               local x0,y0=63.5+ax*w0,63.5-(ay+sector.floor)*w0
-              -- todo: use sector ambiant light
+              -- todo: use sector ambiant light + sprite brightness flags
               local pal1=4\w0
               if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1    
-              palt(15,true)
-              w0*=64
+              palt(0,true)
+              w0*=3
               if thing.actor then
-                print(tostr(thing.actor.kind,true),x0,y0,15)
+                local frame=thing.actor.frames[1]
+                if frame then
+                  local sy,sx,sh,sw=unpack(frame.spr)
+                  --assert(false,sx.."/"..sy.." "..sw.."/"..sh)
+                  sspr(sx,sy,sw,sh,x0-((sw*w0)>>1),y0-sh*w0,sw*w0,sh*w0)
+                end
               end
-              --sspr(0,32,16,32,x0-(w0>>2),y0-w0,w0>>1,w0)
             end
           end
         end
@@ -481,7 +485,7 @@ end
 function _init()
   palt(0,false)
 
-  plyr={0,0,height=0,angle=0,av=0,v=0}
+  plyr={0,0,height=0,angle=0,av=0,v=0,radius=32,health=100,armor=50}
 
   _bsp,_things,_inventory=unpack_map()
 
@@ -543,7 +547,7 @@ function _update()
   if s then
     -- 
     local hits={}
-    local radius=32
+    local radius=plyr.radius
     intersect_sub_sector(ss,plyr,move_dir,0,move_len+radius+24,hits)
     if move_len!=0 then
       -- move
@@ -601,10 +605,11 @@ function _update()
     for k,thing in pairs(_things) do
       local actor=thing.actor
       -- note: no actor should not happen...
-      if actor and v2_dist(plyr,thing)<actor.radius then
+      if actor and v2_dist(plyr,thing)<actor.radius+plyr.radius then
         if actor.trigger then
           actor.trigger(plyr)
           -- todo: optimize?
+          -- todo: flag to remove or not?
           do_async(function()
             -- remove from world
             _things[k]=nil
@@ -778,11 +783,17 @@ function _draw()
     if s then
       print("sector: "..s.id,2,8,8)
     end
-    local y=12
+    local y=16
     for id,amount in pairs(_inventory) do
       print(id..":"..amount,2,y,8)
       y+=6
-    end  
+    end
+    
+    print("♥"..plyr.health,2,111,13)
+    print("♥"..plyr.health,2,110,12)
+    print("웃"..plyr.armor,2,121,4)
+    print("웃"..plyr.armor,2,120,3)
+     
   end
 end
 
@@ -906,8 +917,19 @@ function unpack_special(special,line,sectors)
     line[true].midtex=_onoff_textures[line[true].midtex]
   end
   -- helper function - handles lock & repeat
-  local function trigger_async(fn)
+  local function trigger_async(fn,lockid)
     return function()
+      -- need lock?
+      if lockid then
+        if _inventory[lockid]==0 then
+          _msg="need key"
+          -- todo: err sound
+          return
+        end
+        -- consume item
+        _inventory[lockid]=0
+      end
+
       -- backup trigger
       local trigger=line.trigger
       -- avoid reentrancy
@@ -933,7 +955,7 @@ function unpack_special(special,line,sectors)
       sector.open=sector.open or sector.ceil
       add(doors,sector)
     end)
-    local speed,kind,delay=mpeek(),mpeek(),mpeek()
+    local speed,kind,delay,lock=mpeek(),mpeek(),mpeek(),unpack_variant()
     local function move_async(to,speed)
       -- take current values
       local ceils={}
@@ -967,7 +989,9 @@ function unpack_special(special,line,sectors)
         wait_async(delay)
         move_async("open",speed)
       end
-    end)         
+    end,
+    -- lock id 0 is no lock
+    lock>0 and lock)  
   elseif special==64 then
     -- todo: unify with doors??
     -- elevator raise
@@ -1124,46 +1148,53 @@ function unpack_map()
   end)
 
   -- inventory
-  local actors,inventory={},{}
+  local actors,inventory,ammo={},{},{}
   unpack_array(function()
-    local kind=unpack_variant()
-    local id,amount,maxamount=unpack_fixed(),unpack_variant(),unpack_variant()
+    local kind,id=unpack_variant(),unpack_variant()
     local item={
       kind=kind,
-      radius=unpack_fixed()
+      radius=unpack_fixed(),
+      frames={}
     }
-    -- apply amount and other item properties to actor
-    local function apply(actor,qty)
-      actor[qty]=min(actor[qty]+amount,maxamount)
-      if(sound) sfx(sound)
-    end
-    if kind==0 then
-      -- default value
-      inventory[id]=0
-      -- lock (or any quest item)
-      item.trigger=function(actor)
-        apply(inventory,id)
+    unpack_array(function()
+      add(item.frames,{spr={mpeek(),mpeek(),mpeek(),mpeek()},ticks=unpack_fixed()})
+    end)
+    if kind<5 then
+      -- inventory actor
+      local amount,maxamount=unpack_variant(),unpack_variant()
+      -- apply amount and other item properties to actor
+      local function apply(actor,qty)
+        actor[qty]=min(actor[qty]+amount,maxamount)
+        if(sound) sfx(sound)
       end
-    elseif kind==1 then
-      -- ammo
-      local ammotype=unpack_variant()
-      -- default value
-      -- !!! clash with actor id !!!
-      inventory[ammotype]=0
-      item.trigger=function()
-        -- ex: clip / clipbox shares same ammo type
-        apply(inventory,ammotype)
+      if kind==0 then
+        -- default inventory item (ex: lock)
+        inventory[id]=0
+        item.trigger=function(actor)
+          apply(inventory,id)
+        end
+      elseif kind==1 then
+        -- ammo
+        local ammotype=unpack_variant()
+        -- default value
+        ammo[ammotype]=0
+        item.trigger=function()
+          apply(ammo,ammotype)
+        end
+      elseif kind==3 then
+        -- health
+        item.trigger=function(actor)
+          apply(actor,"health")
+        end
+      elseif kind==4 then
+        -- armor
+        item.trigger=function(actor)
+          apply(actor,"armor")
+        end
       end
-    elseif kind==3 then
-      -- health
-      item.trigger=function(actor)
-        apply(actor,"health")
-      end
-    elseif kind==4 then
-      -- armor
-      item.trigger=function(actor)
-        apply(actor,"armor")
-      end
+    else
+      -- non inventory items
+
     end
 
     -- register
@@ -1192,16 +1223,16 @@ function unpack_map()
 end
 
 __gfx__
-41600000bb77bbbb27bbbbbbbbbbbbbbbbbbbbbb0000000000000000bbbbbbbbbbbbbbbbbbbbbbbb77ba9a7777ba967700000000000000000000000000000000
-95d00000bbb77bbb27bbbbbbbbbbbbbb988888881111122000000000bbbbbbbbbbbbbbbbbbbbbbbb77b65a7777ba967700000000000000000000000000000000
-62700000bbbb777727bbbbbbbbb99bbbbaaaaaaa2222220000000000bbbbbbbbbbbbbbbaaaabbbbb77b65a7777ba9a7700000000000000000000000000000000
-41600000bbbb777727bbbbbbbb9889bbbaaaaaaa3334422000000000bbbbbbbbbbbbb7aaaaaaabbb77b5ea7777ba9a7700000000000000000000000000000000
-95d00000bbb77bbb27bbbbbbbb9889bbbaaaaaaa4444220000000000bbbbbbbbbbbbb7aaaaaaabbb7baa89a777ba9a7700000000000000000000000000000000
-62700000bb77bbbb22777777bbb99bbbbaaaaaaa5556672200000000bbbbbbbbbbbb77aaaaaaaabb727bb72777ba9a7700000000000000000000000000000000
-41600000777bbbbb22222222bbbbbbbbbaaaaaaa6666722000000000bbbbbbbbbbbb77aaaaaaaabb727bb72777ba5a7700000000000000000000000000000000
-95d00000777bbbbb27bbbbbbbbbbbbbbbaaaaaaa7777220000000000bbbbbbbbbbbb777aaaaaaabb7baa89a777b65a7700000000000000000000000000000000
-77777777bbbb77bb27bbbbbb676767662222222288899ab700000000bbbbbbbbbbbb7777aaaaaabb77ba9a7777b69a7700000000000000000000000000000000
-aaaaa987bbb77bbb27bbbbbb66767676bbbbbbbb999aab7000000000bbbbbbbbbbbbb7777aaaabbb77b69a7777ba9a7700000000000000000000000000000000
+41600000bb77bbbb27bbbbbbbbbbbbbbbbbbbbbb0000000000000000bbbbbbbbbbbbbbbbbbbbbbbb77ba9a7777ba967700dccccc002111110043333300000000
+95d00000bbb77bbb27bbbbbbbbbbbbbb988888881111122000000000bbbbbbbbbbbbbbbbbbbbbbbb77b65a7777ba96770dccccff021111ff043333ff00000000
+62700000bbbb777727bbbbbbbbb99bbbbaaaaaaa2222220000000000bbbbbbbbbbbbbbbaaaabbbbb77b65a7777ba9a77dcccdcff211121ff433343ff00000000
+41600000bbbb777727bbbbbbbb9889bbbaaaaaaa3334422000000000bbbbbbbbbbbbb7aaaaaaabbb77b5ea7777ba9a77cccddccc111221113334433300000000
+95d00000bbb77bbb27bbbbbbbb9889bbbaaaaaaa4444220000000000bbbbbbbbbbbbb7aaaaaaabbb7baa89a777ba9a77cccccccc111111113333333300000000
+62700000bb77bbbb22777777bbb99bbbbaaaaaaa5556672200000000bbbbbbbbbbbb77aaaaaaaabb727bb72777ba9a77cddcccff122111ff344333ff00000000
+41600000777bbbbb22222222bbbbbbbbbaaaaaaa6666722000000000bbbbbbbbbbbb77aaaaaaaabb727bb72777ba5a77cdddccff122211ff344433ff00000000
+95d00000777bbbbb27bbbbbbbbbbbbbbbaaaaaaa7777220000000000bbbbbbbbbbbb777aaaaaaabb7baa89a777b65a77cdddccdd122211223444334400000000
+77777777bbbb77bb27bbbbbb676767662222222288899ab700000000bbbbbbbbbbbb7777aaaaaabb77ba9a7777b69a77cccccccc111111113333333300000000
+aaaaa987bbb77bbb27bbbbbb66767676bbbbbbbb999aab7000000000bbbbbbbbbbbbb7777aaaabbb77b69a7777ba9a77dddddddd222222224444444400000000
 baaaaa977777bbbb2277777767676766b9999999aaabb70000000000bbbbbbbbbbbbb77777777bbb77b6ea7777ba9a7700000000000000000000000000000000
 baaaaaa77777bbbb2222222266767676baaaaaaabbbb700000000000aaaaaaaabbbbbbb7777bbbbb77baea7777ba9a7700000000000000000000000000000000
 aaaaaab7bbb77bbb27bbbbbb67676766baaaaaaaccccdd700000000099999999bbbbbbbbbbbbbbbb77ba9a777baa89a700000000000000000000000000000000
@@ -1209,21 +1240,21 @@ aaaaaaa7bbbb77bb27bbbbbb66767676baaaaaaadddd77000000000088888888bbbbbbbbbbbbbbbb
 baaaaaa7bbbbb77727bbbbbb67676766bbbbbbbbeee5567000000000eeeeeeeebbbbbbbbbbbbbbbb77ba9a77727bb72700000000000000000000000000000000
 bbaaaab7bbbbb77727bbbbbb66767676bbbbbbbbffffe56700000000ccccccccbbbbbbbbbbbbbbbb77ba9a777baa89a700000000000000000000000000000000
 bbbbbbbb433333443333333399999999eeee00002222222222222222cdcdcdcd0230023000000000000000000000000000000000000000000000000000000000
-bbbbbbbb4343334433433333aaaaaaaa0ffff000aaaaaaaaaaaaaaaadddddddd2443444300000000000000000000000000000000000000000000000000000000
-bb7dd7bb3333333333333333aaaaaaaa00ffff00a444444aadadadaadddddddd4447744400000000000000000000000000000000000000000000000000000000
-bbdccdbb333333333333333377777777000ffff0a333333aaeadacaadddddddd2474474200000000000000000000000000000000000000000000000000000000
-bbdccdbb3344333333333443bbbbbbbb0000ffffa434433aaeaeacaadddddddd0223322000000000000000000000000000000000000000000000000000000000
-bb7dd7bb434433333333344322222222f0000fffa333333aaeaeacaadddddddd0044440000000000000000000000000000000000000000000000000000000000
-bbbbbbbb3333333434333333ddddddddff0000ffaaaaaaaaaaaaaaaadddddddd0023320000000000000000000000000000000000000000000000000000000000
-bbbbbbbb4333334433333333cdcdcdcdeee0000e99999999999999997d7d7d7d0044440000000000000000000000000000000000000000000000000000000000
-00000000ddccdcccccccccccabaaaabaaaaaaaaabbbbbbbb9999999a77777777bbbbbbbbeeeeeeeeaaaaaaaa0000000000000000000000000000000000000000
-00000000dcccdddcccccccccaaaaaaaaa9bbb77abaaaaaaaaaaaaaaa77777777baaaaaaaeeeeeeeeaaaaaaaa0000000000000000000000000000000000000000
-00000000ddddccddcccccccca6aaaabaa966aa7aba8888aaaaaaaaaa77777777ba8888aaeeeeeeeeaaaaaaaa0000000000000000000000000000000000000000
-00000000dcdccccdccccccccaaa98aaaa95aaababa9dd9aaaaaaaaaa77777777ba9449aaeeeeeeeeaaaaaaaa0000000000000000000000000000000000000000
-00000000cdddccddccccccccabab9abaa9aaaababa9999aaaaaaaaaa77777777ba9999aaeeeeeeeeaaaaaaaa0000000000000000000000000000000000000000
-00000000ccdddddcccccccccaaa66aaaa8aaaababa9cc9aaaaaaaaaa77777777ba9339aaeeeeeeeeaaaaaaaa0000000000000000000000000000000000000000
-00000000cccdccdcccccccccaba5aa5aa889989aba9cc9aaaaaaaaaa77777777ba9339aaeeeeeeeeaaaaaaaa0000000000000000000000000000000000000000
-00000000cddddccdccccccccaaaaaaaaaaaaaaaababddbaabbbbbbbb77777777bab44baaeeeeeeeeaaaaaaaa0000000000000000000000000000000000000000
+bbbbbbbb4343334433433333aaaaaaaa0ffff000aaaaaaaaaaaaaaaadddddddd24434443000dcc00000433000002110000aa0000000000000000000000000000
+bb7dd7bb3333333333333333aaaaaaaa00ffff00a444444aadadadaadddddddd4447744400dcfe000043fe000021fe000b997000000000000000000000000000
+bbdccdbb333333333333333377777777000ffff0a333333aaeadacaadddddddd2474474200cccc00003333000011110008888000000000000000000000000000
+bbdccdbb3344333333333443bbbbbbbb0000ffffa434433aaeaeacaadddddddd0223322000ccfe000033fe000011fe0008888000000000000000000000000000
+bb7dd7bb434433333333344322222222f0000fffa333333aaeaeacaadddddddd0044440000cccc0000333300001111000b99b000000000000000000000000000
+bbbbbbbb3333333434333333ddddddddff0000ffaaaaaaaaaaaaaaaadddddddd0023320000dddd0000444400002222000baab000000000000000000000000000
+bbbbbbbb4333334433333333cdcdcdcdeee0000e99999999999999997d7d7d7d004444000000000000000000000000000baab000000000000000000000000000
+00000000ddccdcccccccccccabaaaabaaaaaaaaabbbbbbbb9999999a77777777bbbbbbbbeeeeeeeeaaaaaaaa000000000baab000000000000000000000000000
+00000000dcccdddcccccccccaaaaaaaaa9bbb77abaaaaaaaaaaaaaaa77777777baaaaaaaeeeeeeeeaaaaaaaa000000000baab000000000000000000000000000
+00000000ddddccddcccccccca6aaaabaa966aa7aba8888aaaaaaaaaa77777777ba8888aaeeeeeeeeaaaaaaaa0000000009aa9000000000000000000000000000
+00000000dcdccccdccccccccaaa98aaaa95aaababa9dd9aaaaaaaaaa77777777ba9449aaeeeeeeeeaaaaaaaa000000000b99b000000000000000000000000000
+00000000cdddccddccccccccabab9abaa9aaaababa9999aaaaaaaaaa77777777ba9999aaeeeeeeeeaaaaaaaa0000000009aa9000000000000000000000000000
+00000000ccdddddcccccccccaaa66aaaa8aaaababa9cc9aaaaaaaaaa77777777ba9339aaeeeeeeeeaaaaaaaa000000007b99b700000000000000000000000000
+00000000cccdccdcccccccccaba5aa5aa889989aba9cc9aaaaaaaaaa77777777ba9339aaeeeeeeeeaaaaaaaa0000000077aa7700000000000000000000000000
+00000000cddddccdccccccccaaaaaaaaaaaaaaaababddbaabbbbbbbb77777777bab44baaeeeeeeeeaaaaaaaa0000000007777000000000000000000000000000
 fffff6766fffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 fffff6666fffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 ffffd757bdffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
