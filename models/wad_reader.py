@@ -278,14 +278,17 @@ def pack_thing(thing, actors):
   return s
 
 def pack_zmap(map, textures, actors):
+  # shortcut to wall textures
+  flats = textures.flats
+
   # export data
   s = pack_variant(len(map.sectors))
   for sector in map.sectors:
     s += pack_int(sector.heightceiling)
     s += pack_int(sector.heightfloor)
     # sector ceiling/floor textures
-    s += pack_named_texture(sector, textures.flats, 'textureceiling')
-    s += pack_named_texture(sector, textures.flats, 'texturefloor')
+    s += pack_named_texture(sector, flats, 'textureceiling')
+    s += pack_named_texture(sector, flats, 'texturefloor')
     # lights
     s += pack_lightlevel(sector, 'lightceiling')
     s += pack_lightlevel(sector, 'lightfloor')
@@ -293,9 +296,9 @@ def pack_zmap(map, textures, actors):
   s += pack_variant(len(map.sides))
   for side in map.sides:
     s += pack_variant(side.sector+1)
-    s += pack_named_texture(side, textures.flats, 'texturetop')
-    s += pack_named_texture(side, textures.flats, 'texturemiddle')
-    s += pack_named_texture(side, textures.flats, 'texturebottom')
+    s += pack_named_texture(side, flats, 'texturetop')
+    s += pack_named_texture(side, flats, 'texturemiddle')
+    s += pack_named_texture(side, flats, 'texturebottom')
 
   s += pack_variant(len(map.vertices)+len(map.other_vertices))
   for v in map.vertices:
@@ -391,7 +394,6 @@ def pack_zmap(map, textures, actors):
 
   # pack texture switches
   texture_pairs = {}
-  flats = textures.flats
   for name,texture in flats.items():
     other_texture = None 
     if '_ON' in name:

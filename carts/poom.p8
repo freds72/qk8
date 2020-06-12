@@ -128,6 +128,10 @@ function v2_dist(a,b)
   return d*sqrt(n*n + 1)
 end
 
+function v2_make(a,b)
+  return {b[1]-a[1],b[2]-a[2]}
+end
+
 function polyfill(v,offset,tex,light)
   poke4(0x5f38,tex)
 
@@ -605,7 +609,8 @@ function _update()
     for k,thing in pairs(_things) do
       local actor=thing.actor
       -- note: no actor should not happen...
-      if actor and v2_dist(plyr,thing)<actor.radius+plyr.radius then
+      local dist=v2_dist(plyr,thing)
+      if dist<actor.radius+plyr.radius then
         if actor.trigger then
           actor.trigger(plyr)
           -- todo: optimize?
@@ -615,8 +620,16 @@ function _update()
             _things[k]=nil
           end)
         else
+          -- todo: check if blocking
+          local n=v2_normal(v2_make(thing,plyr))
+          local fix=-(actor.radius+plyr.radius-dist)*v2_dot(n,move_dir)
+          -- avoid being pulled toward prop
+          if fix>0 then
+            -- fix position
+            plyr[1]+=fix*n[1]
+            plyr[2]+=fix*n[2]
+          end
         end
-        -- todo: check if blocking
       end
     end
 

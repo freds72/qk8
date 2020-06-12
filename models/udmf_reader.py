@@ -56,7 +56,7 @@ class SideWalker(udmfListener):
           side = dotdict()
           for pair in ctx.pair():
             attribute = pair.keyword().getText()
-            value = pair.value().getText()
+            value = pair.value().getText().strip('"')
             if attribute == 'sector':
               value = int(value)
             side[attribute] = value
@@ -74,7 +74,7 @@ class SectorWalker(udmfListener):
             'heightceiling' : 128})
           for pair in ctx.pair():
             attribute = pair.keyword().getText()
-            value = pair.value().getText()
+            value = pair.value().getText().strip('"')
             if attribute in ['heightfloor','heightceiling','id']:
               value = int(value)
             sector[attribute] = value
