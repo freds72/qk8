@@ -80,6 +80,16 @@ function smoothstep(t)
 	t=mid(t,0,1)
 	return t*t*(3-2*t)
 end
+-- return shortest angle to target
+function shortest_angle(target_angle,angle)
+	local dtheta=target_angle-angle
+	if dtheta>0.5 then
+		angle+=1
+	elseif dtheta<-0.5 then
+		angle-=1
+	end
+	return angle
+end
 
 -- 3d vector functions
 function v_lerp(a,b,t)
@@ -487,9 +497,12 @@ end
 -->8
 -- game loop
 function _init()
+  	-- mouse support
+	poke(0x5f2d,1)
+
   palt(0,false)
 
-  plyr={0,0,height=0,angle=0,av=0,v=0,radius=32,health=100,armor=50}
+  plyr={0,0,height=0,angle=0,v={0,0},radius=32,health=100,armor=50}
 
   _bsp,_things,_inventory=unpack_map()
 
@@ -520,7 +533,13 @@ function _init()
   _cam=make_camera()
 end
 
+-- mouse controller
+_mouselb,_mousex=false
+
 function _update()
+  -- mouse input
+	local mx,lmb=stat(32),stat(34)==1
+
   	-- any futures?
 	for k,f in pairs(_futures) do
 		local cs=costatus(f)
@@ -531,17 +550,25 @@ function _update()
 		end
 	end
 
-  local da,dv=0,0
-  if(btn(0)) da-=1
-  if(btn(1)) da+=1
-  if(btn(2)) dv+=1
-  if(btn(3)) dv-=1
-  plyr.av+=da/128
-  plyr.angle+=plyr.av
-  plyr.v+=dv*4
+  local dx,dz=0,0
+  if(btn(0) or btn(0,1)) dx=1
+  if(btn(1) or btn(1,1)) dx=-1
+  if(btn(2) or btn(2,1)) dz=1
+  if(btn(3) or btn(3,1)) dz=-1
+  	
+	if _mousex then
+    --local da=atan2(64,64-_mousex)
+    --plyr.angle=lerp(plyr.angle,plyr.angle+da,0.1)
+    local da=(64-_mousex)/128
+    plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
+  end
+
   local ca,sa=cos(plyr.angle),sin(plyr.angle)
-  local move_dir,move_len={ca,sa},plyr.v
-  if(move_len<0) move_dir={-ca,-sa} move_len=-move_len
+  local v={4*(dz*ca-dx*sa),4*(dz*sa+dx*ca)}
+  plyr.v[1]+=v[1]
+  plyr.v[2]+=v[2]
+  local move_dir,move_len=v2_normal(plyr.v)
+  if(move_len<0) move_dir={-move_dir[1],-move_dir[2]} move_len=-move_len
 
   -- 
   _msg=nil
@@ -549,10 +576,10 @@ function _update()
   -- check collision with world
   local s,ss=find_sector(_bsp,plyr)
   if s then
-    -- 
+    -- todo: unify ray intersection w/ things
     local hits={}
     local radius=plyr.radius
-    intersect_sub_sector(ss,plyr,move_dir,0,move_len+radius+24,hits)
+    intersect_sub_sector(ss,plyr,move_dir,0,move_len+radius,hits)
     if move_len!=0 then
       -- move
       plyr[1]+=move_len*move_dir[1]
@@ -648,9 +675,11 @@ function _update()
     end)
   end
   -- damping
-  plyr.v*=0.8
-  plyr.av*=0.8
-  if(abs(plyr.av)<0.001) plyr.av=0
+  plyr.v[1]*=0.8
+  plyr.v[2]*=0.8
+
+  _mousex=mx
+	_mouselb=lmb
 end
 
 _screen_pal={140,1,3,131,4,132,133,7,6,134,5,8,2,9,10}
@@ -792,10 +821,7 @@ function _draw()
     local cpu=stat(1).."|"..stat(0)
     print(cpu,2,3,3)
     print(cpu,2,2,8)
-    local s=find_sector(_bsp,plyr)
-    if s then
-      print("sector: "..s.id,2,8,8)
-    end
+    print(plyr.angle,2,8,8)
     local y=16
     for id,amount in pairs(_inventory) do
       print(id..":"..amount,2,y,8)
@@ -807,6 +833,7 @@ function _draw()
     print("웃"..plyr.armor,2,121,4)
     print("웃"..plyr.armor,2,120,3)
      
+    pset(_mousex,64,15)
   end
 end
 
@@ -1119,7 +1146,7 @@ function unpack_map()
     for i=1,#segs do
       local s1=segs[i]
       local v1=s1.v0
-      local n,len=v2_normal({v1[1]-v0[1],v1[2]-v0[2]})
+      local n,len=v2_normal(v2_make(v0,v1))
       -- segment dir and len
       s0.dir,s0.ddir,s0.len=n,v2_dot(n,v0),len
       -- normal
