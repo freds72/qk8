@@ -17,6 +17,7 @@ class ACTOR_KIND(IntFlag):
   ARMOR = 4
   # generic class
   DEFAULT = 5
+  MONSTER = 6
 
 builtin_actors = {
   'key':{
@@ -47,6 +48,10 @@ builtin_actors = {
     'radius': 32,
     'armor': 100,
     'health': 100
+  },
+  'monster':{
+    'kind': ACTOR_KIND.MONSTER,
+    'radius': 32
   }
 }
 

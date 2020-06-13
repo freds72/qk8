@@ -25,7 +25,7 @@ class TEXTURES(TEXTURESListener):
     namespace = ctx.namespace().getText().lower()
     print("Texture: {}.{}".format(namespace, name))
     if namespace == "sprite":
-      # multi-frame images
+      # multi-frame/multi-pose images
       patch = ctx.patch()
       texture = dotdict({
         'width':int(ctx.width().getText()),

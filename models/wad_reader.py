@@ -371,12 +371,22 @@ def pack_zmap(map, textures, actors):
     # frames
     s += pack_variant(len(actor.frames))
     for frame in actor.frames:
-      name = "{}{}0".format(frame.image,frame.variant)
-      if name not in sprites:
-        raise Exception("Unknown frame: {} in TEXTURES".format(name))
-      s += pack_texture(sprites[name])
+      # pack all sides for a given pose (variant)
       s += pack_fixed(frame.ticks)
-    if actor.kind!=ACTOR_KIND.DEFAULT:
+      pattern = "{}{}".format(frame.image,frame.variant)
+      if pattern+"1" in sprites:
+        # multiple side sprite
+        s += pack_variant(8)
+        angles = ["1","2","3","4","5","4","3","2"]
+        for angle in angles:
+          s += pack_texture(sprites[pattern+angle])
+      elif pattern+"0" in sprites:
+        s += pack_variant(1)
+        s += pack_texture(sprites[pattern+"0"])
+      else:
+        # single frame sprite
+        raise Exception("Unknown frame: {}x in TEXTURES".format(pattern))
+    if actor.kind<ACTOR_KIND.DEFAULT:
       # shared inventory properties
       s += pack_variant(actor.amount)
       s += pack_variant(actor.maxamount)
