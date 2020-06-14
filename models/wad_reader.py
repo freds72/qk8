@@ -379,10 +379,15 @@ def pack_zmap(map, textures, actors):
         s += pack_variant(8)
         angles = ["1","2","3","4","5","4","3","2"]
         for angle in angles:
-          s += pack_texture(sprites[pattern+angle])
+          texture = sprites[pattern+angle]
+          s += pack_texture(texture)
+          # offsets
+          s += pack_fixed(texture.xoffset)
       elif pattern+"0" in sprites:
         s += pack_variant(1)
-        s += pack_texture(sprites[pattern+"0"])
+        texture = sprites[pattern+"0"]
+        s += pack_texture(texture)
+        s += pack_fixed(texture.xoffset)
       else:
         # single frame sprite
         raise Exception("Unknown frame: {}x in TEXTURES".format(pattern))

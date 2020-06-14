@@ -34,6 +34,11 @@ class TEXTURESVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by TEXTURESParser#offsets.
+    def visitOffsets(self, ctx:TEXTURESParser.OffsetsContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by TEXTURESParser#patch.
     def visitPatch(self, ctx:TEXTURESParser.PatchContext):
         return self.visitChildren(ctx)

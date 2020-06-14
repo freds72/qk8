@@ -145,7 +145,7 @@ end
 function polyfill(v,offset,tex,light)
   poke4(0x5f38,tex)
 
-  local ca,sa,cx,cy,cz=_cam.u,_cam.v,plyr[1]>>4,(plyr.height+56-offset)<<3,plyr[2]>>4
+  local ca,sa,cx,cy,cz=_cam.u,_cam.v,plyr[1]>>4,(plyr.height+45-offset)<<3,plyr[2]>>4
 
   local v0,spans,pal0=v[#v],{}
   local x0,w0=v0.x,v0.w
@@ -386,7 +386,6 @@ function draw_flats(v_cache,segs,vs)
           draw_sub_sector(segs,verts)
           -- draw things (if any)
           local pal0
-          local angle=(((0.25-plyr.angle)%1+1)%1)
           for _,thing in pairs(segs.things) do
             local x,z=thing[1],thing[2]
             local ax,ay,az=
@@ -406,10 +405,11 @@ function draw_flats(v_cache,segs,vs)
                 if frame then
                   -- pick side
                   local sides=frame.sides
-                  local sy,sx,sh,sw,flipx=unpack(sides[flr(#sides*angle)+1])
-                  --assert(false,sx.."/"..sy.." "..sw.."/"..sh)
-                  sspr(sx,sy,sw,sh,x0-((sw*w0)>>1),y0-sh*w0,sw*w0,sh*w0,flipx)
-                end
+                  local angle=atan2(-thing[1]+plyr[1],thing[2]-plyr[2])
+                  local sy,sx,sh,sw,ox,flipx=unpack(sides[flr(#sides*angle)+1])
+                  sspr(sx,sy,sw,sh,x0-ox*w0,y0-sh*w0,sw*w0,sh*w0,flipx)
+                  pset(x0,y0,15)
+                end 
               end
             end
           end
@@ -1203,7 +1203,7 @@ function unpack_map()
       local pose={ticks=unpack_fixed(),sides={}}
       -- get all pose sides
       unpack_array(function(i)
-        add(pose.sides,{mpeek(),mpeek(),mpeek(),mpeek(),i>5})
+        add(pose.sides,{mpeek(),mpeek(),mpeek(),mpeek(),unpack_fixed(),i>5})
       end)
       add(item.frames,pose)
     end)

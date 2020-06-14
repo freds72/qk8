@@ -53,6 +53,15 @@ class TEXTURESListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by TEXTURESParser#offsets.
+    def enterOffsets(self, ctx:TEXTURESParser.OffsetsContext):
+        pass
+
+    # Exit a parse tree produced by TEXTURESParser#offsets.
+    def exitOffsets(self, ctx:TEXTURESParser.OffsetsContext):
+        pass
+
+
     # Enter a parse tree produced by TEXTURESParser#patch.
     def enterPatch(self, ctx:TEXTURESParser.PatchContext):
         pass

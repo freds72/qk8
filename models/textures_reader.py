@@ -27,11 +27,19 @@ class TEXTURES(TEXTURESListener):
     if namespace == "sprite":
       # multi-frame/multi-pose images
       patch = ctx.patch()
+      offsets = ctx.offsets()
+      xoffset = 0
+      yoffset = 0
+      if offsets is not None:
+        xoffset = int(offsets.xoffset().getText())
+        yoffset = int(offsets.yoffset().getText())
       texture = dotdict({
         'width':int(ctx.width().getText()),
         'height':int(ctx.height().getText()),
         'mx':-int(patch.xoffset().getText()),
-        'my':-int(patch.yoffset().getText())
+        'my':-int(patch.yoffset().getText()),
+        'xoffset': xoffset,
+        'yoffset': yoffset
       })
       # todo: split frames
       self.sprites[name] = texture        

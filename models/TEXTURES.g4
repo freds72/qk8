@@ -8,7 +8,7 @@ textures:
   ;
 
 block:
-  namespace name ',' width ',' height '{' xscale? yscale? patch '}'
+  namespace name ',' width ',' height '{' xscale? yscale? offsets? patch '}'
   ;
 
 namespace:
@@ -21,6 +21,10 @@ xscale:
 
 yscale:
 	'YScale' NUMBER
+  ;
+
+offsets:
+  'Offset' xoffset ',' yoffset
   ;
 
 patch:
