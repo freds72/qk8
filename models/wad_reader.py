@@ -14,6 +14,12 @@ from python2pico import pack_variant
 from python2pico import pack_fixed
 from python2pico import to_multicart
 from python2pico import pack_int32
+from bsp_compiler import Polygon
+from bsp_compiler import POLYGON_CLASSIFICATION
+from bsp_compiler import normal,ortho
+
+# debug/draw
+import sys, pygame
 
 # helper funcs
 def dot(v0,v1):
@@ -123,6 +129,7 @@ class MAPDirectory():
         header_data = file.read(struct.calcsize(fmt_SEGHeader))
         header = SEGHeader._make(struct.unpack(fmt_SEGHeader, header_data))
         segs.append(SEG(seg_id, header.v1, header.lineword==0xFFFF and -1 or header.lineword, header.side, header.partner))
+        # map absolute segment ids to sub-sector id
         subsector_by_seg[seg_id] = len(sub_sectors)
         seg_id += 1
       sub_sectors.append(segs)
@@ -480,4 +487,186 @@ def load_WAD(filepath,mapname):
     zmap = maps[mapname].read(file)
     pack_zmap(zmap, textures, actors)
 
-load_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
+def to_float(n):
+  return float((n-0x100000000)/65535.0) if n>0x7fffffff else float(n/65535.0)
+
+def project(v):
+  return (v[0]/4+320,320-v[1]/4)
+
+black = 0, 0, 0
+white = (255, 255, 255)
+grey = (128, 128, 128)
+red = (255, 0, 0)
+dark_red = (128, 0 , 0)
+yellow = (255, 0, 255)
+blue = (0,0,255)
+light_blue = (128, 128, 255)
+
+def draw_plane(surface, v0, v1, color):
+  pygame.draw.line(surface, color, project(v0), project(v1), 2)
+  x = (v0[0]+v1[0])/2
+  y = (v0[1]+v1[1])/2
+  n = normal(ortho(v0,v1))
+  n = (x + 8*n[0], y + 8*n[1])
+  pygame.draw.line(surface, light_blue, project((x,y)), project(n), 2)
+
+
+def display_WAD(filepath,mapname):
+  with open(filepath, 'rb') as file:
+    # read file header
+    header_data = file.read(struct.calcsize(fmt_WADHeader))
+    header = WADHeader._make(struct.unpack(fmt_WADHeader, header_data))
+
+    maps = {}
+    # go to directory
+    file.seek(header.dir_ofs)
+    i = 0
+    while i<header.dir_size:
+      entry_data = file.read(struct.calcsize(fmt_WADDirectory))
+      entry = WADDirectory._make(struct.unpack(fmt_WADDirectory, entry_data))
+      lump_name = entry.lump_name.decode('ascii').rstrip('\x00')
+      # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_glnodes.cpp
+      # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_setup.cpp
+      if re.match("E[0-9]M[0-9]",lump_name):
+        # read UDMF
+        map_dir = MAPDirectory(file, lump_name, entry)
+        maps[lump_name] = map_dir
+        # skip map entries + ENDMAP
+        i += len(map_dir.lumps) + 1
+      i += 1
+
+    # pick map
+    zmap = maps[mapname].read(file)
+    
+    vertices = zmap.vertices + [(to_float(v[0]),to_float(v[1])) for v in zmap.other_vertices]
+
+    # init PVS for sector 6
+    pvs = set()
+    pvs.add(20)
+    # already processed portal pairs
+    pairs = set()
+    portals = []
+    sub0 = zmap.sub_sectors[20]
+    s0 = sub0[len(sub0)-1]
+    for i in range(len(sub0)):
+      s1 = sub0[i]
+      # only double-sided segments are relevant
+      if s0.partner!=-1:
+        # portal plane
+        portal0 = Polygon(v0=s0.v1, v1=s1.v1, vertices=vertices)
+        # connected sub-sectors are visible
+        pvs.add(s0.partner)
+        sub1 = zmap.sub_sectors[s0.partner]
+        # find all anti-portals
+        os0 = sub1[len(sub1)-1]
+        for j in range(len(sub1)):
+          os1 = sub1[j]
+          # only double-sided segments are relevant
+          if os0.partner!=-1:
+            portal1 = Polygon(v0=os0.v1, v1=os1.v1, vertices=vertices)
+            if portal0.classify(portal1)==POLYGON_CLASSIFICATION.FRONT:
+              portals.append(dotdict({
+                'src':portal0,
+                'dst':portal1,
+                'sub_id':os0.partner
+              }))
+              pairs.add("{}:{}".format( s0.partner, os0.partner))
+              print("portal: {}:{} -> {}".format(0, s0.partner, os0.partner))
+          os0 = os1
+      s0 = s1
+    
+    print(portals)
+
+    clips = []
+    # clip portals
+    while len(portals)>0:
+      portal = portals.pop()
+      clip0 = Polygon(v0=portal.dst.v1,v1=portal.src.v0, vertices=vertices)
+      clip1 = Polygon(v0=portal.src.v1,v1=portal.dst.v0, vertices=vertices)
+
+      print("clip segs of sub-sector: {}".format(portal.sub_id))
+
+      # check all segs from the other side of the destination portal
+      sub0 = zmap.sub_sectors[portal.sub_id]
+      s0 = sub0[len(sub0)-1]
+      for i in range(len(sub0)):
+        s1 = sub0[i]
+        seg = Polygon(v0=s0.v1, v1=s1.v1, vertices=vertices)
+        # exclude coplanar segments
+        if seg.classify(portal.dst)!=POLYGON_CLASSIFICATION.COPLANAR:
+          front, back = seg.split(clip0)
+          if front is not None:
+            front, back = front.split(clip1)
+            if front is not None:
+              clips.append(front)
+              # anything remains?
+              pvs.add(portal.sub_id)
+              # is seg connected?
+              next_portal = "{}:{}".format(portal.sub_id, s0.partner)
+              if s0.partner!=-1 and next_portal not in pairs:
+                portals.append(dotdict({
+                  'src': portal.src,
+                  'dst': front,
+                  'sub_id': s0.partner
+                }))
+                pairs.add(next_portal)
+                print("*portal*: {}:{} -> {}".format(0, portal.sub_id, s0.partner))
+        s0 = s1
+
+    print("pvs: {}".format(pvs))
+
+    #  debug display
+    pygame.init()
+
+    size = width, height = 640, 640
+    screen = pygame.display.set_mode(size)
+    my_font = pygame.font.SysFont("Courier", 16)
+    my_bold_font = pygame.font.SysFont("Courier", 16, bold=1)
+
+    while 1:
+      for event in pygame.event.get():
+        if event.type == pygame.QUIT: sys.exit()
+
+      screen.fill(black)
+
+      # draw segments
+      for k in range(len(zmap.sub_sectors)):
+        segs = zmap.sub_sectors[k]
+        n = len(segs)
+        s0 = segs[n-1]
+        v0 = vertices[s0.v1]
+        xc = 0
+        yc = 0
+        
+        for i in range(n):
+          s1 = segs[i]
+          v1 = vertices[s1.v1]
+          xc += v1[0]
+          yc += v1[1]
+          r = 2
+          c = dark_red
+          pygame.draw.line(screen, s0.partner==-1 and grey or c, project(v0), project(v1), r)
+          s0 = s1
+          v0 = v1
+        xc /= n
+        yc /= n
+        font = my_font
+        if k in pvs:
+          font = my_bold_font
+        the_text = font.render("{}".format(k), True, grey)
+        screen.blit(the_text, project((xc, yc)))
+      # portals
+      for portal in portals:
+        # draw frustrum
+        draw_plane(screen, vertices[portal.dst.v1], vertices[portal.src.v0], yellow)
+        draw_plane(screen, vertices[portal.src.v1], vertices[portal.dst.v0], yellow)
+
+      for portal in clips:
+        # draw frustrum
+        pygame.draw.line(screen, blue, project(vertices[portal.v0]), project(vertices[portal.v1]), 2)
+
+      pygame.display.flip()
+
+#load_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
+display_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
+
