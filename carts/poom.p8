@@ -663,8 +663,9 @@ function _update()
       end
     end
 
-    s=find_sector(_bsp,plyr)
+    s,ss=find_sector(_bsp,plyr)
     plyr.sector=s
+    plyr.subs=ss
     plyr.height=s.floor+abs(cos(time()/4)*move_len)
   end
   _cam:track(plyr,plyr.angle,plyr.height+45)
@@ -704,7 +705,7 @@ function _draw()
   elseif false then --btn(5) then
     pal(_screen_pal,1)
     map()
-  elseif false then --btn(4) then
+  elseif btn(4) then
     -- restore palette
     pal(_screen_pal,1)
 
@@ -713,9 +714,12 @@ function _draw()
     line(64,64,127,0,2)
     line(64,64,0,0,2)
     ]]
+    local pvs=plyr.subs.pvs
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       if node.leaf[side] then
-        draw_segs2d(node[side],pos,side and 11 or 8)
+        local subs=node[side]
+        -- potentially visible?
+        if(pvs[subs.id]) draw_segs2d(subs,pos,8)
       else
         -- bounding box
         --[[
@@ -728,9 +732,9 @@ function _draw()
         end
         ]]
   
-        --if _cam:is_visible(bbox) then
+        if _cam:is_visible(node.bbox[side]) then
           visit_bsp(node[side],pos,visitor)
-        --end
+        end
 
         --[[
         -- draw hyperplane	
@@ -795,10 +799,13 @@ function _draw()
     print("sectors: "..sectors,2,8,8)
 
   else
+    local pvs=plyr.subs.pvs
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       side=not side
       if node.leaf[side] then
-        draw_flats(v_cache,node[side])
+        local subs=node[side]
+        -- potentially visible?
+        if(pvs[subs.id]) draw_flats(v_cache,subs)
       else
         if _cam:is_visible(node.bbox[side]) then
           visit_bsp(node[side],pos,visitor)
@@ -821,16 +828,15 @@ function _draw()
     
     if(_msg) print(_msg,64-#_msg*2,120,15)
 
-    local cpu=stat(1).."|"..stat(0)
+    -- debug messages
+    pvc=0
+    for k,_ in pairs(pvs) do
+      pvc+=1
+    end
+    local cpu=stat(1).."|"..stat(0).."|pvs:"..pvc
     print(cpu,2,3,3)
     print(cpu,2,2,8)
-    print(plyr.angle,2,8,8)
-    local y=16
-    for id,amount in pairs(_inventory) do
-      print(id..":"..amount,2,y,8)
-      y+=6
-    end
-    
+
     print("♥"..plyr.health,2,111,13)
     print("♥"..plyr.health,2,110,12)
     print("웃"..plyr.armor,2,121,4)
@@ -1123,8 +1129,8 @@ function unpack_map()
   end)
 
   local sub_sectors,all_segs={},{}
-  unpack_array(function()
-    local segs={}
+  unpack_array(function(i)
+    local segs={id=i,pvs={[i]=true}}
     unpack_array(function()
       local s=add(segs,{
         v0=verts[unpack_variant()],
@@ -1142,6 +1148,10 @@ function unpack_map()
       assert(s.v0,"invalid seg")
       assert(segs.sector,"missing sector")
       add(all_segs,s)
+    end)
+    -- pvs
+    unpack_array(function()
+      segs.pvs[unpack_variant()]=true
     end)
     -- normals
     local s0=segs[#segs]

@@ -339,8 +339,13 @@ def pack_zmap(map, textures, actors):
     s += special_data
   
   s += pack_variant(len(map.sub_sectors))
-  for segs in map.sub_sectors:
-    s += pack_segs(segs)
+  for i in range(len(map.sub_sectors)):
+    s += pack_segs(map.sub_sectors[i])
+    # PVS
+    pvs,clips,vert = get_PVS(map, i)
+    s += pack_variant(len(pvs))
+    for sub_id in pvs:
+      s += pack_variant(sub_id + 1)
 
   s += pack_variant(len(map.nodes))
   for node in map.nodes:
@@ -511,6 +516,84 @@ def draw_plane(surface, v0, v1, color):
   pygame.draw.line(surface, light_blue, project((x,y)), project(n), 2)
 
 
+def get_PVS(zmap, sub_id):
+  vertices = zmap.vertices + [(to_float(v[0]),to_float(v[1])) for v in zmap.other_vertices]
+
+  # init PVS for sector 6
+  pvs = set()
+  # already processed portal pairs
+  pairs = set()
+  portals = []
+  sub0 = zmap.sub_sectors[sub_id]
+  s0 = sub0[len(sub0)-1]
+  for i in range(len(sub0)):
+    s1 = sub0[i]
+    # only double-sided segments are relevant
+    if s0.partner!=-1:
+      # portal plane
+      portal0 = Polygon(v0=s0.v1, v1=s1.v1, vertices=vertices)
+      # connected sub-sectors are visible
+      pvs.add(s0.partner)
+      pairs.add("{}:{}".format(sub_id, s0.partner))
+
+      sub1 = zmap.sub_sectors[s0.partner]
+      # find all anti-portals
+      os0 = sub1[len(sub1)-1]
+      for j in range(len(sub1)):
+        os1 = sub1[j]
+        # only double-sided segments are relevant
+        if os0.partner!=-1:
+          portal1 = Polygon(v0=os0.v1, v1=os1.v1, vertices=vertices)
+          if portal0.classify(portal1)==POLYGON_CLASSIFICATION.FRONT:
+            portals.append(dotdict({
+              'src':portal0,
+              'dst':portal1,
+              'sub_id':os0.partner
+            }))
+            pairs.add("{}:{}".format( s0.partner, os0.partner))
+            print("portal: {}:{} -> {}".format(0, s0.partner, os0.partner))
+        os0 = os1
+    s0 = s1
+  
+  clips = []
+  # clip portals
+  while len(portals)>0:
+    portal = portals.pop()
+    clip0 = Polygon(v0=portal.dst.v1,v1=portal.src.v0, vertices=vertices)
+    clip1 = Polygon(v0=portal.src.v1,v1=portal.dst.v0, vertices=vertices)
+
+    # check all segs from the other side of the destination portal
+    sub0 = zmap.sub_sectors[portal.sub_id]
+    s0 = sub0[len(sub0)-1]
+    for i in range(len(sub0)):
+      s1 = sub0[i]
+      seg = Polygon(v0=s0.v1, v1=s1.v1, vertices=vertices)
+      # exclude coplanar segments
+      if seg.classify(portal.dst)==POLYGON_CLASSIFICATION.BACK:
+        front, back = seg.split(clip0)
+        if front is not None:
+          front, back = front.split(clip1)
+          if front is not None:
+            clips.append(front)
+            # anything remains?
+            pvs.add(portal.sub_id)
+            # is seg connected?
+            next_portal = "{}:{}".format(portal.sub_id, s0.partner)
+            if s0.partner!=-1 and next_portal not in pairs:
+              portals.append(dotdict({
+                'src': portal.src,
+                'dst': front,
+                'sub_id': s0.partner
+              }))
+              pairs.add(next_portal)
+              print("*portal*: {}:{} -> {}".format(0, portal.sub_id, s0.partner))
+      s0 = s1
+
+  print("pvs: {}".format(pvs))
+  # remove self from PVS
+  if sub_id in pvs: pvs.remove(sub_id)
+  return (pvs, clips, vertices)
+
 def display_WAD(filepath,mapname):
   with open(filepath, 'rb') as file:
     # read file header
@@ -538,82 +621,7 @@ def display_WAD(filepath,mapname):
     # pick map
     zmap = maps[mapname].read(file)
     
-    vertices = zmap.vertices + [(to_float(v[0]),to_float(v[1])) for v in zmap.other_vertices]
-
-    # init PVS for sector 6
-    pvs = set()
-    pvs.add(20)
-    # already processed portal pairs
-    pairs = set()
-    portals = []
-    sub0 = zmap.sub_sectors[20]
-    s0 = sub0[len(sub0)-1]
-    for i in range(len(sub0)):
-      s1 = sub0[i]
-      # only double-sided segments are relevant
-      if s0.partner!=-1:
-        # portal plane
-        portal0 = Polygon(v0=s0.v1, v1=s1.v1, vertices=vertices)
-        # connected sub-sectors are visible
-        pvs.add(s0.partner)
-        sub1 = zmap.sub_sectors[s0.partner]
-        # find all anti-portals
-        os0 = sub1[len(sub1)-1]
-        for j in range(len(sub1)):
-          os1 = sub1[j]
-          # only double-sided segments are relevant
-          if os0.partner!=-1:
-            portal1 = Polygon(v0=os0.v1, v1=os1.v1, vertices=vertices)
-            if portal0.classify(portal1)==POLYGON_CLASSIFICATION.FRONT:
-              portals.append(dotdict({
-                'src':portal0,
-                'dst':portal1,
-                'sub_id':os0.partner
-              }))
-              pairs.add("{}:{}".format( s0.partner, os0.partner))
-              print("portal: {}:{} -> {}".format(0, s0.partner, os0.partner))
-          os0 = os1
-      s0 = s1
-    
-    print(portals)
-
-    clips = []
-    # clip portals
-    while len(portals)>0:
-      portal = portals.pop()
-      clip0 = Polygon(v0=portal.dst.v1,v1=portal.src.v0, vertices=vertices)
-      clip1 = Polygon(v0=portal.src.v1,v1=portal.dst.v0, vertices=vertices)
-
-      print("clip segs of sub-sector: {}".format(portal.sub_id))
-
-      # check all segs from the other side of the destination portal
-      sub0 = zmap.sub_sectors[portal.sub_id]
-      s0 = sub0[len(sub0)-1]
-      for i in range(len(sub0)):
-        s1 = sub0[i]
-        seg = Polygon(v0=s0.v1, v1=s1.v1, vertices=vertices)
-        # exclude coplanar segments
-        if seg.classify(portal.dst)!=POLYGON_CLASSIFICATION.COPLANAR:
-          front, back = seg.split(clip0)
-          if front is not None:
-            front, back = front.split(clip1)
-            if front is not None:
-              clips.append(front)
-              # anything remains?
-              pvs.add(portal.sub_id)
-              # is seg connected?
-              next_portal = "{}:{}".format(portal.sub_id, s0.partner)
-              if s0.partner!=-1 and next_portal not in pairs:
-                portals.append(dotdict({
-                  'src': portal.src,
-                  'dst': front,
-                  'sub_id': s0.partner
-                }))
-                pairs.add(next_portal)
-                print("*portal*: {}:{} -> {}".format(0, portal.sub_id, s0.partner))
-        s0 = s1
-
-    print("pvs: {}".format(pvs))
+    pvs, clips, vertices = get_PVS(zmap, 13)
 
     #  debug display
     pygame.init()
@@ -656,10 +664,10 @@ def display_WAD(filepath,mapname):
         the_text = font.render("{}".format(k), True, grey)
         screen.blit(the_text, project((xc, yc)))
       # portals
-      for portal in portals:
-        # draw frustrum
-        draw_plane(screen, vertices[portal.dst.v1], vertices[portal.src.v0], yellow)
-        draw_plane(screen, vertices[portal.src.v1], vertices[portal.dst.v0], yellow)
+      #for portal in portals:
+      #  # draw frustrum
+      #  draw_plane(screen, vertices[portal.dst.v1], vertices[portal.src.v0], yellow)
+      #  draw_plane(screen, vertices[portal.src.v1], vertices[portal.dst.v0], yellow)
 
       for portal in clips:
         # draw frustrum
@@ -667,6 +675,6 @@ def display_WAD(filepath,mapname):
 
       pygame.display.flip()
 
-#load_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
-display_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
+load_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
+#display_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
 
