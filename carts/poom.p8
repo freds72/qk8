@@ -162,7 +162,8 @@ function polyfill(v,offset,tex,light)
     x0+=sy*dx
     w0+=sy*dw
 
-    for y=cy0,min(ceil(y1)-1,127) do
+    if(y1>128) y1=128
+    for y=cy0,ceil(y1)-1 do
       local span=spans[y]
       if span then
       -- limit visibility
@@ -250,14 +251,13 @@ end
 function draw_sub_sector(segs,v_cache)
   -- get heights
   local sector=segs.sector
-  local top,bottom=sector.ceil,sector.floor
-  local v0,pal0=v_cache[#v_cache]
+  local v0,top,bottom,pal0=v_cache[#v_cache],sector.ceil,sector.floor
   local x0,y0,w0=v0.x,v0.y,v0.w
 
   -- todo: test ipairs
   for i,v1 in ipairs(v_cache) do
     local seg,x1,y1,w1=v0.seg,v1.x,v1.y,v1.w
-
+    local _x1=x1
     -- front facing?
     if x0<x1 then
       -- span rasterization
@@ -300,7 +300,8 @@ function draw_sub_sector(segs,v_cache)
           if(bottom>=obottom) obottom=nil
         end
 
-        for x=cx0,min(ceil(x1)-1,127) do
+        if(x1>128) x1=128
+        for x=cx0,ceil(x1)-1 do
           if w0>0.3 then
             -- color shifing
             local pal1=4\w0
@@ -340,7 +341,10 @@ function draw_sub_sector(segs,v_cache)
         end
       end
     end
-    v0,x0,y0,w0=v1,x1,y1,w1
+    v0=v1
+    x0=_x1
+    y0=y1
+    w0=w1
   end
 end
 
@@ -351,20 +355,25 @@ function draw_flats(v_cache,segs,vs)
   
   -- to cam space + clipping flags
   for i,seg in ipairs(segs) do
-    local v=seg.v0
-    local x,z=v[1],v[2]
-    local ax,ay,az=
-      m1*x+m3*z+m4,
-      m8,
-      m9*x+m11*z+m12
-    local code=k_near
-    if(az>_znear) code=k_far
-    if(ax>az) code|=k_right
-    if(-ax>az) code|=k_left
-    
-    local w=128/az
-    verts[i]={ax,ay,az,seg=seg,u=x,v=z,x=63.5+ax*w,y=63.5-ay*w,w=w}
-
+    local v0=seg.v0
+    local v=v_cache[v0]
+    if not v then
+      local x,z=v0[1],v0[2]
+      local ax,az=
+        m1*x+m3*z+m4,
+        m9*x+m11*z+m12
+      local code=k_near
+      if(az>_znear) code=k_far
+      if(ax>az) code|=k_right
+      if(-ax>az) code|=k_left
+      
+      local w=128/az
+      v={ax,m8,az,outcode=code,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
+      v_cache[v0]=v
+    end
+    v.seg=seg
+    verts[i]=v
+    local code=v.outcode
     outcode&=code
     left+=(code&4)
     right+=(code&8)
@@ -372,6 +381,7 @@ function draw_flats(v_cache,segs,vs)
   end
   -- out of screen?
   if outcode==0 then
+    local clipped=false
     if(clipcode!=0) verts=z_poly_clip(_znear,verts)
     if #verts>2 then
       if(left!=0) verts=poly_clip(-0.707,0.707,0,verts)
@@ -563,7 +573,7 @@ function _update()
     --local da=atan2(64,64-_mousex)
     --plyr.angle=lerp(plyr.angle,plyr.angle+da,0.1)
     local da=(64-_mousex)/128
-    plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
+    --plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
   end
 
   local ca,sa=cos(plyr.angle),sin(plyr.angle)
@@ -799,13 +809,15 @@ function _draw()
     print("sectors: "..sectors,2,8,8)
 
   else
-    local pvs=plyr.subs.pvs
+    local pvs,v_cache=plyr.subs.pvs,{}
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       side=not side
       if node.leaf[side] then
         local subs=node[side]
         -- potentially visible?
-        if(pvs[subs.id]) draw_flats(v_cache,subs)
+        if pvs[subs.id] then
+          draw_flats(v_cache,subs)
+        end
       else
         if _cam:is_visible(node.bbox[side]) then
           visit_bsp(node[side],pos,visitor)
