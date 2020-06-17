@@ -24,7 +24,7 @@ end
 
 
 function cam_to_screen2d(v)
-  local x,y=v[1]/8,v[3]/8
+  local x,y=v[1]/16,v[3]/16
   return 64+x,64-y
 end
 
@@ -41,23 +41,23 @@ function make_camera()
       self.v=sa
       -- world to cam matrix
       self.m={
-        ca,0,-sa,-ca*pos[1]+sa*pos[2],
-        0, 1,0,-height,
-        sa,0,ca,-sa*pos[1]-ca*pos[2]
+        ca,-sa,-ca*pos[1]+sa*pos[2],
+        -height,
+        sa,ca,-sa*pos[1]-ca*pos[2]
       }
     end,
     -- debug/map
     project=function(self,v)
       local m,x,z=self.m,v[1],v[2]
       return {
-        m[1]*x+m[3]*z+m[4],
-        m[8],
-        m[9]*x+m[11]*z+m[12]
+        m[1]*x+m[2]*z+m[3],
+        m[4],
+        m[5]*x+m[6]*z+m[7]
       }
     end,
     is_visible=function(self,bbox)    
-      local m,outcode=self.m,0xffff
-      local m1,m3,m4,m9,m11,m12=m[1],m[3],m[4],m[9],m[11],m[12]
+      local outcode=0xffff
+      local m1,m3,m4,_,m9,m11,m12=unpack(self.m)
       for i=1,8,2 do
         local x,z=bbox[i],bbox[i+1]
         local ax,az=m1*x+m3*z+m4,m9*x+m11*z+m12
@@ -198,19 +198,34 @@ function polyfill(v,offset,tex,light)
 end
 
 function draw_segs2d(segs,pos,txt)
-  local verts={}
-
-  for i=1,#segs do
-    local s0=segs[i]
-    local v0=add(verts,_cam:project(s0.v0))
+  local verts,outcode,clipcode={},0xffff,0
+  local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
+  
+  -- to cam space + clipping flags
+  for i,seg in ipairs(segs) do
+    local v0=seg.v0
+    local x,z=v0[1],v0[2]
+    local ax,az=
+      m1*x+m3*z+m4,
+      m9*x+m11*z+m12
+    local code=k_near
+    if(az>_znear) code=k_far
+    if(ax>az) code|=k_right
+    if(-ax>az) code|=k_left
+    
+    local w=128/az
+    local v={ax,m8,az,seg=seg,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
+    verts[i]=v
+    outcode&=code
+    clipcode+=(code&2)
   end
-  --[[
+
   if outcode==0 then
     if(clipcode!=0) verts=z_poly_clip(_znear,verts)
     if #verts>2 then
-      if(left!=0) verts=poly_clip(-0.707,0.707,0,verts)
+      verts=poly_clip(-0.707,0.707,0,verts)
       if #verts>2 then
-        if(right!=0) verts=poly_clip(0.707,0.707,0,verts)
+        verts=poly_clip(0.707,0.707,0,verts)
         if #verts>2 then
           local v0=verts[#verts]
           local x0,y0,w0=cam_to_screen2d(v0)
@@ -226,7 +241,8 @@ function draw_segs2d(segs,pos,txt)
       end
     end
   end
-  ]]
+  
+  --[[
   local v0=verts[#verts]
   local x0,y0,w0=cam_to_screen2d(v0)
   local xc,yc=0,0
@@ -242,6 +258,7 @@ function draw_segs2d(segs,pos,txt)
     v0=v1
   end
   if(txt) print(segs.sector.id,xc/#verts,yc/#verts,10)
+  ]]
   --[[
   local x0,y0=cam_to_screen2d(_cam:project(pfix))
   pset(x0,y0,15)
@@ -258,7 +275,7 @@ function draw_sub_sector(segs,v_cache)
   for i,v1 in ipairs(v_cache) do
     local seg,x1,y1,w1=v0.seg,v1.x,v1.y,v1.w
     local _x1=x1
-    -- front facing?
+    -- front facing & visible
     if x0<x1 then
       -- span rasterization
       --printh(x0.."->"..x1)
@@ -350,8 +367,8 @@ end
 
 -- ceil/floor/wal rendering
 function draw_flats(v_cache,segs,vs)
-  local m,verts,outcode,clipcode,left,right=_cam.m,{},0xffff,0,0,0
-  local m1,m3,m4,m8,m9,m11,m12=m[1],m[3],m[4],m[8],m[9],m[11],m[12]
+  local verts,outcode,clipcode,left,right={},0xffff,0,0,0
+  local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
   
   -- to cam space + clipping flags
   for i,seg in ipairs(segs) do
@@ -367,8 +384,7 @@ function draw_flats(v_cache,segs,vs)
       if(ax>az) code|=k_right
       if(-ax>az) code|=k_left
       
-      local w=128/az
-      v={ax,m8,az,outcode=code,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
+      v={ax,m8,az,outcode=code,u=x,v=z}
       v_cache[v0]=v
     end
     v.seg=seg
@@ -388,8 +404,17 @@ function draw_flats(v_cache,segs,vs)
       if #verts>2 then
         if(right!=0) verts=poly_clip(0.707,0.707,0,verts)
         if #verts>2 then
+
           local sector=segs.sector
-          
+
+          -- perspective project
+          for _,v in pairs(verts) do
+            local w=128/v[3]
+            v.x=63.5+v[1]*w
+            v.y=63.5-m8*w
+            v.w=w
+          end
+
           if(sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,sector.floorlight)
           if(sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight)
 
@@ -866,14 +891,10 @@ local function v_clip(v0,v1,t)
     v0[1]*t_1+v1[1]*t,
     v0[2]*t_1+v1[2]*t,
     v0[3]*t_1+v1[3]*t
-  local w=128/z
   return {
     x,y,z,
-    x=63.5+x*w,
-    y=63.5-y*w,
     u=v0.u*t_1+v1.u*t,
     v=v0.v*t_1+v1.v*t,
-    w=w,
     seg=v0.seg
   }
 end
