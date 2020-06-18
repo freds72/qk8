@@ -366,7 +366,7 @@ function draw_sub_sector(segs,v_cache)
 end
 
 -- ceil/floor/wal rendering
-function draw_flats(v_cache,segs,vs)
+function draw_flats(v_cache,segs,things)
   local verts,outcode,clipcode,left,right={},0xffff,0,0,0
   local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
   
@@ -414,33 +414,26 @@ function draw_flats(v_cache,segs,vs)
 
           draw_sub_sector(segs,verts)
           -- draw things (if any)
-          local pal0
-          for _,thing in pairs(segs.things) do
-            local x,z=thing[1],thing[2]
-            local ax,ay,az=
-              m1*x+m3*z+m4,
-              m8,
-              m9*x+m11*z+m12
-            if az>_znear and az<420 then
-              local w0=128/az
-              local x0,y0=63.5+ax*w0,63.5-(ay+sector.floor)*w0
-              -- todo: use sector ambiant light + sprite brightness flags
+          local head,pal0=things[1].next
+          while head do
+            local thing=head.thing
+            if thing.actor then
+              local x0,y0,w0=head.x,64,head.w
               local pal1=4\w0
               if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1    
               palt(0,true)
               w0*=2
-              if thing.actor then
-                local frame=thing.actor.frames[1]
-                if frame then
-                  -- pick side
-                  local sides=frame.sides
-                  local angle=atan2(-thing[1]+plyr[1],thing[2]-plyr[2])
-                  local sy,sx,sh,sw,ox,flipx=unpack(sides[flr(#sides*angle)+1])
-                  sspr(sx,sy,sw,sh,x0-ox*w0,y0-sh*w0,sw*w0,sh*w0,flipx)
-                  pset(x0,y0,15)
-                end 
-              end
+              local frame=thing.actor.frames[1]
+              if frame then
+                -- pick side
+                local sides=frame.sides
+                local angle=atan2(-thing[1]+plyr[1],thing[2]-plyr[2])
+                local sy,sx,sh,sw,ox,flipx=unpack(sides[flr(#sides*angle)+1])
+                sspr(sx,sy,sw,sh,x0-ox*w0,y0-sh*w0,sw*w0,sh*w0,flipx)
+                pset(x0,y0,15)
+              end 
             end
+            head=head.next
           end
         end
       end
@@ -473,14 +466,14 @@ function find_ssector_thick(root,pos,radius,res)
   local side,otherside=dist<=root.d-radius,dist<=root.d+radius
   -- leaf?
   if root.leaf[side] then
-    add(res,root[side])
+    res[root[side]]=true
   else
     find_ssector_thick(root[side],pos,radius,res)
   end
   -- straddling?
   if side!=otherside then
     if root.leaf[otherside] then
-      add(res,root[otherside])
+      res[root[otherside]]=true
     else
       find_ssector_thick(root[otherside],pos,radius,res)
     end
@@ -526,6 +519,15 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
   end
 end
 
+local depth_cls={
+  __index=function(t,k)
+    -- head of stack
+    local head={w=0}
+    t[k]=head
+    return head
+  end
+}
+
 -->8
 -- game loop
 function _init()
@@ -544,14 +546,9 @@ function _init()
       plyr[1]=thing[1]
       plyr[2]=thing[2]
     else
-      -- attach static things to sub-sectors
-      local subs={}
-      find_ssector_thick(_bsp,thing,20,subs)
-      for _,sub in pairs(subs) do
-        local things=sub.things or {}
-        add(things, thing)
-        sub.things=things  
-      end
+      -- attach static sub-sectors to things
+      thing.subs={}
+      find_ssector_thick(_bsp,thing,thing.actor.radius,thing.subs)
     end
   end
 
@@ -592,7 +589,7 @@ function _update()
     --local da=atan2(64,64-_mousex)
     --plyr.angle=lerp(plyr.angle,plyr.angle+da,0.1)
     local da=(64-_mousex)/128
-    --plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
+    plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
   end
 
   local ca,sa=cos(plyr.angle),sin(plyr.angle)
@@ -666,6 +663,8 @@ function _update()
     -- things collision
     -- todo: optimize (sector..)
     for k,thing in pairs(_things) do
+      -- find sector
+      
       local actor=thing.actor
       -- note: no actor should not happen...
       local dist=v2_dist(plyr,thing)
@@ -822,20 +821,56 @@ function _draw()
     local res={}
     find_ssector_thick(_bsp,plyr,32,res)
     sectors=""
-    for i,sub in ipairs(res) do
-      sectors=sectors.."|"..sub.sector.id
+    for sub,_ in pairs(res) do
+      sectors=sectors.."|"..sub.id
     end
     print("sectors: "..sectors,2,8,8)
 
   else
     local pvs,v_cache=plyr.subs.pvs,{}
+
+    -- 
+    local sorted_things=setmetatable({},{
+      __index=function(t,k)
+        local s=setmetatable({},depth_cls)
+        t[k]=s
+        return s
+      end
+    })
+    for _,thing in pairs(_things) do
+      -- visible?
+      local viz
+      for sub,_ in pairs(thing.subs) do
+        if(pvs[sub.id]) viz=true break
+      end
+      if viz then
+        local v=_cam:project(thing)
+        local ax,az=v[1],v[3]
+        if az>_znear and ax<az and -ax<az then
+          local w=128/az
+          local x,y=63.5+ax*w,63.5-v[2]*w
+          -- insertion sort into each sub
+          for sub,_ in pairs(thing.subs) do
+            -- get start of linked list
+            local head=sorted_things[sub][1]
+            local prev=head
+            while head and head.w<w do
+              prev,head=head,head.next
+            end
+            -- insert new thing
+            prev.next={thing=thing,x=x,y=y,w=w,next=prev.next}
+          end
+        end
+      end
+    end
+
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       side=not side
       if node.leaf[side] then
         local subs=node[side]
         -- potentially visible?
         if pvs[subs.id] then
-          draw_flats(v_cache,subs)
+          draw_flats(v_cache,subs,sorted_things[subs])
         end
       else
         if _cam:is_visible(node.bbox[side]) then
