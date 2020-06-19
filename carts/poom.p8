@@ -64,8 +64,8 @@ function make_camera()
         -- todo: optimize
         local code=k_near
         if(az>_znear) code=k_far
-        if(ax>az) code|=k_right
-        if(-ax>az) code|=k_left
+        if(2*ax>az) code|=k_right
+        if(-2*ax>az) code|=k_left
         outcode&=code
       end
       return outcode==0
@@ -203,15 +203,15 @@ function draw_segs2d(segs,pos,txt)
   
   -- to cam space + clipping flags
   for i,seg in ipairs(segs) do
-    local v0=seg.v0
+    local v0=seg[1]
     local x,z=v0[1],v0[2]
     local ax,az=
       m1*x+m3*z+m4,
       m9*x+m11*z+m12
     local code=k_near
     if(az>_znear) code=k_far
-    if(ax>az) code|=k_right right+=1
-    if(-ax>az) code|=k_left left+=1
+    if(2*ax>az) code|=k_right right+=1
+    if(-2*ax>az) code|=k_left left+=1
     
     local w=128/az
     local v={ax,m8,az,seg=seg,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
@@ -223,9 +223,9 @@ function draw_segs2d(segs,pos,txt)
   if outcode==0 then
     if(clipcode!=0) verts=z_poly_clip(_znear,verts)
     if #verts>2 then
-      verts=poly_clip(-0.707,0.707,0,verts)
+      if(left!=0) verts=poly_clip(-0.8944,0.4472,0,verts)
       if #verts>2 then
-        verts=poly_clip(0.707,0.707,0,verts)
+        if(right!=0) verts=poly_clip(0.8944,0.4472,0,verts)
         if #verts>2 then
           local v0=verts[#verts]
           local x0,y0,w0=cam_to_screen2d(v0)
@@ -280,7 +280,7 @@ function draw_sub_sector(segs,v_cache)
       -- span rasterization
       --printh(x0.."->"..x1)
       -- pick correct texture "major"
-      local dx,u0,u1=x1-x0,v0[seg.uv]*w0,v1[seg.uv]*w1
+      local dx,u0,u1=x1-x0,v0[seg[7]]*w0,v1[seg[7]]*w1
       local dy,du,dw=(y1-y0)/dx,(u1-u0)/dx,(w1-w0)/dx
       
       if(x0<0) y0-=x0*dy u0-=x0*du w0-=x0*dw x0=0
@@ -327,7 +327,7 @@ function draw_sub_sector(segs,v_cache)
             -- wall
             -- top wall side between current sector and back sector
             local ct=ceil(t)
-            if otop then
+            if otop and toptex then
               poke4(0x5f38,toptex)             
               local ot=y0-otop*w0
               tline(x,ct,x,ot,u0/w,(ct-t)/w+offsety,0,1/w)
@@ -336,7 +336,7 @@ function draw_sub_sector(segs,v_cache)
               ct=ceil(ot)
             end
             -- bottom wall side between current sector and back sector     
-            if obottom then
+            if obottom and bottomtex then
               poke4(0x5f38,bottomtex)             
               local ob=y0-obottom*w0
               local cob=ceil(ob)
@@ -345,7 +345,7 @@ function draw_sub_sector(segs,v_cache)
               b=ob
             end
             -- middle wall?
-            if not otherside then
+            if not otherside and midtex then
               -- texture selection
               poke4(0x5f38,midtex)
 
@@ -372,7 +372,7 @@ function draw_flats(v_cache,segs,things)
   
   -- to cam space + clipping flags
   for i,seg in ipairs(segs) do
-    local v0=seg.v0
+    local v0=seg[1]
     local v=v_cache[v0]
     if not v then
       local x,z=v0[1],v0[2]
@@ -381,8 +381,8 @@ function draw_flats(v_cache,segs,things)
         m9*x+m11*z+m12
       local code=k_near
       if(az>_znear) code=k_far
-      if(ax>az) code|=k_right
-      if(-ax>az) code|=k_left
+      if(2*ax>az) code|=k_right
+      if(-2*ax>az) code|=k_left
       
       -- most of the points are visibles at this point
       local w=128/az
@@ -402,15 +402,15 @@ function draw_flats(v_cache,segs,things)
     local clipped=false
     if(clipcode!=0) verts=z_poly_clip(_znear,verts)
     if #verts>2 then
-      if(left!=0) verts=poly_clip(-0.707,0.707,0,verts)
+      if(left!=0) verts=poly_clip(-0.8944,0.4472,0,verts)
       if #verts>2 then
-        if(right!=0) verts=poly_clip(0.707,0.707,0,verts)
+        if(right!=0) verts=poly_clip(0.8944,0.4472,0,verts)
         if #verts>2 then
 
           local sector=segs.sector
 
-          if(sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,sector.floorlight)
-          if(sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight)
+          if(sector.floortex and sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,sector.floorlight)
+          if(sector.ceiltex and sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight)
 
           draw_sub_sector(segs,verts)
           -- draw things (if any)
@@ -486,8 +486,8 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
   local px,pz,dx,dz,tmax_seg=p[1],p[2],d[1],d[2]
   for i=1,#segs do
     local s0=segs[i]
-    local n=s0.n
-    local denom,dist=v2_dot(s0.n,d),s0.d-v2_dot(s0.n,p)
+    local n=s0[5]
+    local denom,dist=v2_dot(n,d),s0[6]-v2_dot(n,p)
     if denom==0 then
       -- parallel and outside
       if(dist<0) return
@@ -498,8 +498,8 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
         px+t*dx,
         pz+t*dz
       }
-      local d=v2_dot(s0.dir,pt)-s0.ddir
-      if d>=0 and d<s0.len then
+      local d=v2_dot(s0[2],pt)-s0[3]
+      if d>=0 and d<s0[4] then
         if denom<0 then
           if(t>tmin) tmin=t
           if(tmin>tmax) return
@@ -525,6 +525,13 @@ local depth_cls={
     local head={w=0}
     t[k]=head
     return head
+  end
+}
+local depthsorted_cls={
+  __index=function(t,k)
+    local s=setmetatable({},depth_cls)
+    t[k]=s
+    return s
   end
 }
 
@@ -589,7 +596,7 @@ function _update()
     --local da=atan2(64,64-_mousex)
     --plyr.angle=lerp(plyr.angle,plyr.angle+da,0.1)
     local da=(64-_mousex)/128
-    plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
+    --plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
   end
 
   local ca,sa=cos(plyr.angle),sin(plyr.angle)
@@ -599,6 +606,8 @@ function _update()
   local move_dir,move_len=v2_normal(plyr.v)
   if(move_len<0) move_dir={-move_dir[1],-move_dir[2]} move_len=-move_len
 
+  plyr[1]+=move_len*move_dir[1]
+  plyr[2]+=move_len*move_dir[2]
   -- 
   _msg=nil
 
@@ -636,10 +645,11 @@ function _update()
 
         if fix_move and hit.t<move_len+radius then
           -- clip move
-          local fix=-(move_len+radius-hit.t)*v2_dot(hit.seg.n,move_dir)
+          local n=hit.seg[5]
+          local fix=-(move_len+radius-hit.t)*v2_dot(n,move_dir)
           -- fix position
-          plyr[1]+=fix*hit.seg.n[1]
-          plyr[2]+=fix*hit.seg.n[2]
+          plyr[1]+=fix*n[1]
+          plyr[2]+=fix*n[2]
         end
       end
     end
@@ -696,6 +706,7 @@ function _update()
     plyr.subs=ss
     plyr.height=s.floor+abs(cos(time()/4)*move_len)
   end
+
   _cam:track(plyr,plyr.angle,plyr.height+45)
 
   if btnp(4) then
@@ -718,7 +729,7 @@ _screen_pal={140,1,3,131,4,132,133,7,6,134,5,8,2,9,10}
 function _draw()
   
   cls()
-  --[[ 
+  --[[
   local x0=-shl(plyr.angle,7)%128
  	map(16,0,x0,0,16,16)
  	if x0>0 then
@@ -797,9 +808,9 @@ function _draw()
         plyr[1]+hit.t*ca,
         plyr[2]+hit.t*sa
       }
-      local d=v2_dot(hit.seg.dir,pt)-hit.seg.ddir
+      local d=v2_dot(hit.seg[2],pt)-hit.seg[3]
       local c=12
-      if d>=0 and d<hit.seg.len then
+      if d>=0 and d<hit.seg[4] then
         c=15
       end
       local x0,y0=cam_to_screen2d(_cam:project(pt))
@@ -830,13 +841,7 @@ function _draw()
     local pvs,v_cache=plyr.subs.pvs,{}
 
     -- 
-    local sorted_things=setmetatable({},{
-      __index=function(t,k)
-        local s=setmetatable({},depth_cls)
-        t[k]=s
-        return s
-      end
-    })
+    local sorted_things=setmetatable({},depthsorted_cls)
     for _,thing in pairs(_things) do
       -- visible?
       local viz
@@ -846,7 +851,7 @@ function _draw()
       if viz then
         local v=_cam:project(thing)
         local ax,az=v[1],v[3]
-        if az>_znear and ax<az and -ax<az then
+        if az>_znear and 2*ax<az and -2*ax<az then
           local w=128/az
           local x,y=63.5+ax*w,63.5-v[2]*w
           -- insertion sort into each sub
@@ -1145,6 +1150,10 @@ function unpack_special(special,line,sectors)
     end)
   end
 end
+function unpack_texture()
+  local tex=unpack_fixed()
+  return tex!=0 and tex
+end
 
 function unpack_map()
   -- jump to data cart
@@ -1159,8 +1168,8 @@ function unpack_map()
       -- ceiling/floor height
       ceil=unpack_int(2),
       floor=unpack_int(2),
-      ceiltex=unpack_fixed(),
-      floortex=unpack_fixed(),
+      ceiltex=unpack_texture(),
+      floortex=unpack_texture(),
       ceillight=mpeek(),
       floorlight=mpeek()
     })
@@ -1169,9 +1178,9 @@ function unpack_map()
   unpack_array(function()
     add(sides,{
       sector=sectors[unpack_variant()],
-      toptex=unpack_fixed(),
-      midtex=unpack_fixed(),
-      bottomtex=unpack_fixed()
+      toptex=unpack_texture(),
+      midtex=unpack_texture(),
+      bottomtex=unpack_texture()
     })
   end)
 
@@ -1196,10 +1205,11 @@ function unpack_map()
 
   local sub_sectors,all_segs={},{}
   unpack_array(function(i)
+    -- register current sub-sector in pvs
     local segs={id=i,pvs={[i]=true}}
     unpack_array(function()
       local s=add(segs,{
-        v0=verts[unpack_variant()],
+        verts[unpack_variant()],
       })
       local flags=mpeek()
       s.side=flags&0x1==0
@@ -1211,8 +1221,8 @@ function unpack_map()
       if s.line and not segs.sector then
         segs.sector=s.line[s.side].sector
       end
-      assert(s.v0,"invalid seg")
-      assert(segs.sector,"missing sector")
+      --assert(s.v0,"invalid seg")
+      --assert(segs.sector,"missing sector")
       add(all_segs,s)
     end)
     -- pvs
@@ -1221,18 +1231,21 @@ function unpack_map()
     end)
     -- normals
     local s0=segs[#segs]
-    local v0=s0.v0
+    local v0=s0[1]
     for i=1,#segs do
       local s1=segs[i]
-      local v1=s1.v0
+      local v1=s1[1]
       local n,len=v2_normal(v2_make(v0,v1))
       -- segment dir and len
-      s0.dir,s0.ddir,s0.len=n,v2_dot(n,v0),len
+      add(s0,n)
+      add(s0,v2_dot(n,v0))
+      add(s0,len)
       -- normal
       n={-n[2],n[1]}
-      s0.n,s0.d=n,v2_dot(n,v0)
+      add(s0,n)
+      add(s0,v2_dot(n,v0))
       -- use normal direction to select uv direction
-      s0.uv=abs(n[1])>abs(n[2]) and "v" or "u"
+      add(s0,abs(n[1])>abs(n[2]) and "v" or "u")
 
       v0,s0=v1,s1
     end
@@ -1243,7 +1256,9 @@ function unpack_map()
   for _,seg in pairs(all_segs) do
     seg.partner=sub_sectors[seg.partner]
   end
-  
+
+  printh("*******")
+  printh(stat(0))
   local nodes={}
   unpack_array(function()
     local node=add(nodes,{
@@ -1257,7 +1272,7 @@ function unpack_map()
         node.leaf[side]=true
         node[side]=sub_sectors[unpack_variant()]
       else
-        -- bounding box
+        -- bounding box only on non-leaves
         node.bbox[side]=unpack_bbox()
         node[side]=nodes[unpack_variant()]
       end
@@ -1265,6 +1280,7 @@ function unpack_map()
     unpack_node(true,flags&0x1>0)
     unpack_node(false,flags&0x2>0)
   end)
+  printh(stat(0))
 
   -- inventory
   local actors,inventory,ammo={},{},{}
