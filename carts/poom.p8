@@ -56,16 +56,17 @@ function make_camera()
       }
     end,
     is_visible=function(self,bbox)    
-      local outcode=0xffff
-      local m1,m3,m4,_,m9,m11,m12=unpack(self.m)
+      local outcode,m1,m3,m4,_,m9,m11,m12=0xffff,unpack(self.m)
       for i=1,8,2 do
         local x,z=bbox[i],bbox[i+1]
-        local ax,az=m1*x+m3*z+m4,m9*x+m11*z+m12
-        -- todo: optimize
+        -- x2: fov
+        local ax,az=(m1*x+m3*z+m4)<<1,m9*x+m11*z+m12
+        -- todo: optimize?
         local code=k_near
         if(az>_znear) code=k_far
-        if(2*ax>az) code|=k_right
-        if(-2*ax>az) code|=k_left
+        if(az>854) code|=1
+        if(ax>az) code|=k_right
+        if(-ax>az) code|=k_left
         outcode&=code
       end
       return outcode==0
@@ -156,18 +157,18 @@ function polyfill(v,offset,tex,light)
     local _x1,_y1,_w1=x1,y1,w1
     if(y0>y1) x1=x0 y1=y0 w1=w0 x0=_x1 y0=_y1 w0=_w1
     local dy=y1-y0
-    local cy0,dx,dw=ceil(y0),(x1-x0)/dy,(w1-w0)/dy
+    local cy0,dx,dw=y0\1+1,(x1-x0)/dy,(w1-w0)/dy
     if(y0<0) x0-=y0*dx w0-=y0*dw y0=0
     local sy=cy0-y0
     x0+=sy*dx
     w0+=sy*dw
 
-    if(y1>128) y1=128
-    for y=cy0,ceil(y1)-1 do
+    if(y1>127) y1=127
+    for y=cy0,y1\1 do
       local span=spans[y]
       if span then
       -- limit visibility
-        if w0>0.3 then
+        if w0>0.15 then
           local a,b=x0,span
           if(a>b) a=span b=x0
           -- collect boundaries
@@ -198,7 +199,7 @@ function polyfill(v,offset,tex,light)
 end
 
 function draw_segs2d(segs,pos,txt)
-  local verts,outcode,clipcode,left,right={},0xffff,0,0,0
+  local verts,outcode,clipcode,leftclip,rightclip={},0xffff,0,0,0
   local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
   
   -- to cam space + clipping flags
@@ -210,22 +211,24 @@ function draw_segs2d(segs,pos,txt)
       m9*x+m11*z+m12
     local code=k_near
     if(az>_znear) code=k_far
-    if(2*ax>az) code|=k_right right+=1
-    if(-2*ax>az) code|=k_left left+=1
+    if(2*ax>az) code|=k_right
+    if(-2*ax>az) code|=k_left
     
     local w=128/az
     local v={ax,m8,az,seg=seg,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
     verts[i]=v
-    outcode&=code  
+    outcode&=code 
+    leftclip+=(code&4)
+    rightclip+=(code&8)
     clipcode+=(code&2)
   end
 
   if outcode==0 then
     if(clipcode!=0) verts=z_poly_clip(_znear,verts)
     if #verts>2 then
-      if(left!=0) verts=poly_clip(-0.8944,0.4472,0,verts)
+      if(leftclip!=0) verts=poly_clip(-0.8944,0.4472,0,verts)
       if #verts>2 then
-        if(right!=0) verts=poly_clip(0.8944,0.4472,0,verts)
+        if(rightclip!=0) verts=poly_clip(0.8944,0.4472,0,verts)
         if #verts>2 then
           local v0=verts[#verts]
           local x0,y0,w0=cam_to_screen2d(v0)
@@ -283,8 +286,8 @@ function draw_sub_sector(segs,v_cache)
       local dx,u0,u1=x1-x0,v0[seg[7]]*w0,v1[seg[7]]*w1
       local dy,du,dw=(y1-y0)/dx,(u1-u0)/dx,(w1-w0)/dx
       
-      if(x0<0) y0-=x0*dy u0-=x0*du w0-=x0*dw x0=0
-      local cx0=ceil(x0)
+      if(x0<0) y0-=x0*dy u0-=x0*du w0-=x0*dw x0=-1
+      local cx0=x0\1+1
       local sx=cx0-x0
       y0+=sx*dy
       u0+=sx*du
@@ -317,32 +320,32 @@ function draw_sub_sector(segs,v_cache)
           if(bottom>=obottom) obottom=nil
         end
 
-        if(x1>128) x1=128
-        for x=cx0,ceil(x1)-1 do
-          if w0>0.3 then
+        if(x1>127) x1=127
+        for x=cx0,x1\1 do
+          if w0>0.15 then
             -- color shifing
-            local pal1=4\w0
+            local pal1=2\w0
             if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
             local t,b,w=y0-top*w0,y0-bottom*w0,w0<<4
             -- wall
             -- top wall side between current sector and back sector
-            local ct=ceil(t)
+            local ct=t\1+1
             if otop and toptex then
               poke4(0x5f38,toptex)             
               local ot=y0-otop*w0
               tline(x,ct,x,ot,u0/w,(ct-t)/w+offsety,0,1/w)
               -- new window top
               t=ot
-              ct=ceil(ot)
+              ct=ot\1+1
             end
             -- bottom wall side between current sector and back sector     
             if obottom and bottomtex then
               poke4(0x5f38,bottomtex)             
               local ob=y0-obottom*w0
-              local cob=ceil(ob)
+              local cob=ob\1+1
               tline(x,cob,x,b,u0/w,(cob-ob)/w,0,1/w)
               -- new window bottom
-              b=ob
+              b=ob\1
             end
             -- middle wall?
             if not otherside and midtex then
@@ -367,7 +370,7 @@ end
 
 -- ceil/floor/wal rendering
 function draw_flats(v_cache,segs,things)
-  local verts,outcode,clipcode,left,right={},0xffff,0,0,0
+  local verts,outcode,nearclip,leftclip,rightclip={},0xffff,0,0,0
   local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
   
   -- to cam space + clipping flags
@@ -381,6 +384,8 @@ function draw_flats(v_cache,segs,things)
         m9*x+m11*z+m12
       local code=k_near
       if(az>_znear) code=k_far
+      if(az>854) code|=1
+      -- fov adjustment
       if(2*ax>az) code|=k_right
       if(-2*ax>az) code|=k_left
       
@@ -393,32 +398,33 @@ function draw_flats(v_cache,segs,things)
     verts[i]=v
     local code=v.outcode
     outcode&=code
-    left+=(code&4)
-    right+=(code&8)
-    clipcode+=(code&2)
+    leftclip+=(code&4)
+    rightclip+=(code&8)
+    nearclip+=(code&2)
   end
   -- out of screen?
   if outcode==0 then
-    local clipped=false
-    if(clipcode!=0) verts=z_poly_clip(_znear,verts)
+    if(nearclip!=0) verts=z_poly_clip(_znear,verts)
     if #verts>2 then
-      if(left!=0) verts=poly_clip(-0.8944,0.4472,0,verts)
+      if(leftclip!=0) verts=poly_clip(-0.8944,0.4472,0,verts)
       if #verts>2 then
-        if(right!=0) verts=poly_clip(0.8944,0.4472,0,verts)
+        if(rightclip!=0) verts=poly_clip(0.8944,0.4472,0,verts)
         if #verts>2 then
 
           local sector=segs.sector
 
-          if(sector.floortex and sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,sector.floorlight)
-          if(sector.ceiltex and sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight)
+          -- no texture = sky/background
+          if(sector.floortex and sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,sector.floorlight/2)
+          if(sector.ceiltex and sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight/2)
 
           draw_sub_sector(segs,verts)
+
           -- draw things (if any)
           local head,pal0=things[1].next
           while head do
             local thing=head.thing
             if thing.actor then
-              local x0,y0,w0=head.x,64,head.w
+              local x0,y0,w0=head.x,head.y,head.w
               local pal1=4\w0
               if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1    
               palt(0,true)
@@ -430,7 +436,7 @@ function draw_flats(v_cache,segs,things)
                 local angle=atan2(-thing[1]+plyr[1],thing[2]-plyr[2])
                 local sy,sx,sh,sw,ox,flipx=unpack(sides[flr(#sides*angle)+1])
                 sspr(sx,sy,sw,sh,x0-ox*w0,y0-sh*w0,sw*w0,sh*w0,flipx)
-                pset(x0,y0,15)
+                --pset(x0,y0,15)
               end 
             end
             head=head.next
@@ -443,7 +449,8 @@ end
 -- traverse and renders bsp in back to front order
 -- calls 'visit' function
 function visit_bsp(node,pos,visitor)
-  local side=v2_dot(node.n,pos)<=node.d
+  local n=node.n
+  local side=n[1]*pos[1]+n[2]*pos[2]<=node.d
   visitor(node,side,pos,visitor)
   visitor(node,not side,pos,visitor)
 end
@@ -543,20 +550,13 @@ function _init()
 
   palt(0,false)
 
-  plyr={0,0,height=0,angle=0,v={0,0},radius=32,health=100,armor=50}
-
   _bsp,_things,_inventory=unpack_map()
 
   -- todo: attach behaviors to things
   for _,thing in pairs(_things) do 
-    if thing.id==1 then
-      plyr[1]=thing[1]
-      plyr[2]=thing[2]
-    else
-      -- attach static sub-sectors to things
-      thing.subs={}
-      find_ssector_thick(_bsp,thing,thing.actor.radius,thing.subs)
-    end
+    -- attach static sub-sectors to things
+    thing.subs={}
+    find_ssector_thick(_bsp,thing,thing.actor.radius,thing.subs)
   end
 
   -- start pos
@@ -596,11 +596,11 @@ function _update()
     --local da=atan2(64,64-_mousex)
     --plyr.angle=lerp(plyr.angle,plyr.angle+da,0.1)
     local da=(64-_mousex)/128
-    --plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
+    plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
   end
 
   local ca,sa=cos(plyr.angle),sin(plyr.angle)
-  local v={3*(dz*ca-dx*sa),3*(dz*sa+dx*ca)}
+  local v={2*(dz*ca-dx*sa),2*(dz*sa+dx*ca)}
   plyr.v[1]+=v[1]
   plyr.v[2]+=v[2]
   local move_dir,move_len=v2_normal(plyr.v)
@@ -616,7 +616,7 @@ function _update()
   if s then
     -- todo: unify ray intersection w/ things
     local hits={}
-    local radius=plyr.radius
+    local radius=plyr.actor.radius
     intersect_sub_sector(ss,plyr,move_dir,0,move_len+radius,hits)
     if move_len!=0 then
       -- move
@@ -676,21 +676,21 @@ function _update()
       -- find sector
       
       local actor=thing.actor
-      -- note: no actor should not happen...
       local dist=v2_dist(plyr,thing)
-      if dist<actor.radius+plyr.radius then
+      if dist<actor.radius+radius then
         if actor.trigger then
-          actor.trigger(plyr)
+          actor.trigger(plyr.actor)
           -- todo: optimize?
           -- todo: flag to remove or not?
           do_async(function()
             -- remove from world
-            _things[k]=nil
+            -- todo: optimize del!!!
+            del(_things,thing)
           end)
         else
           -- todo: check if blocking
           local n=v2_normal(v2_make(thing,plyr))
-          local fix=-(actor.radius+plyr.radius-dist)*v2_dot(n,move_dir)
+          local fix=-(actor.radius+radius-dist)*v2_dot(n,move_dir)
           -- avoid being pulled toward prop
           if fix>0 then
             -- fix position
@@ -704,7 +704,7 @@ function _update()
     s,ss=find_sector(_bsp,plyr)
     plyr.sector=s
     plyr.subs=ss
-    plyr.height=s.floor+abs(cos(time()/4)*move_len)
+    plyr.height=s.floor--+abs(cos(time()/4)*move_len)
   end
 
   _cam:track(plyr,plyr.angle,plyr.height+45)
@@ -738,7 +738,8 @@ function _draw()
   ]]
 
   -- cull_bsp(v_cache,_bsp,plyr)
-  if false then --btn(4) and btn(5) then
+  if btn(4) and btn(5) then
+    pal()
     pal(_screen_pal,1)
     spr(0,0,0,16,16)
   elseif false then --btn(5) then
@@ -863,7 +864,7 @@ function _draw()
               prev,head=head,head.next
             end
             -- insert new thing
-            prev.next={thing=thing,x=x,y=y,w=w,next=prev.next}
+            prev.next={thing=thing,x=x,y=y-sub.sector.floor*w,w=w,next=prev.next}
           end
         end
       end
@@ -877,13 +878,11 @@ function _draw()
         if pvs[subs.id] then
           draw_flats(v_cache,subs,sorted_things[subs])
         end
-      else
-        if _cam:is_visible(node.bbox[side]) then
-          visit_bsp(node[side],pos,visitor)
-        end
+      elseif _cam:is_visible(node.bbox[side]) then
+        visit_bsp(node[side],pos,visitor)
       end
     end)
-
+    
     -- restore palette
     -- memcpy(0x5f10,0x4300,16)
     -- pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
@@ -908,10 +907,11 @@ function _draw()
     print(cpu,2,3,3)
     print(cpu,2,2,8)
 
-    print("♥"..plyr.health,2,111,13)
-    print("♥"..plyr.health,2,110,12)
-    print("웃"..plyr.armor,2,121,4)
-    print("웃"..plyr.armor,2,120,3)
+    local actor=plyr.actor
+    print("♥"..actor.health,2,111,13)
+    print("♥"..actor.health,2,110,12)
+    print("웃"..actor.armor,2,121,4)
+    print("웃"..actor.armor,2,120,3)
      
     pset(_mousex,64,15)
   end
@@ -1282,15 +1282,41 @@ function unpack_map()
   end)
   printh(stat(0))
 
-  -- inventory
-  local actors,inventory,ammo={},{},{}
+  -- inventory & things
+  local things,actors,inventory,ammo={},{},{},{}
+
+  -- helper function
+  local make_projectile=function(projectile,pos,angle)
+    local ca,sa,speed,ttl=cos(angle),sin(angle),projectile.speed,120
+    add(things,{
+      pos[1],
+      pos[2],
+      subs={},
+      actor=projectile,
+      update=function(self)
+        self[1]+=speed*ca
+        self[2]+=speed*sa
+        -- update subs
+        self.subs={}
+        find_ssector_thick(_bsp,self,projectile.radius,self.subs)
+
+        -- todo: intersect walls & things
+        ttl-=1
+        if ttl<0 then
+          do_async(function() del(things,self) end)
+        end
+      end
+    })
+  end
   unpack_array(function()
     local kind,id=unpack_variant(),unpack_variant()
     local item={
+      id=id,
       kind=kind,
       radius=unpack_fixed(),
       frames={}
     }
+    printh("actor:"..kind)
     unpack_array(function()
       local pose={ticks=unpack_fixed(),sides={}}
       -- get all pose sides
@@ -1321,6 +1347,24 @@ function unpack_map()
         item.trigger=function()
           apply(ammo,ammotype)
         end
+      elseif kind==2 then
+        -- weapon
+        item.slot=unpack_variant()
+        local ammouse,ammogive,ammotype,projectile=unpack_variant(),unpack_variant(),actors[unpack_variant()],actors[unpack_variant()]
+        printh("weapon:"..item.slot.." ammouse:"..ammouse)
+        item.pickup=function(actor)
+          -- todo: fix (mix up inventory amount and ammogive)
+          apply(actor,id)
+        end
+        item.trigger=function(pos,angle)
+          local qty=ammo[ammotype]
+          if qty-ammouse>=0 then
+            ammo[ammotype]=max(qty-ammouse)
+            -- todo: projectile vs. bullet/invisible ammo
+            make_projectile(projectile,pos,angle)
+            -- todo: firing delay
+          end
+        end
       elseif kind==3 then
         -- health
         item.trigger=function(actor)
@@ -1332,9 +1376,22 @@ function unpack_map()
           apply(actor,"armor")
         end
       end
-    else
-      -- non inventory items
-
+    elseif kind==7 then
+      -- projectile
+      item.damage=unpack_variant()
+      item.speed=unpack_variant()
+    elseif kind==8 then
+      item.health=unpack_variant()
+      item.armor=unpack_variant()
+      -- player
+      local startitem=actors[unpack_variant()]
+      if startitem and startitem.kind==2 then
+        printh("startitem at slot:"..startitem.slot)
+        -- weapon
+        local weapons=item.weapons or {}
+        weapons[startitem.slot]=item
+        item.weapons=weapons
+      end
     end
 
     -- register
@@ -1342,14 +1399,28 @@ function unpack_map()
   end)
 
   -- things
-  local things={}
   unpack_array(function()
-    add(things,{
-      -- link to underlying actor
-      actor=actors[unpack_variant()],
-      unpack_fixed(),
-      unpack_fixed()
-    })
+    local id=unpack_variant()
+    if id==1 then
+      -- todo: unify
+      plyr={
+        -- coordinates
+        unpack_fixed(),
+        unpack_fixed(),
+        actor=actors[id],
+        v={0,0},
+        angle=0,
+        height=0
+      }
+    else
+      add(things,{
+        -- link to underlying actor
+        actor=actors[id],
+        -- coordinates
+        unpack_fixed(),
+        unpack_fixed()
+      })
+    end
   end)
 
   -- texture pairs
@@ -1387,14 +1458,14 @@ bbdccdbb3344333333333443bbbbbbbb0000ffffa434433aaeaeacaadddddddd0223322000ccfe00
 bb7dd7bb434433333333344322222222f0000fffa333333aaeaeacaadddddddd0044440000cccc0000333300001111000b99b000000000000000000000000000
 bbbbbbbb3333333434333333ddddddddff0000ffaaaaaaaaaaaaaaaadddddddd0023320000dddd0000444400002222000baab000000000000000000000000000
 bbbbbbbb4333334433333333cdcdcdcdeee0000e99999999999999997d7d7d7d004444000000000000000000000000000baab000000000000000000000000000
-00000000ddccdcccccccccccabaaaabaaaaaaaaabbbbbbbb9999999a77777777bbbbbbbbeeeeeeeeaaaaaaaa000000000baab000000000000000000000000000
-00000000dcccdddcccccccccaaaaaaaaa9bbb77abaaaaaaaaaaaaaaa77777777baaaaaaaeeeeeeeeaaaaaaaa000000000baab000000000000000000000000000
-00000000ddddccddcccccccca6aaaabaa966aa7aba8888aaaaaaaaaa77777777ba8888aaeeeeeeeeaaaaaaaa0000000009aa9000000000000000000000000000
-00000000dcdccccdccccccccaaa98aaaa95aaababa9dd9aaaaaaaaaa77777777ba9449aaeeeeeeeeaaaaaaaa000000000b99b000000000000000000000000000
-00000000cdddccddccccccccabab9abaa9aaaababa9999aaaaaaaaaa77777777ba9999aaeeeeeeeeaaaaaaaa0000000009aa9000000000000000000000000000
-00000000ccdddddcccccccccaaa66aaaa8aaaababa9cc9aaaaaaaaaa77777777ba9339aaeeeeeeeeaaaaaaaa000000007b99b700000000000000000000000000
-00000000cccdccdcccccccccaba5aa5aa889989aba9cc9aaaaaaaaaa77777777ba9339aaeeeeeeeeaaaaaaaa0000000077aa7700000000000000000000000000
-00000000cddddccdccccccccaaaaaaaaaaaaaaaababddbaabbbbbbbb77777777bab44baaeeeeeeeeaaaaaaaa0000000007777000000000000000000000000000
+00000000ddccdcccccccccccabaaaabaaaaaaaaabbbbbbbb9999999a77777777bbbbbbbbeeeeeeeeaaaaaaaa000000000baab000002dd2000000000000000000
+00000000dcccdddcccccccccaaaaaaaaa9bbb77abaaaaaaaaaaaaaaa77777777baaaaaaaeeeeeeeeaaaaaaaa000000000baab0000ddccdd00021120000000000
+00000000ddddccddcccccccca6aaaabaa966aa7aba8888aaaaaaaaaa77777777ba8888aaeeeeeeeeaaaaaaaa0000000009aa90002dceecd22198891200000000
+00000000dcdccccdccccccccaaa98aaaa95aaababa9dd9aaaaaaaaaa77777777ba9449aaeeeeeeeeaaaaaaaa000000000b99b000dceffecd1988889100000000
+00000000cdddccddccccccccabab9abaa9aaaababa9999aaaaaaaaaa77777777ba9999aaeeeeeeeeaaaaaaaa0000000009aa9000dceffecd1988889100000000
+00000000ccdddddcccccccccaaa66aaaa8aaaababa9cc9aaaaaaaaaa77777777ba9339aaeeeeeeeeaaaaaaaa000000007b99b7002dceecd22198891200000000
+00000000cccdccdcccccccccaba5aa5aa889989aba9cc9aaaaaaaaaa77777777ba9339aaeeeeeeeeaaaaaaaa0000000077aa77000ddccdd00021120000000000
+00000000cddddccdccccccccaaaaaaaaaaaaaaaababddbaabbbbbbbb77777777bab44baaeeeeeeeeaaaaaaaa0000000007777000002dd2000000000000000000
 000007abab700000000000000007baab000000000000babb0000000000000000000007bbb700000000000000000007bbb7000000000000000000000000000000
 000007aaa570000000000000000baab4000000000007aab44000000000000000000006bbb400000000000000000002bbb7000000000000000000000000000000
 0000055aaa5000000000000000055aab0000000000065aab200000000000000000000ba577000000000000000000077777000000000000000000000000000000

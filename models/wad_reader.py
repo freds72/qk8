@@ -199,7 +199,7 @@ def pack_named_texture(owner, textures, name):
   # de-reference texture name
   name = owner[name]
   # no texture/blank texture
-  if name not in textures: return "04080202"
+  if name not in textures: return "00000000"
   return pack_texture(textures[name])
 
 def pack_lightlevel(owner, name):
@@ -396,24 +396,38 @@ def pack_zmap(map, textures, actors):
           # offsets
           s += pack_fixed(texture.xoffset)
       elif pattern+"0" in sprites:
+        # single frame sprite
         s += pack_variant(1)
         texture = sprites[pattern+"0"]
         s += pack_texture(texture)
         s += pack_fixed(texture.xoffset)
       else:
-        # single frame sprite
         raise Exception("Unknown frame: {}x in TEXTURES".format(pattern))
     if actor.kind<ACTOR_KIND.DEFAULT:
       # shared inventory properties
       s += pack_variant(actor.amount)
       s += pack_variant(actor.maxamount)
       # todo: pickup sound
+    elif actor.kind==ACTOR_KIND.PLAYER:
+      s += pack_variant(actor.health)
+      s += pack_variant(actor.armor)
+      # todo: can be multiple
+      s += pack_variant(actor.get('startitem',0))
     # specific entries
     if actor.kind==ACTOR_KIND.AMMO:
       # all ammo child classes are bound to their parent
       # ex: clipbox -> clip
-      s += pack_variant(actor.parent)
-
+      s += pack_variant(actor.get('parent',actor.id))
+    elif actor.kind==ACTOR_KIND.WEAPON:
+      s += pack_variant(actor.slotnumber)
+      s += pack_variant(actor.ammouse)
+      s += pack_variant(actor.ammogive)
+      s += pack_variant(actor.ammotype)
+      s += pack_variant(actor.projectile)
+    elif actor.kind==ACTOR_KIND.PROJECTILE:
+      s += pack_variant(actor.damage)
+      s += pack_variant(actor.speed)
+  
   # things
   s += pack_variant(len(map.things))
   for thing in map.things:
@@ -551,7 +565,7 @@ def get_PVS(zmap, sub_id):
               'sub_id':os0.partner
             }))
             pairs.add("{}:{}".format( s0.partner, os0.partner))
-            print("portal: {}:{} -> {}".format(0, s0.partner, os0.partner))
+            # print("portal: {}:{} -> {}".format(0, s0.partner, os0.partner))
         os0 = os1
     s0 = s1
   
@@ -586,10 +600,10 @@ def get_PVS(zmap, sub_id):
                 'sub_id': s0.partner
               }))
               pairs.add(next_portal)
-              print("*portal*: {}:{} -> {}".format(0, portal.sub_id, s0.partner))
+              #print("*portal*: {}:{} -> {}".format(0, portal.sub_id, s0.partner))
       s0 = s1
 
-  print("pvs: {}".format(pvs))
+  #print("pvs: {}".format(pvs))
   # remove self from PVS
   if sub_id in pvs: pvs.remove(sub_id)
   return (pvs, clips, vertices)
@@ -621,7 +635,7 @@ def display_WAD(filepath,mapname):
     # pick map
     zmap = maps[mapname].read(file)
     
-    pvs, clips, vertices = get_PVS(zmap, 13)
+    pvs, clips, vertices = get_PVS(zmap, 38)
 
     #  debug display
     pygame.init()
