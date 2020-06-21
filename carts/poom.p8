@@ -423,12 +423,14 @@ function draw_flats(v_cache,segs,things)
           local head,pal0=things[1].next
           while head do
             local thing=head.thing
-            if thing.actor then
-              local x0,y0,w0=head.x,head.y,head.w
-              local pal1=4\w0
-              if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1    
-              palt(0,true)
-              w0*=2
+            local x0,y0,w0=head.x,head.y,head.w
+            local pal1=4\w0
+            if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1    
+            palt(0,true)
+            w0*=2
+            if thing.draw then
+              thing:draw(x0,y0,w0)
+            else
               local frame=thing.actor.frames[1]
               if frame then
                 -- pick side
@@ -550,7 +552,7 @@ function _init()
 
   palt(0,false)
 
-  _bsp,_things,_inventory=unpack_map()
+  _bsp,_things=unpack_map()
 
   -- todo: attach behaviors to things
   for _,thing in pairs(_things) do 
@@ -643,7 +645,7 @@ function _update()
           
           -- cross special?
           if ldef.trigger and ldef.flags&0x10>0 then
-            ldef.trigger()
+            ldef.trigger(plyr)
           end
         end
 
@@ -680,7 +682,7 @@ function _update()
       -- find sector
       
       local actor=thing.actor
-      if actor.kind!=7 then
+      if actor and actor.kind!=7 then
         -- todo: hit check with projectile
         local dist=v2_dist(plyr,thing)
         if dist<actor.radius+radius then
@@ -1051,16 +1053,16 @@ function unpack_special(special,line,sectors)
   end
   -- helper function - handles lock & repeat
   local function trigger_async(fn,lockid)
-    return function()
+    return function(actor)
       -- need lock?
       if lockid then
-        if _inventory[lockid]==0 then
+        if actor[lockid]==0 then
           _msg="need key"
           -- todo: err sound
           return
         end
         -- consume item
-        _inventory[lockid]=0
+        actor[lockid]=0
       end
 
       -- backup trigger
@@ -1300,18 +1302,58 @@ function unpack_map()
 
   -- helper function
   local make_projectile=function(projectile,pos,angle)
-    local ca,sa,speed,ttl=cos(angle),sin(angle),projectile.speed,120
+    local ca,sa,speed,radius,ttl=cos(angle),sin(angle),projectile.speed,projectile.radius,120
     add(things,{
       pos[1],
       pos[2],
       subs={},
       actor=projectile,
       update=function(self)
+        -- update subs
+        for ss,_ in pairs(self.subs) do
+          local hits={}
+          intersect_sub_sector(ss,self,{ca,sa},0,speed+radius,hits)
+       
+          -- hit something?
+          for _,hit in ipairs(hits) do
+            local ldef=hit.seg.line
+            -- 
+            if hit.t<speed+radius then
+              local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
+              if otherside==nil then
+                local x0,y0,t=self[1],self[2],hit.t
+                do_async(function()
+                  local subs,ttl={},10
+                  find_ssector_thick(_bsp,{x0,y0},radius,subs)
+                  add(things,{
+                    x0+t*ca,
+                    y0+t*sa,
+                    subs=subs,
+                    update=function(self)
+                      ttl-=1
+                      -- todo: factorize
+                      if(ttl<0) do_async(function() del(things,self) end)
+                    end,
+                    draw=function(self,x,y,w)
+                      circfill(x,y,10*w*ttl/10,2)
+                    end
+                  })
+                  del(things,self) 
+                end)
+                return
+              elseif abs(facingside.sector.floor-otherside.sector.floor)>24 then
+                fix_move=true
+              elseif abs(facingside.sector.floor-otherside.sector.ceil)<64 then
+                fix_move=true
+              end
+            end
+          end
+        end
+
         self[1]+=speed*ca
         self[2]+=speed*sa
-        -- update subs
         self.subs={}
-        find_ssector_thick(_bsp,self,projectile.radius,self.subs)
+        find_ssector_thick(_bsp,self,radius,self.subs)
 
         -- todo: intersect walls & things
         ttl-=1
