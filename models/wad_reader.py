@@ -411,8 +411,13 @@ def pack_zmap(map, textures, actors):
     elif actor.kind==ACTOR_KIND.PLAYER:
       s += pack_variant(actor.health)
       s += pack_variant(actor.armor)
-      # todo: can be multiple
-      s += pack_variant(actor.get('startitem',0))
+      startitems = actor.get('startitems',[])
+      s += pack_variant(len(startitems))
+      for si in startitems:
+        # other actor reference
+        s += pack_variant(si[0])
+        # amount
+        s += pack_variant(si[1])
     # specific entries
     if actor.kind==ACTOR_KIND.AMMO:
       # all ammo child classes are bound to their parent

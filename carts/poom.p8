@@ -611,6 +611,10 @@ function _update()
   -- 
   _msg=nil
 
+  for _,thing in pairs(_things) do
+    if(thing.update) thing:update()
+  end
+
   -- check collision with world
   local s,ss=find_sector(_bsp,plyr)
   if s then
@@ -676,26 +680,29 @@ function _update()
       -- find sector
       
       local actor=thing.actor
-      local dist=v2_dist(plyr,thing)
-      if dist<actor.radius+radius then
-        if actor.trigger then
-          actor.trigger(plyr.actor)
-          -- todo: optimize?
-          -- todo: flag to remove or not?
-          do_async(function()
-            -- remove from world
-            -- todo: optimize del!!!
-            del(_things,thing)
-          end)
-        else
-          -- todo: check if blocking
-          local n=v2_normal(v2_make(thing,plyr))
-          local fix=-(actor.radius+radius-dist)*v2_dot(n,move_dir)
-          -- avoid being pulled toward prop
-          if fix>0 then
-            -- fix position
-            plyr[1]+=fix*n[1]
-            plyr[2]+=fix*n[2]
+      if actor.kind!=7 then
+        -- todo: hit check with projectile
+        local dist=v2_dist(plyr,thing)
+        if dist<actor.radius+radius then
+          if actor.trigger then
+            actor.trigger(plyr.actor)
+            -- todo: optimize?
+            -- todo: flag to remove or not?
+            do_async(function()
+              -- remove from world
+              -- todo: optimize del!!!
+              del(_things,thing)
+            end)
+          else
+            -- todo: check if blocking
+            local n=v2_normal(v2_make(thing,plyr))
+            local fix=-(actor.radius+radius-dist)*v2_dot(n,move_dir)
+            -- avoid being pulled toward prop
+            if fix>0 then
+              -- fix position
+              plyr[1]+=fix*n[1]
+              plyr[2]+=fix*n[2]
+            end
           end
         end
       end
@@ -709,14 +716,12 @@ function _update()
 
   _cam:track(plyr,plyr.angle,plyr.height+45)
 
-  if btnp(4) then
-    do_async(function()
-      wait_async(2)
-      _wp_frame=2
-      wait_async(15)
-      _wp_frame=1
-    end)
+  local pactor=plyr.actor
+  if btnp(4) and pactor.selected_slot then
+    local wp=pactor.weapons[pactor.selected_slot]
+    wp.trigger(pactor,plyr,plyr.angle)
   end
+
   -- damping
   plyr.v[1]*=0.8
   plyr.v[2]*=0.8
@@ -738,14 +743,14 @@ function _draw()
   ]]
 
   -- cull_bsp(v_cache,_bsp,plyr)
-  if btn(4) and btn(5) then
+  if false then --btn(4) and btn(5) then
     pal()
     pal(_screen_pal,1)
     spr(0,0,0,16,16)
   elseif false then --btn(5) then
     pal(_screen_pal,1)
     map()
-  elseif btn(4) then
+  elseif false then --btn(4) then
     -- restore palette
     pal(_screen_pal,1)
 
@@ -912,7 +917,15 @@ function _draw()
     print("♥"..actor.health,2,110,12)
     print("웃"..actor.armor,2,121,4)
     print("웃"..actor.armor,2,120,3)
-     
+    
+    local y=64
+    for k,qty in pairs(actor) do
+      if type(qty)!="table" then
+        print(k..":"..qty,2,y,3)
+        y+=6
+      end
+    end
+
     pset(_mousex,64,15)
   end
 end
@@ -1283,7 +1296,7 @@ function unpack_map()
   printh(stat(0))
 
   -- inventory & things
-  local things,actors,inventory,ammo={},{},{},{}
+  local things,actors={},{}
 
   -- helper function
   local make_projectile=function(projectile,pos,angle)
@@ -1316,7 +1329,6 @@ function unpack_map()
       radius=unpack_fixed(),
       frames={}
     }
-    printh("actor:"..kind)
     unpack_array(function()
       local pose={ticks=unpack_fixed(),sides={}}
       -- get all pose sides
@@ -1329,37 +1341,35 @@ function unpack_map()
       -- inventory actor
       local amount,maxamount=unpack_variant(),unpack_variant()
       -- apply amount and other item properties to actor
-      local function apply(actor,qty)
-        actor[qty]=min(actor[qty]+amount,maxamount)
+      -- ref is the unique actor reference 
+      local function pickup(owner,ref,qty)
+        owner[ref]=min((owner[ref] or 0)+(qty or amount),maxamount)
         if(sound) sfx(sound)
       end
       if kind==0 then
         -- default inventory item (ex: lock)
-        inventory[id]=0
         item.trigger=function(actor)
-          apply(inventory,id)
+          pickup(actor,id)
         end
       elseif kind==1 then
-        -- ammo
+        -- ammo familly
         local ammotype=unpack_variant()
-        -- default value
-        ammo[ammotype]=0
-        item.trigger=function()
-          apply(ammo,ammotype)
+        item.trigger=function(actor)
+          pickup(actor,ammotype)
         end
       elseif kind==2 then
         -- weapon
         item.slot=unpack_variant()
-        local ammouse,ammogive,ammotype,projectile=unpack_variant(),unpack_variant(),actors[unpack_variant()],actors[unpack_variant()]
-        printh("weapon:"..item.slot.." ammouse:"..ammouse)
+        local ammouse,ammogive,ammotype,projectile=unpack_variant(),unpack_variant(),unpack_variant(),actors[unpack_variant()]
+        printh("weapon:"..id.." slot:"..item.slot.." ammouse:"..ammouse)
         item.pickup=function(actor)
-          -- todo: fix (mix up inventory amount and ammogive)
-          apply(actor,id)
+          actors[ammotype].pickup(actor,ammogive)
+          -- todo: switch weapon logic
         end
-        item.trigger=function(pos,angle)
-          local qty=ammo[ammotype]
+        item.trigger=function(actor,pos,angle)
+          local qty=actor[ammotype]
           if qty-ammouse>=0 then
-            ammo[ammotype]=max(qty-ammouse)
+            actor[ammotype]=max(qty-ammouse)
             -- todo: projectile vs. bullet/invisible ammo
             make_projectile(projectile,pos,angle)
             -- todo: firing delay
@@ -1368,12 +1378,12 @@ function unpack_map()
       elseif kind==3 then
         -- health
         item.trigger=function(actor)
-          apply(actor,"health")
+          pickup(actor,"health")
         end
       elseif kind==4 then
         -- armor
         item.trigger=function(actor)
-          apply(actor,"armor")
+          pickup(actor,"armor")
         end
       end
     elseif kind==7 then
@@ -1381,17 +1391,22 @@ function unpack_map()
       item.damage=unpack_variant()
       item.speed=unpack_variant()
     elseif kind==8 then
+      -- player
       item.health=unpack_variant()
       item.armor=unpack_variant()
-      -- player
-      local startitem=actors[unpack_variant()]
-      if startitem and startitem.kind==2 then
-        printh("startitem at slot:"..startitem.slot)
-        -- weapon
-        local weapons=item.weapons or {}
-        weapons[startitem.slot]=item
-        item.weapons=weapons
-      end
+      unpack_array(function()
+        local startitem,amount=actors[unpack_variant()],unpack_variant()
+        if startitem.kind==2 then
+          -- weapon
+          local weapons=item.weapons or {}
+          weapons[startitem.slot]=startitem
+          item.weapons=weapons
+          -- set initial weapon selection
+          if(not item.selected_slot) item.selected_slot=startitem.slot
+        else
+          item[startitem.id]=amount
+        end
+      end)
     end
 
     -- register
@@ -1410,7 +1425,8 @@ function unpack_map()
         actor=actors[id],
         v={0,0},
         angle=0,
-        height=0
+        height=0,
+        ammo={}
       }
     else
       add(things,{
@@ -1451,12 +1467,12 @@ aaaaaaa7bbbb77bb27bbbbbb66767676baaaaaaadddd77000000000088888888bbbbbbbbbbbbbbbb
 baaaaaa7bbbbb77727bbbbbb67676766bbbbbbbbeee5567000000000eeeeeeeebbbbbbbbbbbbbbbb77ba9a77727bb72700000000000000000000000000000000
 bbaaaab7bbbbb77727bbbbbb66767676bbbbbbbbffffe56700000000ccccccccbbbbbbbbbbbbbbbb77ba9a777baa89a700000000000000000000000000000000
 bbbbbbbb433333443333333399999999eeee00002222222222222222cdcdcdcd0230023000000000000000000000000000000000000000000000000000000000
-bbbbbbbb4343334433433333aaaaaaaa0ffff000aaaaaaaaaaaaaaaadddddddd24434443000dcc00000433000002110000aa0000000000000000000000000000
-bb7dd7bb3333333333333333aaaaaaaa00ffff00a444444aadadadaadddddddd4447744400dcfe000043fe000021fe000b997000000000000000000000000000
-bbdccdbb333333333333333377777777000ffff0a333333aaeadacaadddddddd2474474200cccc00003333000011110008888000000000000000000000000000
-bbdccdbb3344333333333443bbbbbbbb0000ffffa434433aaeaeacaadddddddd0223322000ccfe000033fe000011fe0008888000000000000000000000000000
-bb7dd7bb434433333333344322222222f0000fffa333333aaeaeacaadddddddd0044440000cccc0000333300001111000b99b000000000000000000000000000
-bbbbbbbb3333333434333333ddddddddff0000ffaaaaaaaaaaaaaaaadddddddd0023320000dddd0000444400002222000baab000000000000000000000000000
+bbbbbbbb4343334433433333aaaaaaaa0ffff000aaaaaaaaaaaaaaaadddddddd24434443000dcc00000433000002110000aa0000fe0fe0fe0002180000000000
+bb7dd7bb3333333333333333aaaaaaaa00ffff00a444444aadadadaadddddddd4447744400dcfe000043fe000021fe000b997000cd0cd0cd0021810000000000
+bbdccdbb333333333333333377777777000ffff0a333333aaeadacaadddddddd2474474200cccc00003333000011110008888000cd0cd0cd0018120000000000
+bbdccdbb3344333333333443bbbbbbbb0000ffffa434433aaeaeacaadddddddd0223322000ccfe000033fe000011fe0008888000cd0cd0cd0021810000000000
+bb7dd7bb434433333333344322222222f0000fffa333333aaeaeacaadddddddd0044440000cccc0000333300001111000b99b000000000000018120000000000
+bbbbbbbb3333333434333333ddddddddff0000ffaaaaaaaaaaaaaaaadddddddd0023320000dddd0000444400002222000baab000000000000081200000000000
 bbbbbbbb4333334433333333cdcdcdcdeee0000e99999999999999997d7d7d7d004444000000000000000000000000000baab000000000000000000000000000
 00000000ddccdcccccccccccabaaaabaaaaaaaaabbbbbbbb9999999a77777777bbbbbbbbeeeeeeeeaaaaaaaa000000000baab000002dd2000000000000000000
 00000000dcccdddcccccccccaaaaaaaaa9bbb77abaaaaaaaaaaaaaaa77777777baaaaaaaeeeeeeeeaaaaaaaa000000000baab0000ddccdd00021120000000000

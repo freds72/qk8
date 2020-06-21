@@ -18,6 +18,8 @@ class ACTOR_KIND(IntFlag):
   # generic class
   DEFAULT = 5
   MONSTER = 6
+  PROJECTILE = 7
+  PLAYER = 8
 
 builtin_actors = {
   'key':{
@@ -32,7 +34,9 @@ builtin_actors = {
   },
   'weapon':{
     'kind': ACTOR_KIND.WEAPON,
-    'radius': 20
+    'radius': 20,
+    'amount': 0,
+    'maxamount': 1
   },
   'health':{
     'kind': ACTOR_KIND.HEALTH,
@@ -45,13 +49,20 @@ builtin_actors = {
     'maxamount': 200
   },
   'player':{
+    'kind': ACTOR_KIND.PLAYER,
     'radius': 32,
     'armor': 100,
-    'health': 100
+    'health': 100,
+    'speed': 3
   },
   'monster':{
     'kind': ACTOR_KIND.MONSTER,
     'radius': 32
+  },
+  'projectile':{
+    'kind': ACTOR_KIND.PROJECTILE,
+    'damage': 1,
+    'speed': 5
   }
 }
 
@@ -96,17 +107,36 @@ class DecorateWalker(DECORATEListener):
 
       for pair in ctx.pair():
         attribute = pair.keyword().getText().lower()
-        value = pair.value().getText()
+        value = pair.value().getText().lower().strip('"')
         if attribute in []:
           value = value=='true'
-        elif attribute in ['height','radius','slotnumber','amount','maxamount']:
+        elif attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse']:
           value = int(value)
+        elif attribute in ['ammotype','projectile']:
+          if value not in self.result:
+            raise Exception("Actor: {} references unknown: {}".format(name, value))
+          otheractor = self.result[value]
+          value = otheractor.id
+        elif attribute in ['startitem']:
+          if value not in self.result:
+            raise Exception("Actor: {} references unknown start item: {}".format(name, value))
+          otheractor = self.result[value]
+          startitems = properties.get('startitems',[])
+          # default amount
+          amount = 1
+          # so far, only ammo can have startitem params
+          values = pair.args().value
+          if otheractor.kind == ACTOR_KIND.AMMO and len(values())>0:
+            amount = int(values(0).getText())
+          startitems.append((otheractor.id, amount))
+          value = startitems
+          attribute = 'startitems'
+        
         # else string
         properties[attribute] = value
       
       # add sprite frames
       frames = []
-      print(self.frames)
       for frame in self.frames:
         frames.append(frame)
       properties['frames'] = frames

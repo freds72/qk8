@@ -11,40 +11,43 @@ else:
 
 def serializedATN():
     with StringIO() as buf:
-        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\23")
-        buf.write("r\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7\4\b")
+        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\24")
+        buf.write("|\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7\4\b")
         buf.write("\t\b\4\t\t\t\4\n\t\n\4\13\t\13\4\f\t\f\4\r\t\r\4\16\t")
-        buf.write("\16\4\17\t\17\4\20\t\20\3\2\7\2\"\n\2\f\2\16\2%\13\2\3")
-        buf.write("\2\3\2\3\3\3\3\3\3\3\3\5\3-\n\3\3\3\5\3\60\n\3\3\3\3\3")
-        buf.write("\7\3\64\n\3\f\3\16\3\67\13\3\3\3\5\3:\n\3\3\3\3\3\3\4")
-        buf.write("\3\4\3\4\5\4A\n\4\3\4\3\4\3\4\3\5\3\5\3\6\3\6\3\6\7\6")
-        buf.write("K\n\6\f\6\16\6N\13\6\3\6\3\6\3\7\3\7\3\b\3\b\3\b\3\b\3")
-        buf.write("\b\3\b\5\bZ\n\b\6\b\\\n\b\r\b\16\b]\3\b\3\b\3\t\3\t\3")
-        buf.write("\n\3\n\3\13\3\13\3\f\3\f\3\r\3\r\3\16\3\16\3\17\3\17\3")
-        buf.write("\20\3\20\3\20\2\2\21\2\4\6\b\n\f\16\20\22\24\26\30\32")
-        buf.write("\34\36\2\5\3\2\3\4\3\2\n\13\4\2\f\r\17\17\2k\2#\3\2\2")
-        buf.write("\2\4(\3\2\2\2\6@\3\2\2\2\bE\3\2\2\2\nG\3\2\2\2\fQ\3\2")
-        buf.write("\2\2\16S\3\2\2\2\20a\3\2\2\2\22c\3\2\2\2\24e\3\2\2\2\26")
-        buf.write("g\3\2\2\2\30i\3\2\2\2\32k\3\2\2\2\34m\3\2\2\2\36o\3\2")
-        buf.write("\2\2 \"\5\4\3\2! \3\2\2\2\"%\3\2\2\2#!\3\2\2\2#$\3\2\2")
-        buf.write("\2$&\3\2\2\2%#\3\2\2\2&\'\7\2\2\3\'\3\3\2\2\2()\t\2\2")
-        buf.write("\2),\5\26\f\2*+\7\5\2\2+-\5\34\17\2,*\3\2\2\2,-\3\2\2")
-        buf.write("\2-/\3\2\2\2.\60\5\32\16\2/.\3\2\2\2/\60\3\2\2\2\60\61")
-        buf.write("\3\2\2\2\61\65\7\6\2\2\62\64\5\6\4\2\63\62\3\2\2\2\64")
-        buf.write("\67\3\2\2\2\65\63\3\2\2\2\65\66\3\2\2\2\669\3\2\2\2\67")
-        buf.write("\65\3\2\2\28:\5\n\6\298\3\2\2\29:\3\2\2\2:;\3\2\2\2;<")
-        buf.write("\7\7\2\2<\5\3\2\2\2=>\5\34\17\2>?\7\b\2\2?A\3\2\2\2@=")
-        buf.write("\3\2\2\2@A\3\2\2\2AB\3\2\2\2BC\5\b\5\2CD\5\36\20\2D\7")
-        buf.write("\3\2\2\2EF\7\20\2\2F\t\3\2\2\2GH\7\t\2\2HL\7\6\2\2IK\5")
-        buf.write("\16\b\2JI\3\2\2\2KN\3\2\2\2LJ\3\2\2\2LM\3\2\2\2MO\3\2")
-        buf.write("\2\2NL\3\2\2\2OP\7\7\2\2P\13\3\2\2\2QR\t\3\2\2R\r\3\2")
-        buf.write("\2\2ST\5\26\f\2T[\7\5\2\2UV\5\20\t\2VW\5\22\n\2WY\5\24")
-        buf.write("\13\2XZ\5\30\r\2YX\3\2\2\2YZ\3\2\2\2Z\\\3\2\2\2[U\3\2")
-        buf.write("\2\2\\]\3\2\2\2][\3\2\2\2]^\3\2\2\2^_\3\2\2\2_`\5\f\7")
-        buf.write("\2`\17\3\2\2\2ab\7\20\2\2b\21\3\2\2\2cd\7\16\2\2d\23\3")
-        buf.write("\2\2\2ef\7\f\2\2f\25\3\2\2\2gh\7\20\2\2h\27\3\2\2\2ij")
-        buf.write("\7\17\2\2j\31\3\2\2\2kl\7\f\2\2l\33\3\2\2\2mn\7\20\2\2")
-        buf.write("n\35\3\2\2\2op\t\4\2\2p\37\3\2\2\2\13#,/\659@LY]")
+        buf.write("\16\4\17\t\17\4\20\t\20\4\21\t\21\3\2\7\2$\n\2\f\2\16")
+        buf.write("\2\'\13\2\3\2\3\2\3\3\3\3\3\3\3\3\5\3/\n\3\3\3\5\3\62")
+        buf.write("\n\3\3\3\3\3\7\3\66\n\3\f\3\16\39\13\3\3\3\5\3<\n\3\3")
+        buf.write("\3\3\3\3\4\3\4\3\4\5\4C\n\4\3\4\3\4\3\4\3\4\3\5\3\5\3")
+        buf.write("\6\3\6\3\6\7\6N\n\6\f\6\16\6Q\13\6\3\6\3\6\3\7\3\7\3\b")
+        buf.write("\3\b\3\b\3\b\3\b\3\b\5\b]\n\b\6\b_\n\b\r\b\16\b`\3\b\3")
+        buf.write("\b\3\t\3\t\3\n\3\n\3\13\3\13\3\f\3\f\3\r\3\r\3\16\3\16")
+        buf.write("\3\17\3\17\3\20\3\20\7\20u\n\20\f\20\16\20x\13\20\3\21")
+        buf.write("\3\21\3\21\2\2\22\2\4\6\b\n\f\16\20\22\24\26\30\32\34")
+        buf.write("\36 \2\5\3\2\3\4\3\2\n\13\4\2\r\16\20\20\2u\2%\3\2\2\2")
+        buf.write("\4*\3\2\2\2\6B\3\2\2\2\bH\3\2\2\2\nJ\3\2\2\2\fT\3\2\2")
+        buf.write("\2\16V\3\2\2\2\20d\3\2\2\2\22f\3\2\2\2\24h\3\2\2\2\26")
+        buf.write("j\3\2\2\2\30l\3\2\2\2\32n\3\2\2\2\34p\3\2\2\2\36v\3\2")
+        buf.write("\2\2 y\3\2\2\2\"$\5\4\3\2#\"\3\2\2\2$\'\3\2\2\2%#\3\2")
+        buf.write("\2\2%&\3\2\2\2&(\3\2\2\2\'%\3\2\2\2()\7\2\2\3)\3\3\2\2")
+        buf.write("\2*+\t\2\2\2+.\5\26\f\2,-\7\5\2\2-/\5\34\17\2.,\3\2\2")
+        buf.write("\2./\3\2\2\2/\61\3\2\2\2\60\62\5\32\16\2\61\60\3\2\2\2")
+        buf.write("\61\62\3\2\2\2\62\63\3\2\2\2\63\67\7\6\2\2\64\66\5\6\4")
+        buf.write("\2\65\64\3\2\2\2\669\3\2\2\2\67\65\3\2\2\2\678\3\2\2\2")
+        buf.write("8;\3\2\2\29\67\3\2\2\2:<\5\n\6\2;:\3\2\2\2;<\3\2\2\2<")
+        buf.write("=\3\2\2\2=>\7\7\2\2>\5\3\2\2\2?@\5\34\17\2@A\7\b\2\2A")
+        buf.write("C\3\2\2\2B?\3\2\2\2BC\3\2\2\2CD\3\2\2\2DE\5\b\5\2EF\5")
+        buf.write(" \21\2FG\5\36\20\2G\7\3\2\2\2HI\7\21\2\2I\t\3\2\2\2JK")
+        buf.write("\7\t\2\2KO\7\6\2\2LN\5\16\b\2ML\3\2\2\2NQ\3\2\2\2OM\3")
+        buf.write("\2\2\2OP\3\2\2\2PR\3\2\2\2QO\3\2\2\2RS\7\7\2\2S\13\3\2")
+        buf.write("\2\2TU\t\3\2\2U\r\3\2\2\2VW\5\26\f\2W^\7\5\2\2XY\5\20")
+        buf.write("\t\2YZ\5\22\n\2Z\\\5\24\13\2[]\5\30\r\2\\[\3\2\2\2\\]")
+        buf.write("\3\2\2\2]_\3\2\2\2^X\3\2\2\2_`\3\2\2\2`^\3\2\2\2`a\3\2")
+        buf.write("\2\2ab\3\2\2\2bc\5\f\7\2c\17\3\2\2\2de\7\21\2\2e\21\3")
+        buf.write("\2\2\2fg\7\17\2\2g\23\3\2\2\2hi\7\r\2\2i\25\3\2\2\2jk")
+        buf.write("\7\21\2\2k\27\3\2\2\2lm\7\20\2\2m\31\3\2\2\2no\7\r\2\2")
+        buf.write("o\33\3\2\2\2pq\7\21\2\2q\35\3\2\2\2rs\7\f\2\2su\5 \21")
+        buf.write("\2tr\3\2\2\2ux\3\2\2\2vt\3\2\2\2vw\3\2\2\2w\37\3\2\2\2")
+        buf.write("xv\3\2\2\2yz\t\4\2\2z!\3\2\2\2\f%.\61\67;BO\\`v")
         return buf.getvalue()
 
 
@@ -59,11 +62,11 @@ class DECORATEParser ( Parser ):
     sharedContextCache = PredictionContextCache()
 
     literalNames = [ "<INVALID>", "'ACTOR'", "'actor'", "':'", "'{'", "'}'", 
-                     "'.'", "'States'", "'Stop'", "'Loop'" ]
+                     "'.'", "'States'", "'Stop'", "'Loop'", "','" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                      "<INVALID>", "<INVALID>", "NUMBER", "BOOLEAN_VALUE", 
+                      "<INVALID>", "<INVALID>", "<INVALID>", "NUMBER", "BOOLEAN_VALUE", 
                       "SINGLE_CHAR", "QUOTED_STRING", "KEYWORD", "BLOCKCOMMENT", 
                       "LINECOMMENT", "WS" ]
 
@@ -81,11 +84,12 @@ class DECORATEParser ( Parser ):
     RULE_function = 11
     RULE_uid = 12
     RULE_parent = 13
-    RULE_value = 14
+    RULE_args = 14
+    RULE_value = 15
 
     ruleNames =  [ "actors", "block", "pair", "keyword", "states", "state_control", 
                    "state_block", "image", "variant", "ticks", "name", "function", 
-                   "uid", "parent", "value" ]
+                   "uid", "parent", "args", "value" ]
 
     EOF = Token.EOF
     T__0=1
@@ -97,14 +101,15 @@ class DECORATEParser ( Parser ):
     T__6=7
     T__7=8
     T__8=9
-    NUMBER=10
-    BOOLEAN_VALUE=11
-    SINGLE_CHAR=12
-    QUOTED_STRING=13
-    KEYWORD=14
-    BLOCKCOMMENT=15
-    LINECOMMENT=16
-    WS=17
+    T__9=10
+    NUMBER=11
+    BOOLEAN_VALUE=12
+    SINGLE_CHAR=13
+    QUOTED_STRING=14
+    KEYWORD=15
+    BLOCKCOMMENT=16
+    LINECOMMENT=17
+    WS=18
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -158,17 +163,17 @@ class DECORATEParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 33
+            self.state = 35
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             while _la==DECORATEParser.T__0 or _la==DECORATEParser.T__1:
-                self.state = 30
+                self.state = 32
                 self.block()
-                self.state = 35
+                self.state = 37
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
-            self.state = 36
+            self.state = 38
             self.match(DECORATEParser.EOF)
         except RecognitionException as re:
             localctx.exception = re
@@ -235,54 +240,54 @@ class DECORATEParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 38
+            self.state = 40
             _la = self._input.LA(1)
             if not(_la==DECORATEParser.T__0 or _la==DECORATEParser.T__1):
                 self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
                 self.consume()
-            self.state = 39
+            self.state = 41
             self.name()
-            self.state = 42
+            self.state = 44
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             if _la==DECORATEParser.T__2:
-                self.state = 40
+                self.state = 42
                 self.match(DECORATEParser.T__2)
-                self.state = 41
+                self.state = 43
                 self.parent()
 
 
-            self.state = 45
+            self.state = 47
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             if _la==DECORATEParser.NUMBER:
-                self.state = 44
+                self.state = 46
                 self.uid()
 
 
-            self.state = 47
+            self.state = 49
             self.match(DECORATEParser.T__3)
-            self.state = 51
+            self.state = 53
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             while _la==DECORATEParser.KEYWORD:
-                self.state = 48
+                self.state = 50
                 self.pair()
-                self.state = 53
+                self.state = 55
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
-            self.state = 55
+            self.state = 57
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             if _la==DECORATEParser.T__6:
-                self.state = 54
+                self.state = 56
                 self.states()
 
 
-            self.state = 57
+            self.state = 59
             self.match(DECORATEParser.T__4)
         except RecognitionException as re:
             localctx.exception = re
@@ -305,6 +310,10 @@ class DECORATEParser ( Parser ):
 
         def value(self):
             return self.getTypedRuleContext(DECORATEParser.ValueContext,0)
+
+
+        def args(self):
+            return self.getTypedRuleContext(DECORATEParser.ArgsContext,0)
 
 
         def parent(self):
@@ -337,20 +346,22 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 4, self.RULE_pair)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 62
+            self.state = 64
             self._errHandler.sync(self)
             la_ = self._interp.adaptivePredict(self._input,5,self._ctx)
             if la_ == 1:
-                self.state = 59
+                self.state = 61
                 self.parent()
-                self.state = 60
+                self.state = 62
                 self.match(DECORATEParser.T__5)
 
 
-            self.state = 64
+            self.state = 66
             self.keyword()
-            self.state = 65
+            self.state = 67
             self.value()
+            self.state = 68
+            self.args()
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -395,7 +406,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 6, self.RULE_keyword)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 67
+            self.state = 70
             self.match(DECORATEParser.KEYWORD)
         except RecognitionException as re:
             localctx.exception = re
@@ -446,21 +457,21 @@ class DECORATEParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 69
+            self.state = 72
             self.match(DECORATEParser.T__6)
-            self.state = 70
+            self.state = 73
             self.match(DECORATEParser.T__3)
-            self.state = 74
+            self.state = 77
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             while _la==DECORATEParser.KEYWORD:
-                self.state = 71
+                self.state = 74
                 self.state_block()
-                self.state = 76
+                self.state = 79
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
-            self.state = 77
+            self.state = 80
             self.match(DECORATEParser.T__4)
         except RecognitionException as re:
             localctx.exception = re
@@ -505,7 +516,7 @@ class DECORATEParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 79
+            self.state = 82
             _la = self._input.LA(1)
             if not(_la==DECORATEParser.T__7 or _la==DECORATEParser.T__8):
                 self._errHandler.recoverInline(self)
@@ -590,35 +601,35 @@ class DECORATEParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 81
+            self.state = 84
             self.name()
-            self.state = 82
+            self.state = 85
             self.match(DECORATEParser.T__2)
-            self.state = 89 
+            self.state = 92 
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             while True:
-                self.state = 83
+                self.state = 86
                 self.image()
-                self.state = 84
-                self.variant()
-                self.state = 85
-                self.ticks()
                 self.state = 87
+                self.variant()
+                self.state = 88
+                self.ticks()
+                self.state = 90
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
                 if _la==DECORATEParser.QUOTED_STRING:
-                    self.state = 86
+                    self.state = 89
                     self.function()
 
 
-                self.state = 91 
+                self.state = 94 
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
                 if not (_la==DECORATEParser.KEYWORD):
                     break
 
-            self.state = 93
+            self.state = 96
             self.state_control()
         except RecognitionException as re:
             localctx.exception = re
@@ -664,7 +675,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 14, self.RULE_image)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 95
+            self.state = 98
             self.match(DECORATEParser.KEYWORD)
         except RecognitionException as re:
             localctx.exception = re
@@ -710,7 +721,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 16, self.RULE_variant)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 97
+            self.state = 100
             self.match(DECORATEParser.SINGLE_CHAR)
         except RecognitionException as re:
             localctx.exception = re
@@ -756,7 +767,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 18, self.RULE_ticks)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 99
+            self.state = 102
             self.match(DECORATEParser.NUMBER)
         except RecognitionException as re:
             localctx.exception = re
@@ -802,7 +813,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 20, self.RULE_name)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 101
+            self.state = 104
             self.match(DECORATEParser.KEYWORD)
         except RecognitionException as re:
             localctx.exception = re
@@ -848,7 +859,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 22, self.RULE_function)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 103
+            self.state = 106
             self.match(DECORATEParser.QUOTED_STRING)
         except RecognitionException as re:
             localctx.exception = re
@@ -894,7 +905,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 24, self.RULE_uid)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 105
+            self.state = 108
             self.match(DECORATEParser.NUMBER)
         except RecognitionException as re:
             localctx.exception = re
@@ -940,8 +951,69 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 26, self.RULE_parent)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 107
+            self.state = 110
             self.match(DECORATEParser.KEYWORD)
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class ArgsContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+
+        def value(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(DECORATEParser.ValueContext)
+            else:
+                return self.getTypedRuleContext(DECORATEParser.ValueContext,i)
+
+
+        def getRuleIndex(self):
+            return DECORATEParser.RULE_args
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterArgs" ):
+                listener.enterArgs(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitArgs" ):
+                listener.exitArgs(self)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitArgs" ):
+                return visitor.visitArgs(self)
+            else:
+                return visitor.visitChildren(self)
+
+
+
+
+    def args(self):
+
+        localctx = DECORATEParser.ArgsContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 28, self.RULE_args)
+        self._la = 0 # Token type
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 116
+            self._errHandler.sync(self)
+            _la = self._input.LA(1)
+            while _la==DECORATEParser.T__9:
+                self.state = 112
+                self.match(DECORATEParser.T__9)
+                self.state = 113
+                self.value()
+                self.state = 118
+                self._errHandler.sync(self)
+                _la = self._input.LA(1)
+
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -989,11 +1061,11 @@ class DECORATEParser ( Parser ):
     def value(self):
 
         localctx = DECORATEParser.ValueContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 28, self.RULE_value)
+        self.enterRule(localctx, 30, self.RULE_value)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 109
+            self.state = 119
             _la = self._input.LA(1)
             if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << DECORATEParser.NUMBER) | (1 << DECORATEParser.BOOLEAN_VALUE) | (1 << DECORATEParser.QUOTED_STRING))) != 0)):
                 self._errHandler.recoverInline(self)

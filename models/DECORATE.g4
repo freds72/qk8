@@ -12,7 +12,7 @@ block:
   ;
 
 pair:
-  (parent '.')? keyword value
+  (parent '.')? keyword value args
   ;
   
 keyword:
@@ -58,6 +58,10 @@ uid:
 
 parent:
   KEYWORD
+  ;
+
+args:
+  (',' value)*
   ;
 
 value:
