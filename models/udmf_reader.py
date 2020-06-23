@@ -89,11 +89,11 @@ class ThingWalker(udmfListener):
           # default
           thing = dotdict()
           for pair in ctx.pair():
-            attribute = pair.keyword().getText()
+            attribute = pair.keyword().getText().lower()
             value = pair.value().getText()
             if attribute in ['x','y']:
               value = float(value)
-            elif attribute in ['type']:
+            elif attribute in ['type','angle']:
               value = int(value)
             thing[attribute] = value
           self.result.append(thing)
