@@ -563,6 +563,9 @@ function _init()
     -- attach static sub-sectors to things
     thing.subs={}
     find_ssector_thick(_bsp,thing,thing.actor.radius,thing.subs)
+    -- default height
+    local s=find_sector(_bsp,thing)
+    thing.height=s.floor
   end
 
   -- start pos
@@ -724,7 +727,7 @@ function _update()
 
   local pactor=plyr.actor
   if btnp(4) and pactor.selected_slot then
-    local wp=pactor.weapons[pactor.selected_slot]
+    local wp=pactor.weapons[5]
     wp.trigger(pactor,plyr,plyr.height+32,plyr.angle)
   end
 
@@ -864,8 +867,8 @@ function _draw()
         local v=_cam:project(thing)
         local ax,az=v[1],v[3]
         if az>_znear and 2*ax<az and -2*ax<az then
-          local w,h=128/az,thing.height or 0
-          local x,y=63.5+ax*w,63.5-(v[2]+h)*w
+          local w,h=128/az,thing.height+v[2]
+          local x,y=63.5+ax*w,63.5-h*w
           -- insertion sort into each sub
           for sub,_ in pairs(thing.subs) do
             -- get start of linked list
@@ -875,7 +878,7 @@ function _draw()
               prev,head=head,head.next
             end
             -- insert new thing
-            prev.next={thing=thing,x=x,y=y-sub.sector.floor*w,w=w,next=prev.next}
+            prev.next={thing=thing,x=x,y=y,w=w,next=prev.next}
           end
         end
       end
@@ -1316,54 +1319,57 @@ function unpack_map()
       subs={},
       actor=projectile,
       update=function(self)
-        -- update subs
-        for ss,_ in pairs(self.subs) do
-          local hits={}
-          intersect_sub_sector(ss,self,{ca,sa},0,speed+radius,hits)
-       
-          -- hit something?
-          for _,hit in ipairs(hits) do
-            local ldef=hit.seg.line
-            -- 
-            if hit.t<speed+radius then
-              local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
-              if otherside==nil then
-                local x0,y0,t=self[1],self[2],hit.t
-                do_async(function()
-                  local subs,ttl={},10
-                  find_ssector_thick(_bsp,{x0,y0},radius,subs)
-                  add(things,{
-                    x0+t*ca,
-                    y0+t*sa,
-                    subs=subs,
-                    update=function(self)
-                      ttl-=1
-                      -- todo: factorize
-                      if(ttl<0) do_async(function() del(things,self) end)
-                    end,
-                    draw=function(self,x,y,w)
-                      local r=8*w*ttl/10
-                      circfill(x,y,r,2)
-                    end
-                  })
-                  del(things,self) 
-                end)
-                return
-              elseif abs(facingside.sector.floor-otherside.sector.floor)>24 then
-                fix_move=true
-              elseif abs(facingside.sector.floor-otherside.sector.ceil)<64 then
-                fix_move=true
-              end
+        -- hit something?
+        local hits,s,ss={},find_sector(_bsp,self)
+        intersect_sub_sector(ss,self,{ca,sa},0,speed+radius,hits)
+      
+        -- hit something?
+        for _,hit in ipairs(hits) do
+          local ldef,kill=hit.seg.line
+          -- 
+          if hit.t<speed+radius then
+            local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
+            if otherside==nil then
+              -- solid wall?
+              kill=true
+            elseif otherside.sector.floor>height-radius or otherside.sector.ceil<height+radius then
+              -- opening?
+              kill=true
             end
+          end
+          if kill then
+            local x0,y0,t=self[1],self[2],hit.t
+            do_async(function()
+              local subs,ttl={},10
+              find_ssector_thick(_bsp,{x0,y0},radius,subs)
+              add(things,{
+                x0+t*ca,
+                y0+t*sa,
+                height=height,
+                subs=subs,
+                update=function(self)
+                  ttl-=1
+                  -- todo: factorize
+                  if(ttl<0) do_async(function() del(things,self) end)
+                end,
+                draw=function(self,x,y,w)
+                  local r=8*w*ttl/10
+                  circfill(x,y-4*w,r,2)
+                end
+              })
+              del(things,self) 
+            end)
+            return
           end
         end
 
         self[1]+=speed*ca
         self[2]+=speed*sa
+        -- find all sectors where that thing is visible
         self.subs={}
         find_ssector_thick(_bsp,self,radius,self.subs)
 
-        -- todo: intersect walls & things
+        -- todo: other things
         ttl-=1
         if ttl<0 then
           do_async(function() del(things,self) end)

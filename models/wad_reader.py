@@ -282,6 +282,7 @@ def pack_thing(thing, actors):
   s = pack_variant(thing.type)
   s += pack_fixed(thing.x)
   s += pack_fixed(thing.y)
+  s += pack_variant(thing.get('angle',0))
   return s
 
 def pack_zmap(map, textures, actors):
