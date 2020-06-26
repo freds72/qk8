@@ -62,11 +62,11 @@ function make_camera()
         -- x2: fov
         local ax,az=(m1*x+m3*z+m4)<<1,m9*x+m11*z+m12
         -- todo: optimize?
-        local code=k_near
-        if(az>_znear) code=k_far
+        local code=2
+        if(az>16) code=0
         if(az>854) code|=1
-        if(ax>az) code|=k_right
-        if(-ax>az) code|=k_left
+        if(ax>az) code|=4
+        if(-ax>az) code|=8
         outcode&=code
       end
       return outcode==0
@@ -134,6 +134,13 @@ end
 
 function v2_dist(a,b)
   local dx,dy=abs(b[1]-a[1]),abs(b[2]-a[2])
+  local d=max(dx,dy)
+  local n=min(dx,dy)/d
+  return d*sqrt(n*n + 1)
+end
+-- safe vector len
+function v2_len(a)
+  local dx,dy=abs(a[1]),abs(a[2])
   local d=max(dx,dy)
   local n=min(dx,dy)/d
   return d*sqrt(n*n + 1)
@@ -209,22 +216,22 @@ function draw_segs2d(segs,pos,txt)
     local ax,az=
       m1*x+m3*z+m4,
       m9*x+m11*z+m12
-    local code=k_near
-    if(az>_znear) code=k_far
-    if(2*ax>az) code|=k_right
-    if(-2*ax>az) code|=k_left
+    local code=2
+    if(az>16) code=0
+    if(-2*ax>az) code|=8
+    if(2*ax>az) code|=4
     
     local w=128/az
     local v={ax,m8,az,seg=seg,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
     verts[i]=v
     outcode&=code 
-    leftclip+=(code&4)
-    rightclip+=(code&8)
+    leftclip+=(code&8)
+    rightclip+=(code&4)
     clipcode+=(code&2)
   end
 
   if outcode==0 then
-    if(clipcode!=0) verts=z_poly_clip(_znear,verts)
+    if(clipcode!=0) verts=z_poly_clip(16,verts)
     if #verts>2 then
       if(leftclip!=0) verts=poly_clip(-0.8944,0.4472,0,verts)
       if #verts>2 then
@@ -281,7 +288,6 @@ function draw_sub_sector(segs,v_cache)
     -- front facing
     if x0<x1 then
       -- span rasterization
-      --printh(x0.."->"..x1)
       -- pick correct texture "major"
       local dx,u0,u1=x1-x0,v0[seg[7]]*w0,v1[seg[7]]*w1
       local dy,du,dw=(y1-y0)/dx,(u1-u0)/dx,(w1-w0)/dx
@@ -382,12 +388,12 @@ function draw_flats(v_cache,segs,things)
       local ax,az=
         m1*x+m3*z+m4,
         m9*x+m11*z+m12
-      local code=k_near
-      if(az>_znear) code=k_far
+      local code=2
+      if(az>16) code=0
       if(az>854) code|=1
       -- fov adjustment
-      if(2*ax>az) code|=k_right
-      if(-2*ax>az) code|=k_left
+      if(-2*ax>az) code|=4
+      if(2*ax>az) code|=8
       
       -- most of the points are visibles at this point
       local w=128/az
@@ -424,7 +430,7 @@ function draw_flats(v_cache,segs,things)
           while head do
             local thing=head.thing
             local x0,y0,w0=head.x,head.y,head.w
-            local pal1=4\w0
+            local pal1=0--4\w0
             if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1    
             palt(0,true)
             w0*=2
@@ -461,16 +467,16 @@ function visit_bsp(node,pos,visitor)
   visitor(node,not side,pos,visitor)
 end
 
-function find_sector(root,pos)
+function find_sub_sector(root,pos)
   if(not root) return
   -- go down (if possible)
   local side=v2_dot(root.n,pos)<=root.d
   if root.leaf[side] then
     -- leaf?
-    return root[side].sector,root[side]
+    return root[side]
   end
     
-  return find_sector(root[side],pos)
+  return find_sub_sector(root[side],pos)
 end
 
 function find_ssector_thick(root,pos,radius,res)
@@ -497,6 +503,29 @@ end
 function intersect_sub_sector(segs,p,d,tmin,tmax,res)
   local _tmax=tmax
   local px,pz,dx,dz,tmax_seg=p[1],p[2],d[1],d[2]
+
+  -- hitting things?
+  for _,thing in pairs(_things) do
+    if thing.actor and thing.subs[segs] then
+      -- overflow 'safe' coordinates
+      local m,r={(px-thing[1])>>8,(pz-thing[2])>>8},thing.actor.radius>>8
+      local b,c=v2_dot(m,d),v2_dot(m,m)-r*r
+
+      -- check distance and ray direction vs. circle
+      if c<=0 or b<=0 then
+        local discr=b*b-c
+        if discr>=0 then
+          -- convert back to world units
+          local t=(-b-sqrt(discr))<<8
+          -- if t is negative, ray started inside sphere so clamp t to zero 
+          -- if(t<tmin) t=tmin
+          -- record hit
+          if(t>=tmin and t<tmax) add(res,{t=t,thing=thing})
+        end
+      end
+    end
+  end
+
   for i=1,#segs do
     local s0=segs[i]
     local n=s0[5]
@@ -560,21 +589,15 @@ function _init()
 
   -- todo: attach behaviors to things
   for _,thing in pairs(_things) do 
-    -- attach static sub-sectors to things
+    -- all sub-sectors that thing touches
+    -- used for rendering and collision detection
     thing.subs={}
     find_ssector_thick(_bsp,thing,thing.actor.radius,thing.subs)
     -- default height
-    local s=find_sector(_bsp,thing)
-    thing.height=s.floor
+    local ss=find_sub_sector(_bsp,thing)
+    thing.height=ss.sector.floor
   end
 
-  -- start pos
-  --[[
-  local s=find_sector(_bsp,plyr)
-  assert(s,"invalid start position")
-  plyr.sector=s
-  plyr.height=s.floor
-  ]]
   _cam=make_camera()
 end
 
@@ -625,8 +648,8 @@ function _update()
   end
 
   -- check collision with world
-  local s,ss=find_sector(_bsp,plyr)
-  if s then
+  local ss=find_sub_sector(_bsp,plyr)
+  if ss then
     -- todo: unify ray intersection w/ things
     local hits={}
     local radius=plyr.actor.radius
@@ -638,56 +661,60 @@ function _update()
 
       -- fix position
       for _,hit in ipairs(hits) do
-        local ldef,fix_move=hit.seg.line
-        -- 
-        if hit.t<move_len+radius then
-          local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
-          if otherside==nil then
-            fix_move=true
-          elseif abs(facingside.sector.floor-otherside.sector.floor)>24 then
-            fix_move=true
-          elseif abs(facingside.sector.floor-otherside.sector.ceil)<64 then
-            fix_move=true
+        local fix_move
+        if hit.seg then
+          local ldef=hit.seg.line
+          -- 
+          if hit.t<move_len+radius then
+            local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
+            if otherside==nil then
+              fix_move=true
+            elseif abs(facingside.sector.floor-otherside.sector.floor)>24 then
+              fix_move=true
+            elseif abs(facingside.sector.floor-otherside.sector.ceil)<64 then
+              fix_move=true
+            end
+            
+            -- cross special?
+            if ldef.trigger and ldef.flags&0x10>0 then
+              ldef.trigger(plyr)
+            end
           end
-          
-          -- cross special?
-          if ldef.trigger and ldef.flags&0x10>0 then
-            ldef.trigger(plyr)
-          end
-        end
+    
 
-        if fix_move and hit.t<move_len+radius then
-          -- clip move
-          local n=hit.seg[5]
-          local fix=-(move_len+radius-hit.t)*v2_dot(n,move_dir)
-          -- fix position
-          plyr[1]+=fix*n[1]
-          plyr[2]+=fix*n[2]
+          if fix_move and hit.t<move_len+radius then
+            -- clip move
+            local n=hit.seg[5]
+            local fix=-(move_len+radius-hit.t)*v2_dot(n,move_dir)
+            -- fix position
+            plyr[1]+=fix*n[1]
+            plyr[2]+=fix*n[2]
+          end
         end
       end
     end
 
     -- check triggers/bumps/...
     for _,hit in ipairs(hits) do
-      local ldef=hit.seg.line
-      -- buttons
-      if ldef.trigger and ldef.flags&0x8>0 then
-        -- use special?
-        if btn(4) then
-          ldef.trigger()
-        else
-          _msg="press (x) to activate"
+      if hit.seg then
+        local ldef=hit.seg.line
+        -- buttons
+        if ldef.trigger and ldef.flags&0x8>0 then
+          -- use special?
+          if btn(4) then
+            ldef.trigger()
+          else
+            _msg="press (x) to activate"
+          end
+          -- trigger/message only closest hit
+          break
         end
-        -- trigger/message only closest hit
-        break
       end
     end
 
     -- things collision
-    -- todo: optimize (sector..)
     for k,thing in pairs(_things) do
       -- find sector
-      
       local actor=thing.actor
       if actor and actor.kind!=7 then
         -- todo: hit check with projectile
@@ -717,10 +744,10 @@ function _update()
       end
     end
 
-    s,ss=find_sector(_bsp,plyr)
-    plyr.sector=s
+    ss=find_sub_sector(_bsp,plyr)
+    plyr.sector=ss.sector
     plyr.subs=ss
-    plyr.height=s.floor--+abs(cos(time()/4)*move_len)
+    plyr.height=ss.sector.floor--+abs(cos(time()/4)*move_len)
   end
 
   _cam:track(plyr,plyr.angle,plyr.height+45)
@@ -812,34 +839,33 @@ function _draw()
     local hits={}
     -- intersect(_bsp,plyr,{ca,sa},0,128,hits)
 
-    local s,ss=find_sector(_bsp,plyr)
+    local ss=find_sub_sector(_bsp,plyr)
     if ss then
       intersect_sub_sector(ss,plyr,{ca,sa},0,1024,hits)
     end
     
-    local lines={}
+    local px,py,lines=plyr[1],plyr[2],{}
     for i,hit in pairs(hits) do
       local pt={
-        plyr[1]+hit.t*ca,
-        plyr[2]+hit.t*sa
+        px+hit.t*ca,
+        py+hit.t*sa
       }
-      local d=v2_dot(hit.seg[2],pt)-hit.seg[3]
-      local c=12
-      if d>=0 and d<hit.seg[4] then
-        c=15
-      end
       local x0,y0=cam_to_screen2d(_cam:project(pt))
-      pset(x0,y0,c)
-      local ldef=hit.seg.line
-      if not lines[ldef] then
-        local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
-        if facingside then
-          print(i..":"..facingside.sector.id,x0+3,y0-2,15)
+      pset(x0,y0,hit.seg and 12 or 8)
+      if hit.seg then
+        local ldef=hit.seg.line
+        if not lines[ldef] then
+          local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
+          if facingside then
+            print(i..":"..facingside.sector.id,x0+3,y0-2,15)
+          end
+          if otherside then
+            print(i..":"..otherside.sector.id,x0-20,y0-2,15)
+          end
+          lines[ldef]=true
         end
-        if otherside then
-          print(i..":"..otherside.sector.id,x0-20,y0-2,15)
-        end
-        lines[ldef]=true
+      else
+        print(hit.thing.actor.id,x0+2,y0-3,8)
       end
     end
     pset(64,64,15)
@@ -867,14 +893,17 @@ function _draw()
         local v=_cam:project(thing)
         local ax,az=v[1],v[3]
         if az>_znear and 2*ax<az and -2*ax<az then
+          -- h: thing offset+cam offset
           local w,h=128/az,thing.height+v[2]
           local x,y=63.5+ax*w,63.5-h*w
           -- insertion sort into each sub
           for sub,_ in pairs(thing.subs) do
             -- get start of linked list
             local head=sorted_things[sub][1]
+            -- empty list case
             local prev=head
             while head and head.w<w do
+              -- swap/advance
               prev,head=head,head.next
             end
             -- insert new thing
@@ -1320,23 +1349,34 @@ function unpack_map()
       actor=projectile,
       update=function(self)
         -- hit something?
-        local hits,s,ss={},find_sector(_bsp,self)
+        local hits,ss={},find_sub_sector(_bsp,self)
         intersect_sub_sector(ss,self,{ca,sa},0,speed+radius,hits)
       
         -- hit something?
         for _,hit in ipairs(hits) do
-          local ldef,kill=hit.seg.line
-          -- 
-          if hit.t<speed+radius then
-            local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
-            if otherside==nil then
-              -- solid wall?
-              kill=true
-            elseif otherside.sector.floor>height-radius or otherside.sector.ceil<height+radius then
-              -- opening?
-              kill=true
+          local kill
+          if hit.seg then
+            local ldef=hit.seg.line
+            -- 
+            if hit.t<speed+radius then
+              local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
+              if otherside==nil then
+                -- solid wall?
+                kill=true
+              elseif otherside.sector.floor>height-radius or otherside.sector.ceil<height+radius then
+                -- opening?
+                kill=true
+              end
             end
+          else
+            -- hit thing
+            local otherthing=hit.thing
+            kill=true
+            do_async(function()
+              del(things,otherthing) 
+            end)
           end
+
           if kill then
             local x0,y0,t=self[1],self[2],hit.t
             do_async(function()
@@ -1507,16 +1547,16 @@ function unpack_map()
 end
 
 __gfx__
-41600000bb77bbbb27bbbbbbbbbbbbbbbbbbbbbb0000000000000000bbbbbbbbbbbbbbbbbbbbbbbb77ba9a7777ba967700dccccc002111110043333300000000
-95d00000bbb77bbb27bbbbbbbbbbbbbb988888881111122000000000bbbbbbbbbbbbbbbbbbbbbbbb77b65a7777ba96770dccccff021111ff043333ff00000000
-62700000bbbb777727bbbbbbbbb99bbbbaaaaaaa2222220000000000bbbbbbbbbbbbbbbaaaabbbbb77b65a7777ba9a77dcccdcff211121ff433343ff00000000
-41600000bbbb777727bbbbbbbb9889bbbaaaaaaa3334422000000000bbbbbbbbbbbbb7aaaaaaabbb77b5ea7777ba9a77cccddccc111221113334433300000000
-95d00000bbb77bbb27bbbbbbbb9889bbbaaaaaaa4444220000000000bbbbbbbbbbbbb7aaaaaaabbb7baa89a777ba9a77cccccccc111111113333333300000000
-62700000bb77bbbb22777777bbb99bbbbaaaaaaa5556672200000000bbbbbbbbbbbb77aaaaaaaabb727bb72777ba9a77cddcccff122111ff344333ff00000000
-41600000777bbbbb22222222bbbbbbbbbaaaaaaa6666722000000000bbbbbbbbbbbb77aaaaaaaabb727bb72777ba5a77cdddccff122211ff344433ff00000000
-95d00000777bbbbb27bbbbbbbbbbbbbbbaaaaaaa7777220000000000bbbbbbbbbbbb777aaaaaaabb7baa89a777b65a77cdddccdd122211223444334400000000
-77777777bbbb77bb27bbbbbb676767662222222288899ab700000000bbbbbbbbbbbb7777aaaaaabb77ba9a7777b69a77cccccccc111111113333333300000000
-aaaaa987bbb77bbb27bbbbbb66767676bbbbbbbb999aab7000000000bbbbbbbbbbbbb7777aaaabbb77b69a7777ba9a77dddddddd222222224444444400000000
+41600000bb77bbbb27bbbbbbbbbbbbbbbbbbbbbb0000000000000000bbbbbbbbbbbbbbbbbbbbbbbb77ba9a7777ba967700000000000000000000000000000000
+95d00000bbb77bbb27bbbbbbbbbbbbbb988888881111122000000000bbbbbbbbbbbbbbbbbbbbbbbb77b65a7777ba967700000000000000000000000000000000
+62700000bbbb777727bbbbbbbbb99bbbbaaaaaaa2222220000000000bbbbbbbbbbbbbbbaaaabbbbb77b65a7777ba9a7700000000000000000000000000000000
+41600000bbbb777727bbbbbbbb9889bbbaaaaaaa3334422000000000bbbbbbbbbbbbb7aaaaaaabbb77b5ea7777ba9a7700000000000000000000000000000000
+95d00000bbb77bbb27bbbbbbbb9889bbbaaaaaaa4444220000000000bbbbbbbbbbbbb7aaaaaaabbb7baa89a777ba9a7700000000000000000000000000000000
+62700000bb77bbbb22777777bbb99bbbbaaaaaaa5556672200000000bbbbbbbbbbbb77aaaaaaaabb727bb72777ba9a7700000000000000000000000000000000
+41600000777bbbbb22222222bbbbbbbbbaaaaaaa6666722000000000bbbbbbbbbbbb77aaaaaaaabb727bb72777ba5a7700000000000000000000000000000000
+95d00000777bbbbb27bbbbbbbbbbbbbbbaaaaaaa7777220000000000bbbbbbbbbbbb777aaaaaaabb7baa89a777b65a7700000000000000000000000000000000
+77777777bbbb77bb27bbbbbb676767662222222288899ab700000000bbbbbbbbbbbb7777aaaaaabb77ba9a7777b69a7700000000000000000000000000000000
+aaaaa987bbb77bbb27bbbbbb66767676bbbbbbbb999aab7000000000bbbbbbbbbbbbb7777aaaabbb77b69a7777ba9a7700000000000000000000000000000000
 baaaaa977777bbbb2277777767676766b9999999aaabb70000000000bbbbbbbbbbbbb77777777bbb77b6ea7777ba9a7700000000000000000000000000000000
 baaaaaa77777bbbb2222222266767676baaaaaaabbbb700000000000aaaaaaaabbbbbbb7777bbbbb77baea7777ba9a7700000000000000000000000000000000
 aaaaaab7bbb77bbb27bbbbbb67676766baaaaaaaccccdd700000000099999999bbbbbbbbbbbbbbbb77ba9a777baa89a700000000000000000000000000000000
