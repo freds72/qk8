@@ -25,7 +25,7 @@ function _draw()
 		for j=0,31 do
 			poke4(mem+(j%2)*4+(j\2)*64,_tiles[tile+j])
 		end
-		print(tile,(i%w)*16,(i\w)*16,1)
+		print(tile,(i%w)*16,(i\w)*16,7)
 	end
 	pset(48,64,8)
 	print(#_tiles,2,64,8)

@@ -20,6 +20,11 @@ metadata = pack_variant(len(files))
 tiles = 0
 for f in files:
   img = Image.open("{}\\resized\\{}".format(local_dir,f))
+
+  pal = img.palette.palette
+  for i in range(math.floor(len(pal)/3)):
+    print("{:02x}{:02x}{:02x}".format(pal[i],pal[9+i],pal[18+i]))
+
   width, height = img.size
   tw = math.floor(width/16)
   th = math.floor(height/16)
@@ -27,17 +32,19 @@ for f in files:
   metadata += "{:02x}{:02x}".format(tw,th)
 
   frame_tiles = []
-  for i in range(tw):
-    for j in range(th):
+  for j in range(th):
+    for i in range(tw):
       # reference to corresponding tiles
       frame_tiles.append(tiles)
       # read 16x16 blocks
       for y in range(16):
+        pixels = []
         for x in range(16):
           # image is using the pico palette (+transparency)
           # print("{}/{} - {},{}".format(i,j,i*16 + x, j*16 + y))
-          pixel = img.getpixel((i*16 + x, j*16 + y))
-          data += "{:01x}".format(x==y and 1 or 0)#max(pixel-1,0))
+          pixels.append(img.getpixel((i*16 + x, j*16 + y)))
+        for x in range(16):
+          data += "{:01x}".format(pixels[math.floor(x/8)*8+7-(x%8)])
       tiles += 1
   metadata += pack_variant(len(frame_tiles))
   for i in frame_tiles:
