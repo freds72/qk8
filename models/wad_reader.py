@@ -344,7 +344,8 @@ def pack_zmap(map, textures, actors):
     s += pack_segs(map.sub_sectors[i])
     # PVS
     pvs,clips,vert = get_PVS(map, i)
-    s += pack_variant(len(pvs))
+    s += pack_variant(len(pvs)+1)
+    s += pack_variant(i + 1)
     for sub_id in pvs:
       s += pack_variant(sub_id + 1)
 
