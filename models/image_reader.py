@@ -83,10 +83,11 @@ for f in files:
   print("Processing: {} - {}x{} pix".format(f,width,height))
   metadata += "{:02x}{:02x}".format(tw,th)
 
-  frame_tiles = []
+  frame_tiles = {}
   for j in range(th):
     for i in range(tw):
       # read 16x16 blocks
+      image_data = bytes([])
       for y in range(16):
         for x in range(0,16,8):
           pixels = []
@@ -98,14 +99,17 @@ for f in files:
             high = img.getpixel((i*16 + x + n + 1, j*16 + y))
             high = high==transparency and 15 or rgba_to_pico[indexed_to_rgba[high]]
             pixels.append(low|high<<4)
-          data += bytes(pixels[::-1])
-      # reference to corresponding tiles
-      frame_tiles.append(tiles)
-      tiles += 1
+          image_data += bytes(pixels[::-1])
+      # fully transparent tile?
+      if not all(b==0xff for b in image_data):
+        data += image_data
+        # reference to corresponding tiles
+        frame_tiles[j*tw+i] = tiles
+        tiles += 1
   metadata += pack_variant(len(frame_tiles))
-  for i in frame_tiles:
-    # keep zero-based index
-    metadata += pack_variant(i)
+  for i,tile in frame_tiles.items():
+    metadata += "{:02x}".format(i)
+    metadata += pack_variant(tile*32+1)
 
 # compressed = lzw_encode(data)
 # print("uncompressed:{} / compressed: {}".format(len(data),len(compressed)))
