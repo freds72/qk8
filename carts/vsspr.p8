@@ -9,9 +9,6 @@ function _init()
 end
 
 function _update()
-	--for i=1,100 do
-	_sprite_cache:use(rnd(32)\1)
-	--end
 end
 
 function _draw()
@@ -20,14 +17,13 @@ function _draw()
 	local frame=_frames[flr(3*time()%#_frames)+1]
 	local w,h,tiles=unpack(frame)
 	for i,tile in pairs(tiles) do
-		local mem=0x6000|(i%w)<<3|(i\w)<<10
-		for j=0,31 do
-			poke4(mem|(j&1)<<2|(j\2)<<6,_tiles[tile+j])
-		end
+		local sx,sy=_sprite_cache:use(tile,_tiles)
+		sspr(sx,sy,16,16,(i%w)*16,(i\w)*16,16,16)
 		-- print(tile,(i%w)*16,(i\w)*16,7)
 	end
 	pset(48,64,8)
-	print(#_tiles,2,64,8)
+	--spr(0,0,0,16,16)
+
 	--_sprite_cache:print(2,16,7)
 	--_sprite_cache:draw(64)
 	print(stat(1).."\n"..stat(0),90,2,8)
@@ -63,7 +59,7 @@ function make_sprite_cache(maxlen)
 	end
 	
 	return {
-		use=function(self,id)
+		use=function(self,id,tiles)
 			--
 			local entry=index[id]
 			if entry then
@@ -71,17 +67,24 @@ function make_sprite_cache(maxlen)
 				-- force refresh
 			 remove(entry)
 			else
-				local slot=len
+				-- allocate a new 16x16 entry
+				-- todo: optimize
+				local sx,sy=(len<<4)&127,((len<<4)\128)<<4
 				-- list too large?
 				if len+1>maxlen then
 					local old=remove(first)
 					-- reuse cache entry
-					slot=old.slot
+					sx,sy=unpack(old.slot)
 					index[old.id]=nil
 				end
-				-- new
-				-- todo: refresh sprite
-				entry={id=id,slot=slot,t=time()}
+				-- new (or relocate)
+				-- copy data to sprite sheet
+				local mem=(sx\2)|sy<<6
+				for j=0,31 do
+					poke4(mem|(j&1)<<2|(j\2)<<6,tiles[id+j])
+				end		
+				--
+				entry={id=id,slot={sx,sy},t=time()}
 				-- reverse lookup
 				index[id]=entry
 			end
@@ -101,7 +104,7 @@ function make_sprite_cache(maxlen)
 				first,last=entry,entry
 			end
 			len+=1
-			return entry
+			return unpack(entry.slot)
 		end,
 		print=function(self,x,y,c)
 		 color(c)
@@ -189,10 +192,12 @@ function unpack_sprites()
 	end)
 	unpack_array(function()
 		-- 16 rows of 2*8 pixels
-		for i=1,32 do
+		for k=0,31 do
 			add(tiles,unpack_fixed())
 		end
 	end)
+	-- restore spritesheet
+	reload()
 	return frames,tiles
 end
 

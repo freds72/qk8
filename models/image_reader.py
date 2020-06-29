@@ -57,7 +57,8 @@ def lzw_encode(data):
 local_dir = os.path.dirname(os.path.realpath(__file__))
 
 data = bytes([])
-files = ['CYBRA1.png','CYBRA2.png','CYBRA3.png','CYBRA4.png','CYBRA5.png','CYBRA6.png','CYBRA7.png','CYBRA8.png']
+#files = ['CYBRA1.png','CYBRA2.png','CYBRA3.png','CYBRA4.png','CYBRA5.png','CYBRA6.png','CYBRA7.png','CYBRA8.png']
+files = ['CYBRA1.png','CYBRA2.png','CYBRA3.png','CYBRA4.png','CYBRA5.png','CYBRA6.png','CYBRA7.png','CYBRA8.png','CYBRB1.png','CYBRB2.png','CYBRB3.png','CYBRB4.png','CYBRB5.png','CYBRB6.png','CYBRB7.png','CYBRB8.png','CYBRC1.png','CYBRC2.png','CYBRC3.png','CYBRC4.png','CYBRC5.png','CYBRC6.png','CYBRC7.png','CYBRC8.png','CYBRD1.png','CYBRD2.png','CYBRD3.png','CYBRD4.png','CYBRD5.png','CYBRD6.png','CYBRD7.png','CYBRD8.png','CYBRE1.png','CYBRE2.png','CYBRE3.png','CYBRE4.png','CYBRE5.png','CYBRE6.png','CYBRE7.png','CYBRE8.png','CYBRF1.png','CYBRF2.png','CYBRF3.png','CYBRF4.png','CYBRF5.png','CYBRF6.png','CYBRF7.png','CYBRF8.png','CYBRG1.png','CYBRG2.png','CYBRG3.png','CYBRG4.png','CYBRG5.png','CYBRG6.png','CYBRG7.png','CYBRG8.png','CYBRH0.png','CYBRI0.png','CYBRJ0.png','CYBRK0.png','CYBRL0.png','CYBRM0.png','CYBRN0.png','CYBRO0.png','CYBRP0.png']
 
 img = Image.open("{}\\{}".format(local_dir,'palette_line.png'))
 rgba_to_pico = {}
@@ -100,7 +101,7 @@ for f in files:
             high = high==transparency and 15 or rgba_to_pico[indexed_to_rgba[high]]
             pixels.append(low|high<<4)
           image_data += bytes(pixels[::-1])
-      # fully transparent tile?
+      # skip fully transparent tile
       if not all(b==0xff for b in image_data):
         data += image_data
         # reference to corresponding tiles
@@ -108,8 +109,7 @@ for f in files:
         tiles += 1
   metadata += pack_variant(len(frame_tiles))
   for i,tile in frame_tiles.items():
-    metadata += "{:02x}".format(i)
-    metadata += pack_variant(tile*32+1)
+    metadata += "{:02x}{}".format(i,pack_variant(tile*32+1))
 
 # compressed = lzw_encode(data)
 # print("uncompressed:{} / compressed: {}".format(len(data),len(compressed)))
@@ -120,6 +120,7 @@ metadata += pack_variant(tiles)
 for b in data:
     metadata += "{:02x}".format(b)
 # export as cart
+# todo: big monsters = dedicated tileset to avoid >> 32767 tiles
 to_multicart(metadata, "vsspr")
 
 
