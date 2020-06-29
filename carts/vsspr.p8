@@ -19,8 +19,7 @@ function _draw()
 	--vsspr(1,64,64,1)
 	local frame=_frames[flr(3*time()%#_frames)+1]
 	local w,h,tiles=unpack(frame)
-	for i,tile in ipairs(tiles) do
-		i-=1
+	for i,tile in pairs(tiles) do
 		local mem=0x6000|(i%w)<<3|(i\w)<<10
 		for j=0,31 do
 			poke4(mem|(j&1)<<2|(j\2)<<6,_tiles[tile+j])
@@ -184,7 +183,8 @@ function unpack_sprites()
 		local w,h=mpeek(),mpeek()
 		local frame=add(frames,{w,h,{}})
 		unpack_array(function()
-			add(frame[3],unpack_variant()*32+1)
+			-- tile index
+			frame[3][mpeek()]=unpack_variant()
 		end)
 	end)
 	unpack_array(function()
