@@ -10,28 +10,28 @@ end
 
 function _update()
 	--for i=1,100 do
-		_sprite_cache:use(rnd(32)\1)
+	_sprite_cache:use(rnd(32)\1)
 	--end
 end
 
 function _draw()
- cls()
- --vsspr(1,64,64,1)
- local frame=_frames[1]
+	cls()
+	--vsspr(1,64,64,1)
+	local frame=_frames[flr(3*time()%#_frames)+1]
 	local w,h,tiles=unpack(frame)
 	for i,tile in ipairs(tiles) do
 		i-=1
-		local mem=0x6000+(i%w)*8+(i\w)*64*16
+		local mem=0x6000|(i%w)<<3|(i\w)<<10
 		for j=0,31 do
-			poke4(mem+(j%2)*4+(j\2)*64,_tiles[tile+j])
+			poke4(mem|(j&1)<<2|(j\2)<<6,_tiles[tile+j])
 		end
-		print(tile,(i%w)*16,(i\w)*16,7)
+		-- print(tile,(i%w)*16,(i\w)*16,7)
 	end
 	pset(48,64,8)
 	print(#_tiles,2,64,8)
- --_sprite_cache:print(2,16,7)
- --_sprite_cache:draw(64)
- -- print(stat(1).."\n"..stat(0),2,2,8)
+	--_sprite_cache:print(2,16,7)
+	--_sprite_cache:draw(64)
+	print(stat(1).."\n"..stat(0),90,2,8)
 
 	pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
 end
