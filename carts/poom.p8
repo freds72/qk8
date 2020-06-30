@@ -207,7 +207,7 @@ function polyfill(v,offset,tex,light)
 end
 
 function draw_segs2d(segs,pos,txt)
-  local verts,outcode,clipcode,leftclip,rightclip={},0xffff,0,0,0
+  local verts,outcode,clipcode={},0xffff,0
   local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
   
   -- to cam space + clipping flags
@@ -226,29 +226,21 @@ function draw_segs2d(segs,pos,txt)
     local v={ax,m8,az,seg=seg,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
     verts[i]=v
     outcode&=code 
-    leftclip+=(code&8)
-    rightclip+=(code&4)
     clipcode+=(code&2)
   end
 
   if outcode==0 then
     if(clipcode!=0) verts=z_poly_clip(16,verts)
     if #verts>2 then
-      if(leftclip!=0) verts=poly_clip(-0.8944,0.4472,0,verts)
-      if #verts>2 then
-        if(rightclip!=0) verts=poly_clip(0.8944,0.4472,0,verts)
-        if #verts>2 then
-          local v0=verts[#verts]
-          local x0,y0,w0=cam_to_screen2d(v0)
-          for i=1,#verts do
-            local v1=verts[i]
-            local x1,y1,w1=cam_to_screen2d(v1)
-            
-            line(x0,y0,x1,y1,v0.c or 11)
-            x0,y0=x1,y1
-            v0=v1
-          end
-        end
+      local v0=verts[#verts]
+      local x0,y0,w0=cam_to_screen2d(v0)
+      for i=1,#verts do
+        local v1=verts[i]
+        local x1,y1,w1=cam_to_screen2d(v1)
+        
+        line(x0,y0,x1,y1,v0.c or 11)
+        x0,y0=x1,y1
+        v0=v1
       end
     end
   end
@@ -375,7 +367,7 @@ end
 
 -- ceil/floor/wal rendering
 function draw_flats(v_cache,segs,things)
-  local verts,outcode,nearclip,leftclip,rightclip={},0xffff,0,0,0
+  local verts,outcode,nearclip={},0xffff,0
   local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
   
   -- to cam space + clipping flags
@@ -403,56 +395,47 @@ function draw_flats(v_cache,segs,things)
     verts[i]=v
     local code=v.outcode
     outcode&=code
-    leftclip+=(code&4)
-    rightclip+=(code&8)
     nearclip+=(code&2)
   end
   -- out of screen?
   if outcode==0 then
     if(nearclip!=0) verts=z_poly_clip(_znear,verts)
     if #verts>2 then
-      if(leftclip!=0) verts=poly_clip(-0.8944,0.4472,0,verts)
-      if #verts>2 then
-        if(rightclip!=0) verts=poly_clip(0.8944,0.4472,0,verts)
-        if #verts>2 then
+      local sector=segs.sector
 
-          local sector=segs.sector
+      -- no texture = sky/background
+      if(sector.floortex and sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,sector.floorlight/2)
+      if(sector.ceiltex and sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight/2)
 
-          -- no texture = sky/background
-          if(sector.floortex and sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,sector.floorlight/2)
-          if(sector.ceiltex and sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight/2)
+      draw_sub_sector(segs,verts)
 
-          draw_sub_sector(segs,verts)
-
-          -- draw things (if any)
-          local head,pal0=things[1].next
-          while head do
-            local thing=head.thing
-            local x0,y0,w0=head.x,head.y,head.w
-            local pal1=0--4\w0
-            if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1    
-            palt(0,true)
-            w0*=2
-            if thing.draw then
-              thing:draw(x0,y0,w0)
-            else
-              local frame=thing.actor.frames[1]
-              if frame then
-                -- pick side (if any)
-                local sides,side=frame.sides,1
-                if #sides>1 then
-                  local angle=atan2(-thing[1]+plyr[1],thing[2]-plyr[2])-thing.angle+0.0625
-                  angle=(angle%1+1)%1
-                  side=(#sides*angle)\1+1
-                end
-                local sy,sx,sh,sw,ox,flipx=unpack(sides[side])
-                sspr(sx,sy,sw,sh,x0-ox*w0,y0-sh*w0,sw*w0,sh*w0,flipx)
-                --pset(x0,y0,15)
-              end 
+      -- draw things (if any)
+      local head,pal0=things[1].next
+      while head do
+        local thing=head.thing
+        local x0,y0,w0=head.x,head.y,head.w
+        local pal1=0--4\w0
+        if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1    
+        palt(0,true)
+        w0*=2
+        if thing.draw then
+          thing:draw(x0,y0,w0)
+        else
+          local frame=thing.actor.frames[1]
+          if frame then
+            -- pick side (if any)
+            local sides,side=frame.sides,1
+            if #sides>1 then
+              local angle=atan2(-thing[1]+plyr[1],thing[2]-plyr[2])-thing.angle+0.0625
+              angle=(angle%1+1)%1
+              side=(#sides*angle)\1+1
             end
-            head=head.next
-          end
+            local sy,sx,sh,sw,ox,flipx=unpack(sides[side])
+            sspr(sx,sy,sw,sh,x0-ox*w0,y0-sh*w0,sw*w0,sh*w0,flipx)
+            --pset(x0,y0,15)
+          end 
         end
+        head=head.next
       end
     end
   end
@@ -627,7 +610,7 @@ function _update()
     --local da=atan2(64,64-_mousex)
     --plyr.angle=lerp(plyr.angle,plyr.angle+da,0.1)
     local da=(64-_mousex)/128
-    --plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
+    plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
   end
 
   local ca,sa=cos(plyr.angle),sin(plyr.angle)
@@ -1019,26 +1002,6 @@ function z_poly_clip(znear,v)
 	for i=1,#v do
 		local v1=v[i]
 		local d1=v1[3]-znear
-		if d1>0 then
-      if d0<=0 then
-        res[#res+1]=v_clip(v0,v1,d0/(d0-d1))
-      end
-			res[#res+1]=v1
-		elseif d0>0 then
-      res[#res+1]=v_clip(v0,v1,d0/(d0-d1))
-    end
-		v0,d0=v1,d1
-	end
-	return res
-end
--- generic p plane / v vertex cliping
-function poly_clip(px,pz,d,v)
-  local res,v0={},v[#v]
-  -- x/z plane only
-	local d0=px*v0[1]+pz*v0[3]-d
-	for i=1,#v do
-		local v1=v[i]
-		local d1=px*v1[1]+pz*v1[3]-d
 		if d1>0 then
       if d0<=0 then
         res[#res+1]=v_clip(v0,v1,d0/(d0-d1))

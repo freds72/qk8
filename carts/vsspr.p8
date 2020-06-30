@@ -8,24 +8,36 @@ function _init()
 	_sprite_cache=make_sprite_cache(32)
 end
 
+function vspr(sx,sy,angle,scale)
+	palt(15,true)
+	local frame=_frames[flr(angle*#_frames)+1]
+	local w,h,tiles=unpack(frame)
+  --local scale=16--((abs(cos(time()/4))+2)<<4)\1+1
+	for i,tile in pairs(tiles) do
+		local ssx,ssy=_sprite_cache:use(tile,_tiles)
+		sspr(ssx,ssy,16,16,sx+(i%w-w/2)*scale,sy+(i\w-h)*scale,scale,scale)
+		-- print(tile,(i%w)*16,(i\w)*16,7)
+	end
+end
+
+local angle=0
 function _update()
+	if(btnp(0)) angle-=0.05
+	if(btnp(1)) angle+=0.05
+	angle=(angle%1+1)%1
 end
 
 function _draw()
 	cls(1)
-	palt(0,false)
-	palt(15,true)
 	--vsspr(1,64,64,1)
-	local frame=_frames[flr(3*time()%#_frames)+1]
-	local w,h,tiles=unpack(frame)
-  local scale=16--((abs(cos(time()/4))+2)<<4)\1+1
-	for i,tile in pairs(tiles) do
-		local sx,sy=_sprite_cache:use(tile,_tiles)
-		sspr(sx,sy,16,16,64+(i%w-w/2)*scale,64+(i\w-h/2)*scale,scale,scale)
-		-- print(tile,(i%w)*16,(i\w)*16,7)
+	--spr(0,0,64,16,8)
+	palt(0,false)
+	for i=16,96,32 do
+		vspr(i,64,angle,16)
 	end
 	palt()
-	--spr(0,0,64,16,8)
+
+	-- spr(0,0,64,16,8)
 
 	--_sprite_cache:print(2,16,7)
 	--_sprite_cache:draw(64)
