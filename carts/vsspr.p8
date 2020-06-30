@@ -12,17 +12,20 @@ function _update()
 end
 
 function _draw()
-	cls()
+	cls(1)
+	palt(0,false)
+	palt(15,true)
 	--vsspr(1,64,64,1)
 	local frame=_frames[flr(3*time()%#_frames)+1]
 	local w,h,tiles=unpack(frame)
+  local scale=16--((abs(cos(time()/4))+2)<<4)\1+1
 	for i,tile in pairs(tiles) do
 		local sx,sy=_sprite_cache:use(tile,_tiles)
-		sspr(sx,sy,16,16,(i%w)*16,(i\w)*16,16,16)
+		sspr(sx,sy,16,16,64+(i%w-w/2)*scale,64+(i\w-h/2)*scale,scale,scale)
 		-- print(tile,(i%w)*16,(i\w)*16,7)
 	end
-	pset(48,64,8)
-	--spr(0,0,0,16,16)
+	palt()
+	--spr(0,0,64,16,8)
 
 	--_sprite_cache:print(2,16,7)
 	--_sprite_cache:draw(64)
@@ -59,13 +62,13 @@ function make_sprite_cache(maxlen)
 	end
 	
 	return {
+		index={},
 		use=function(self,id,tiles)
-			--
 			local entry=index[id]
 			if entry then
 				-- existing item?
 				-- force refresh
-			 remove(entry)
+				remove(entry)
 			else
 				-- allocate a new 16x16 entry
 				-- todo: optimize
@@ -74,7 +77,7 @@ function make_sprite_cache(maxlen)
 				if len+1>maxlen then
 					local old=remove(first)
 					-- reuse cache entry
-					sx,sy=unpack(old.slot)
+					sx,sy=old[1],old[2]
 					index[old.id]=nil
 				end
 				-- new (or relocate)
@@ -84,7 +87,7 @@ function make_sprite_cache(maxlen)
 					poke4(mem|(j&1)<<2|(j\2)<<6,tiles[id+j])
 				end		
 				--
-				entry={id=id,slot={sx,sy},t=time()}
+				entry={sx,sy,id=id}
 				-- reverse lookup
 				index[id]=entry
 			end
@@ -104,7 +107,8 @@ function make_sprite_cache(maxlen)
 				first,last=entry,entry
 			end
 			len+=1
-			return unpack(entry.slot)
+			-- return sprite sheet coords
+			return entry[1],entry[2]
 		end,
 		print=function(self,x,y,c)
 		 color(c)
