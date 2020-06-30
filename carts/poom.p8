@@ -24,7 +24,7 @@ end
 
 
 function cam_to_screen2d(v)
-  local x,y=v[1]/16,v[3]/16
+  local x,y=v[1]/8,v[3]/8
   return 64+x,64-y
 end
 
@@ -238,7 +238,7 @@ function draw_segs2d(segs,pos,txt)
         local v1=verts[i]
         local x1,y1,w1=cam_to_screen2d(v1)
         
-        line(x0,y0,x1,y1,v0.c or 11)
+        line(x0,y0,x1,y1,11)
         x0,y0=x1,y1
         v0=v1
       end
@@ -487,6 +487,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
   local px,pz,dx,dz,tmax_seg=p[1],p[2],d[1],d[2]
 
   -- hitting things?
+  local things_hits={t=-32000}
   for _,thing in pairs(_things) do
     if thing.actor and thing.subs[segs] then
       -- overflow 'safe' coordinates
@@ -502,10 +503,25 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
           -- if t is negative, ray started inside sphere so clamp t to zero 
           -- if(t<tmin) t=tmin
           -- record hit
-          if(t>=tmin and t<tmax) add(res,{t=t,thing=thing})
+          if t>=tmin and t<tmax then
+            -- empty list case
+            local head,prev=things_hits,things_hits
+            while head and head.t<t do
+              -- swap/advance
+              prev,head=head,head.next
+            end
+            -- insert new thing
+            prev.next={t=t,thing=thing,next=prev.next}
+          end
         end
       end
     end
+  end
+  -- add sorted things intersections
+  local head=things_hits.next
+  while head do
+    add(res,head)
+    head=head.next
   end
 
   for i=1,#segs do
@@ -795,7 +811,7 @@ function _draw()
   elseif false then --btn(5) then
     pal(_screen_pal,1)
     map()
-  elseif false then --btn(4) then
+  elseif btn(4) then
     -- restore palette
     pal(_screen_pal,1)
 
@@ -808,8 +824,7 @@ function _draw()
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       if node.leaf[side] then
         local subs=node[side]
-        -- potentially visible?
-        if(pvs[subs.id]) draw_segs2d(subs,pos,8)
+        draw_segs2d(subs,pos,8)
       else
         -- bounding box
         --[[
@@ -874,7 +889,7 @@ function _draw()
           lines[ldef]=true
         end
       else
-        print(hit.thing.actor.id,x0+2,y0-3,8)
+        print(i..":"..hit.thing.actor.id,x0+2,y0-3,8)
       end
     end
     pset(64,64,15)
