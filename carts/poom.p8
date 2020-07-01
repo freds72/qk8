@@ -3,15 +3,14 @@ version 27
 __lua__
 
 -- globals
-_bsp,_verts=nil
-_cam,plyr,_things=nil
-_onoff_textures={}
-_inventory,_selected_wp,_wp_frame={},1,2
-_znear=16
-_yceil,_yfloor=nil
-_msg=nil
-local k_far,k_near=0,2
-local k_right,k_left=4,8
+local _bsp=nil
+local _cam,plyr,_things=nil
+local _onoff_textures={}
+local _znear=16
+local _msg=nil
+
+--local k_far,k_near=0,2
+--local k_right,k_left=4,8
 
 -- copy color ramps to memory
 local mem=0x4300
@@ -125,10 +124,7 @@ function v2_dot(a,b)
 end
 
 function v2_normal(v)
-  local x,y=abs(v[1]),abs(v[2])
-  local d=max(x,y)
-  local n=min(x,y)/d
-  d*=sqrt(n*n + 1)
+  local d=v2_len(v)
   return {v[1]/d,v[2]/d},d
 end
 
@@ -443,8 +439,7 @@ end
 -- traverse and renders bsp in back to front order
 -- calls 'visit' function
 function visit_bsp(node,pos,visitor)
-  local n=node.n
-  local side=n[1]*pos[1]+n[2]*pos[2]<=node.d
+  local side=node[1]*pos[1]+node[2]*pos[2]<=node[3]
   visitor(node,side,pos,visitor)
   visitor(node,not side,pos,visitor)
 end
@@ -452,7 +447,7 @@ end
 function find_sub_sector(root,pos)
   if(not root) return
   -- go down (if possible)
-  local side=v2_dot(root.n,pos)<=root.d
+  local side=v2_dot(root,pos)<=root[3]
   if root.leaf[side] then
     -- leaf?
     return root[side]
@@ -463,8 +458,8 @@ end
 
 function find_ssector_thick(root,pos,radius,res)
   -- go down (if possible)
-  local dist=v2_dot(root.n,pos)
-  local side,otherside=dist<=root.d-radius,dist<=root.d+radius
+  local dist,d=v2_dot(root,pos),root[3]
+  local side,otherside=dist<=d-radius,dist<=d+radius
   -- leaf?
   if root.leaf[side] then
     res[root[side]]=true
@@ -626,7 +621,7 @@ function _update()
     --local da=atan2(64,64-_mousex)
     --plyr.angle=lerp(plyr.angle,plyr.angle+da,0.1)
     local da=(64-_mousex)/128
-    plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
+    --plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
   end
 
   local ca,sa=cos(plyr.angle),sin(plyr.angle)
@@ -1032,8 +1027,7 @@ end
 
 -->8
 -- unpack map
-local cart_id,mem
-local cart_progress=0
+local cart_progress,cart_id,mem=0
 function mpeek()
 	if mem==0x4300 then
 		cart_progress=0
@@ -1062,8 +1056,7 @@ function unpack_variant()
 	local h=mpeek()
 	-- above 127?
   if h&0x80>0 then
-    local hl=mpeek()
-    h=(h&0x7f)<<8|hl
+    h=(h&0x7f)<<8|mpeek()
   end
 	return h
 end
@@ -1203,6 +1196,7 @@ function unpack_special(special,line,sectors)
     end)
   end
 end
+
 function unpack_texture()
   local tex=unpack_fixed()
   return tex!=0 and tex
@@ -1256,9 +1250,6 @@ function unpack_map()
     add(lines,line)
   end)
 
-  printh("*******")
-  printh(stat(0))
-
   local sub_sectors,all_segs={},{}
   unpack_array(function(i)
     -- register current sub-sector in pvs
@@ -1281,7 +1272,7 @@ function unpack_map()
       --assert(segs.sector,"missing sector")
       add(all_segs,s)
     end)
-    -- pvs
+    -- pvs (backed as a bit array)
     unpack_array(function()
       local id=unpack_variant()
       local mask=segs.pvs[id\32] or 0
@@ -1314,13 +1305,11 @@ function unpack_map()
   for _,seg in pairs(all_segs) do
     seg.partner=sub_sectors[seg.partner]
   end
-  printh(stat(0))
-
   local nodes={}
   unpack_array(function()
     local node=add(nodes,{
-      n={unpack_fixed(),unpack_fixed()},
-      d=unpack_fixed(),
+      unpack_fixed(),unpack_fixed(),
+      unpack_fixed(),
       bbox={},
       leaf={}})
     local flags=mpeek()
