@@ -484,9 +484,11 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
   -- hitting things?
   local things_hits={t=-32000}
   for _,thing in pairs(_things) do
-    if thing.actor and thing.subs[segs] then
+    local actor=thing.actor
+    -- is actor solid?
+    if actor and actor.flags&0x1>0 and thing.subs[segs] then
       -- overflow 'safe' coordinates
-      local m,r={(px-thing[1])>>8,(pz-thing[2])>>8},thing.actor.radius>>8
+      local m,r={(px-thing[1])>>8,(pz-thing[2])>>8},actor.radius>>8
       local b,c=v2_dot(m,d),v2_dot(m,m)-r*r
 
       -- check distance and ray direction vs. circle
@@ -573,10 +575,8 @@ local depthsorted_cls={
 -->8
 -- game loop
 function _init()
-  	-- mouse support
+  -- mouse support
 	poke(0x5f2d,1)
-
-  palt(0,false)
 
   _bsp,_things=unpack_map()
 
@@ -621,13 +621,15 @@ function _update()
     --local da=atan2(64,64-_mousex)
     --plyr.angle=lerp(plyr.angle,plyr.angle+da,0.1)
     local da=(64-_mousex)/128
-    --plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
+    plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
   end
 
   local ca,sa=cos(plyr.angle),sin(plyr.angle)
   local v={2*(dz*ca-dx*sa),2*(dz*sa+dx*ca)}
   plyr.v[1]+=v[1]
   plyr.v[2]+=v[2]
+  -- gravity
+  plyr.v[3]-=2
   local move_dir,move_len=v2_normal(plyr.v)
   if(move_len<0) move_dir={-move_dir[1],-move_dir[2]} move_len=-move_len
 
@@ -645,7 +647,7 @@ function _update()
   if ss then
     -- todo: unify ray intersection w/ things
     local hits={}
-    local radius=plyr.actor.radius
+    local radius,height=plyr.actor.radius,plyr.height
     intersect_sub_sector(ss,plyr,move_dir,0,move_len+radius,hits)
     if move_len!=0 then
       -- move
@@ -656,22 +658,18 @@ function _update()
       for _,hit in ipairs(hits) do
         local fix_move
         if hit.seg then
+          -- bsp hit?
           local ldef=hit.seg.line
-          -- todo:remove/useless
-          if hit.t<move_len+radius then
-            local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
-            if otherside==nil then
-              fix_move=true
-            elseif abs(facingside.sector.floor-otherside.sector.floor)>24 then
-              fix_move=true
-            elseif abs(facingside.sector.floor-otherside.sector.ceil)<64 then
-              fix_move=true
-            end
-            
-            -- cross special?
-            if ldef.trigger and ldef.flags&0x10>0 then
-              ldef.trigger(plyr)
-            end
+          local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
+          if otherside==nil then
+            fix_move=true
+          elseif otherside.sector.floor-height>16 then
+            fix_move=true
+          end
+          
+          -- cross special?
+          if ldef.trigger and ldef.flags&0x10>0 then
+            ldef.trigger(plyr)
           end
     
           if fix_move then
@@ -683,6 +681,7 @@ function _update()
             plyr[2]+=fix*n[2]
           end
         else
+          -- thing hit?
           local actor=hit.thing.actor
           if actor and actor.kind!=7 then
             if hit.t<radius then
@@ -730,49 +729,23 @@ function _update()
       end
     end
 
-    -- things collision
-    --[[
-    for k,thing in pairs(_things) do
-      -- find sector
-      local actor=thing.actor
-      if actor and actor.kind!=7 then
-        -- todo: hit check with projectile
-        local dist=v2_dist(plyr,thing)
-        if dist<actor.radius+radius then
-          if actor.trigger then
-            actor.trigger(plyr.actor)
-            -- todo: optimize?
-            -- todo: flag to remove or not?
-            do_async(function()
-              -- remove from world
-              -- todo: optimize del!!!
-              del(_things,thing)
-            end)
-          else
-            -- todo: check if blocking
-            local n=v2_normal(v2_make(thing,plyr))
-            local fix=-(actor.radius+radius-dist)*v2_dot(n,move_dir)
-            -- avoid being pulled toward prop
-            if fix>0 then
-              -- fix position
-              plyr[1]+=fix*n[1]
-              plyr[2]+=fix*n[2]
-            end
-          end
-        end
-      end
-    end
-    ]]
-
+    -- refresh sector after fixed collision
     ss=find_sub_sector(_bsp,plyr)
     plyr.sector=ss.sector
     plyr.subs=ss
-    plyr.height=ss.sector.floor--+abs(cos(time()/4)*move_len)
+    height+=plyr.v[3]
+    if height<ss.sector.floor then
+      -- todo: fall damage
+      plyr.v[3]=0
+      height=ss.sector.floor
+    end
+    plyr.height=height
   end
 
   _cam:track(plyr,plyr.angle,plyr.height+45)
 
   local pactor=plyr.actor
+
   if btnp(4) and pactor.selected_slot then
     local wp=pactor.weapons[5]
     wp.trigger(pactor,plyr,plyr.height+32,plyr.angle)
@@ -959,6 +932,16 @@ function _draw()
     sspr(unpack(_weapons[_selected_wp].sprite[_wp_frame]))
     palt()
     ]]
+
+    --[[
+    if rnd()>0.9 then
+      fillp(0xa5a5.f)
+      circfill(-150,64,180,12)
+      fillp()
+      circfill(-160,64,170,12)
+    end
+    ]]
+
     
     if(_msg) print(_msg,64-#_msg*2,120,15)
 
@@ -972,6 +955,9 @@ function _draw()
     print("♥"..actor.health,2,110,12)
     print("웃"..actor.armor,2,121,4)
     print("웃"..actor.armor,2,120,3)
+    local ammo=actor[actor.weapons[5].ammotype]
+    print("∧"..ammo,2,101,9)
+    print("∧"..ammo,2,100,8)
     
     --[[
     local y=64
@@ -1346,8 +1332,8 @@ function unpack_map()
         intersect_sub_sector(ss,self,{ca,sa},0,speed+radius,hits)
       
         -- hit something?
+        local kill
         for _,hit in ipairs(hits) do
-          local kill
           if hit.seg then
             local ldef=hit.seg.line
             -- 
@@ -1355,45 +1341,47 @@ function unpack_map()
               local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
               if otherside==nil then
                 -- solid wall?
-                kill=true
+                kill=hit
               elseif otherside.sector.floor>height-radius or otherside.sector.ceil<height+radius then
                 -- opening?
-                kill=true
+                kill=hit
               end
             end
           else
             -- hit thing
-            local otherthing=hit.thing
-            kill=true
-            do_async(function()
-              del(things,otherthing) 
-            end)
+            local otheractor=hit.thing.actor
+            -- shootable?
+            if otheractor.flags&0x2>0 then
+              kill=hit
+              --hit.thing:hit(projectile.dmg,projectile.dmgtype)
+            end
           end
+          if(kill) break
+        end
 
-          if kill then
-            local x0,y0,t=self[1],self[2],hit.t
-            do_async(function()
-              local subs,ttl={},10
-              find_ssector_thick(_bsp,{x0,y0},radius,subs)
-              add(things,{
-                x0+t*ca,
-                y0+t*sa,
-                height=height,
-                subs=subs,
-                update=function(self)
-                  ttl-=1
-                  -- todo: factorize
-                  if(ttl<0) do_async(function() del(things,self) end)
-                end,
-                draw=function(self,x,y,w)
-                  local r=8*w*ttl/10
-                  circfill(x,y-4*w,r,2)
-                end
-              })
-              del(things,self) 
-            end)
-            return
-          end
+        if kill then
+          local x0,y0,t=self[1],self[2],kill.t
+          do_async(function()
+            local subs,ttl={},10
+            find_ssector_thick(_bsp,{x0,y0},radius,subs)
+            add(things,{
+              x0+t*ca,
+              y0+t*sa,
+              height=height,
+              subs=subs,
+              update=function(self)
+                ttl-=1
+                -- todo: factorize
+                if(ttl<0) do_async(function() del(things,self) end)
+              end,
+              draw=function(self,x,y,w)
+                local r=8*w*ttl/10
+                circfill(x,y-4*w,r,2)
+              end
+            })
+            del(things,self) 
+          end)
+          return
         end
 
         self[1]+=speed*ca
@@ -1416,6 +1404,10 @@ function unpack_map()
       id=id,
       kind=kind,
       radius=unpack_fixed(),
+      -- mask layout:
+      -- 1: solid
+      -- 2: shootable
+      flags=mpeek(),
       frames={}
     }
     unpack_array(function()
@@ -1451,6 +1443,8 @@ function unpack_map()
         item.slot=unpack_variant()
         local ammouse,ammogive,ammotype,projectile=unpack_variant(),unpack_variant(),unpack_variant(),actors[unpack_variant()]
         printh("weapon:"..id.." slot:"..item.slot.." ammouse:"..ammouse)
+        --  for hud
+        item.ammotype=ammotype
         item.pickup=function(actor)
           actors[ammotype].pickup(actor,ammogive)
           -- todo: switch weapon logic
@@ -1479,8 +1473,8 @@ function unpack_map()
       -- projectile
       item.damage=unpack_variant()
       item.speed=unpack_variant()
-    elseif kind==8 then
-      -- player
+    elseif kind==8 or kind==6 then
+      -- player or monster
       item.health=unpack_variant()
       item.armor=unpack_variant()
       unpack_array(function()
@@ -1512,7 +1506,7 @@ function unpack_map()
         unpack_fixed(),
         unpack_fixed(),
         actor=actors[id],
-        v={0,0},
+        v={0,0,0},
         angle=unpack_variant()/360,
         height=0,
         ammo={}
@@ -1536,7 +1530,7 @@ function unpack_map()
 
   -- restore main cart
   reload()
-  return nodes[#nodes],things,inventory
+  return nodes[#nodes],things
 end
 
 __gfx__

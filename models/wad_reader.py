@@ -198,8 +198,10 @@ def pack_named_texture(owner, textures, name):
   if name not in owner: return "04080202"
   # de-reference texture name
   name = owner[name]
+  if name == '-': return "00000000"
+
   # no texture/blank texture
-  if name not in textures: return "00000000"
+  if name not in textures: return "04080202"
   return pack_texture(textures[name])
 
 def pack_lightlevel(owner, name):
@@ -382,6 +384,8 @@ def pack_zmap(map, textures, actors):
     s += pack_variant(actor.id)
     # other shared properties
     s += pack_fixed(actor.radius)
+    flags = (actor.get('solid',False) and 1 or 0) | (actor.get('shootable',False) and 2 or 0)
+    s += "{:02x}".format(flags)
     # frames
     s += pack_variant(len(actor.frames))
     for frame in actor.frames:
@@ -410,7 +414,7 @@ def pack_zmap(map, textures, actors):
       s += pack_variant(actor.amount)
       s += pack_variant(actor.maxamount)
       # todo: pickup sound
-    elif actor.kind==ACTOR_KIND.PLAYER:
+    elif actor.kind in [ACTOR_KIND.PLAYER, ACTOR_KIND.MONSTER]:
       s += pack_variant(actor.health)
       s += pack_variant(actor.armor)
       startitems = actor.get('startitems',[])

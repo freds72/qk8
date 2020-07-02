@@ -44,6 +44,15 @@ class DECORATEListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by DECORATEParser#flags.
+    def enterFlags(self, ctx:DECORATEParser.FlagsContext):
+        pass
+
+    # Exit a parse tree produced by DECORATEParser#flags.
+    def exitFlags(self, ctx:DECORATEParser.FlagsContext):
+        pass
+
+
     # Enter a parse tree produced by DECORATEParser#states.
     def enterStates(self, ctx:DECORATEParser.StatesContext):
         pass

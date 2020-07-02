@@ -8,7 +8,7 @@ actors:
   ;
 
 block:
-  ('ACTOR'|'actor') name (':' parent)? uid? '{' pair* states? '}'
+  ('ACTOR'|'actor') name (':' parent)? uid? '{' pair* flags* states? '}'
   ;
 
 pair:
@@ -17,6 +17,10 @@ pair:
   
 keyword:
   KEYWORD
+  ;
+
+flags:
+  ENABLED keyword
   ;
 
 states:
@@ -71,6 +75,10 @@ value:
   ;
 
 // lexer
+ENABLED:
+  ('-'|'+')
+  ;
+
 NUMBER
   : '-'? DIGIT+ ('.' DIGIT+)?
   ;

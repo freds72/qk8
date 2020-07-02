@@ -26,38 +26,49 @@ builtin_actors = {
     'kind': ACTOR_KIND.KEY,
     'amount': 1,
     'maxamount':1,
-    'radius': 20
+    'radius': 20,
+    'solid': True
   },
   'ammo':{
     'kind': ACTOR_KIND.AMMO,
-    'radius': 20
+    'radius': 20,
+    'solid': True
   },
   'weapon':{
     'kind': ACTOR_KIND.WEAPON,
     'radius': 20,
     'amount': 0,
-    'maxamount': 1
+    'maxamount': 1,
+    'solid': True
   },
   'health':{
     'kind': ACTOR_KIND.HEALTH,
     'radius': 20,
-    'maxamount': 200
+    'maxamount': 200,
+    'solid': True
   },
   'armor':{
     'kind': ACTOR_KIND.ARMOR,
     'radius': 20,
-    'maxamount': 200
+    'maxamount': 200,
+    'solid': True
   },
   'player':{
     'kind': ACTOR_KIND.PLAYER,
     'radius': 32,
     'armor': 100,
     'health': 100,
-    'speed': 3
+    'speed': 3,
+    'shootable': True,
+    'solid': True
   },
   'monster':{
     'kind': ACTOR_KIND.MONSTER,
-    'radius': 32
+    'radius': 32,
+    'armor': 0,
+    'health': 50,
+    'shootable': True,
+    'solid': True
   },
   'projectile':{
     'kind': ACTOR_KIND.PROJECTILE,
@@ -134,6 +145,12 @@ class DecorateWalker(DECORATEListener):
         
         # else string
         properties[attribute] = value
+      
+      # flags
+      for flag in ctx.flags():
+        activated = flag.ENABLED().getText()
+        attribute = flag.keyword().getText().lower()
+        properties[attribute] = activated=='+'
       
       # add sprite frames
       frames = []
