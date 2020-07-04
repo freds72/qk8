@@ -194,14 +194,18 @@ def pack_texture(texture):
   return "{:02x}{:02x}{:02x}{:02x}".format(texture.my,texture.mx,texture.height,texture.width)
 
 def pack_named_texture(owner, textures, name):
-  # unknown texture
-  if name not in owner: return "04080202"
+  # no upper/middle/lower/ceiling/floor entries?
+  if name not in owner: 
+    return "00000000"
   # de-reference texture name
   name = owner[name]
-  if name == '-': return "00000000"
+  # logical 'no texture'
+  if name == '-': 
+    return "00000000"
 
   # no texture/blank texture
-  if name not in textures: return "04080202"
+  if name not in textures: 
+    return "04080202"
   return pack_texture(textures[name])
 
 def pack_lightlevel(owner, name):
@@ -286,6 +290,9 @@ def pack_thing(thing, actors):
   s += pack_fixed(thing.y)
   s += pack_variant(thing.get('angle',0))
   return s
+
+def pack_flag(owner, name):
+  return owner.get(name,False) and 1 or 0
 
 def pack_zmap(map, textures, actors):
   # shortcut to wall textures
@@ -382,9 +389,10 @@ def pack_zmap(map, textures, actors):
     # actor "class"
     s += pack_variant(actor.kind)
     s += pack_variant(actor.id)
-    # other shared properties
+    # mandatory/shared properties
     s += pack_fixed(actor.radius)
-    flags = (actor.get('solid',False) and 1 or 0) | (actor.get('shootable',False) and 2 or 0)
+    # behavior flags
+    flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2
     s += "{:02x}".format(flags)
     # frames
     s += pack_variant(len(actor.frames))
@@ -409,35 +417,69 @@ def pack_zmap(map, textures, actors):
         s += pack_fixed(texture.xoffset)
       else:
         raise Exception("Unknown frame: {}x in TEXTURES".format(pattern))
-    if actor.kind<ACTOR_KIND.DEFAULT:
-      # shared inventory properties
-      s += pack_variant(actor.amount)
-      s += pack_variant(actor.maxamount)
-      # todo: pickup sound
-    elif actor.kind in [ACTOR_KIND.PLAYER, ACTOR_KIND.MONSTER]:
-      s += pack_variant(actor.health)
-      s += pack_variant(actor.armor)
-      startitems = actor.get('startitems',[])
-      s += pack_variant(len(startitems))
+    
+    properties = 0
+#{0x0.0001,"health"},
+#{0x0.0002,"armor"},
+#{0x0.0004,"amount"},
+#{0x0.0008,maxamount"},
+#{0x0.000a,"icon",function() return chr(mpeek()) end},
+#{0x0.000c,"slot",mpeek},
+#{0x0.000f,"projectile",unpack_actor_ref},
+#{0x0.0010,"speed"},
+#{0x0.0020,"damage"},
+#{0x0.0040,"ammotype"},
+    properties_data = ""
+    if actor.get('health'):
+      properties |= 0x1
+      properties_data += pack_variant(actor.health)
+    if actor.get('armor'):
+      properties |= 0x2
+      properties_data += pack_variant(actor.armor)
+    if actor.get('amount'):
+      properties |= 0x4
+      properties_data += pack_variant(actor.amount)
+    if actor.get('maxamount'):
+      properties |= 0x8
+      properties_data += pack_variant(actor.maxamount)
+    if actor.get('icon'):
+      properties |= 0x10
+      properties_data += "{:02x}".format(actor.get('icon',63))
+    if actor.get('slotnumber'):
+      properties |= 0x20
+      properties_data += "{:02x}".format(actor.slotnumber)
+    if actor.get('projectile'):
+      properties |= 0x40
+      properties_data += pack_variant(actor.projectile)
+    if actor.get('speed'):
+      properties |= 0x80
+      properties_data += pack_variant(actor.speed)
+    if actor.get('damage'):
+      properties |= 0x100
+      properties_data += pack_variant(actor.damage)
+    if actor.get('ammotype'):
+      properties |= 0x200
+      properties_data += pack_variant(actor.ammotype)
+    if actor.get('startitems'):
+      properties |= 0x400
+      startitems = actor.startitems
+      properties_data += pack_variant(len(startitems))
       for si in startitems:
         # other actor reference
-        s += pack_variant(si[0])
+        properties_data += pack_variant(si[0])
         # amount
-        s += pack_variant(si[1])
-    # specific entries
-    if actor.kind==ACTOR_KIND.AMMO:
-      # all ammo child classes are bound to their parent
-      # ex: clipbox -> clip
-      s += pack_variant(actor.get('parent',actor.id))
-    elif actor.kind==ACTOR_KIND.WEAPON:
-      s += pack_variant(actor.slotnumber)
+        properties_data += pack_variant(si[1])
+    s += pack_int32(properties)
+    s += properties_data
+  
+    # class properties
+    if actor.kind==ACTOR_KIND.WEAPON:
       s += pack_variant(actor.ammouse)
       s += pack_variant(actor.ammogive)
-      s += pack_variant(actor.ammotype)
-      s += pack_variant(actor.projectile)
-    elif actor.kind==ACTOR_KIND.PROJECTILE:
-      s += pack_variant(actor.damage)
-      s += pack_variant(actor.speed)
+
+    if actor.kind==ACTOR_KIND.AMMO:
+      # ammo variants (normal, large) are tied to their parent type
+      s += pack_variant(actor.get('parent',actor.id))
   
   # things
   s += pack_variant(len(map.things))

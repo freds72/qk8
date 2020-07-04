@@ -624,12 +624,12 @@ function _update()
     plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
   end
 
-  local ca,sa=cos(plyr.angle),sin(plyr.angle)
-  local v={2*(dz*ca-dx*sa),2*(dz*sa+dx*ca)}
+  local speed,ca,sa=plyr.actor.speed,cos(plyr.angle),sin(plyr.angle)
+  local v={speed*(dz*ca-dx*sa),speed*(dz*sa+dx*ca)}
   plyr.v[1]+=v[1]
   plyr.v[2]+=v[2]
   -- gravity
-  plyr.v[3]-=2
+  plyr.v[3]-=1
   local move_dir,move_len=v2_normal(plyr.v)
   if(move_len<0) move_dir={-move_dir[1],-move_dir[2]} move_len=-move_len
 
@@ -639,7 +639,17 @@ function _update()
   _msg=nil
 
   for _,thing in pairs(_things) do
-    if(thing.update) thing:update()
+    local actor=thing.actor
+    if actor and actor.speed then
+      -- hit something?
+      -- local hits,ss={},find_sub_sector(_bsp,thing)
+
+      thing[1]+=actor.speed*thing.v[1]
+      thing[2]+=actor.speed*thing.v[2]
+      -- find all sectors where that thing is visible
+      thing.subs={}
+      find_ssector_thick(_bsp,thing,actor.radius,thing.subs)
+    end
   end
 
   -- check collision with world
@@ -663,7 +673,7 @@ function _update()
           local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
           if otherside==nil then
             fix_move=true
-          elseif otherside.sector.floor-height>16 then
+          elseif otherside.sector.floor-height>24 then
             fix_move=true
           end
           
@@ -779,7 +789,7 @@ function _draw()
   elseif false then --btn(5) then
     pal(_screen_pal,1)
     map()
-  elseif btn(4) then
+  elseif false then-- btn(4) then
     -- restore palette
     pal(_screen_pal,1)
 
@@ -1315,6 +1325,9 @@ function unpack_map()
 
   -- inventory & things
   local things,actors={},{}
+  local unpack_actor_ref=function()
+    return actors[unpack_variant()]
+  end
 
   -- helper function
   local make_projectile=function(projectile,pos,height,angle)
@@ -1353,7 +1366,8 @@ function unpack_map()
             -- shootable?
             if otheractor.flags&0x2>0 then
               kill=hit
-              --hit.thing:hit(projectile.dmg,projectile.dmgtype)
+              -- todo: hit
+              -- hit.thing:hit(projectile.dmg,projectile.dmgtype)
             end
           end
           if(kill) break
@@ -1404,12 +1418,14 @@ function unpack_map()
       id=id,
       kind=kind,
       radius=unpack_fixed(),
-      -- mask layout:
-      -- 1: solid
-      -- 2: shootable
+      -- flags layout:
+      -- 0x1: solid
+      -- 0x2: shootable
+      -- 0x4: missile
       flags=mpeek(),
       frames={}
     }
+    -- sprites
     unpack_array(function()
       local pose={ticks=unpack_fixed(),sides={}}
       -- get all pose sides
@@ -1418,78 +1434,96 @@ function unpack_map()
       end)
       add(item.frames,pose)
     end)
-    if kind<5 then
-      -- inventory actor
-      local amount,maxamount=unpack_variant(),unpack_variant()
-      -- apply amount and other item properties to actor
-      -- ref is the unique actor reference 
-      local function pickup(owner,ref,qty)
-        owner[ref]=min((owner[ref] or 0)+(qty or amount),maxamount)
-        if(sound) sfx(sound)
-      end
-      if kind==0 then
-        -- default inventory item (ex: lock)
-        item.trigger=function(actor)
-          pickup(actor,id)
-        end
-      elseif kind==1 then
-        -- ammo familly
-        local ammotype=unpack_variant()
-        item.trigger=function(actor)
-          pickup(actor,ammotype)
-        end
-      elseif kind==2 then
-        -- weapon
-        item.slot=unpack_variant()
-        local ammouse,ammogive,ammotype,projectile=unpack_variant(),unpack_variant(),unpack_variant(),actors[unpack_variant()]
-        printh("weapon:"..id.." slot:"..item.slot.." ammouse:"..ammouse)
-        --  for hud
-        item.ammotype=ammotype
-        item.pickup=function(actor)
-          actors[ammotype].pickup(actor,ammogive)
-          -- todo: switch weapon logic
-        end
-        item.trigger=function(actor,pos,height,angle)
-          local qty=actor[ammotype]
-          if qty-ammouse>=0 then
-            actor[ammotype]=max(qty-ammouse)
-            -- todo: projectile vs. bullet/invisible ammo
-            make_projectile(projectile,pos,height,angle)
-            -- todo: firing delay
+    -- misc. actor properties
+    local properties,properties_factory=unpack_fixed(),{
+      {0x0.0001,"health"},
+      {0x0.0002,"armor"},
+      {0x0.0004,"amount"},
+      {0x0.0008,"maxamount"},
+      {0x0.0010,"icon",function() return chr(mpeek()) end},
+      {0x0.0020,"slot",mpeek},
+      {0x0.0040,"projectile",unpack_actor_ref},
+      {0x0.0080,"speed"},
+      {0x0.0100,"damage"},
+      {0x0.0200,"ammotype"},
+      {0x0.0400,"",function()
+        -- 
+        unpack_array(function()
+          local startitem,amount=unpack_actor_ref(),unpack_variant()
+          if startitem.kind==2 then
+            -- weapon
+            local weapons=item.weapons or {}
+            weapons[startitem.slot]=startitem
+            item.weapons=weapons
+            -- set initial weapon selection
+            if(not item.selected_slot) item.selected_slot=startitem.slot
+          else
+            item[startitem.id]=amount
           end
-        end
-      elseif kind==3 then
-        -- health
-        item.trigger=function(actor)
-          pickup(actor,"health")
-        end
-      elseif kind==4 then
-        -- armor
-        item.trigger=function(actor)
-          pickup(actor,"armor")
+        end)
+      end}
+    }
+
+    -- decode 
+    for _,props in ipairs(properties_factory) do
+      local mask,k,fn=unpack(props)
+      if mask&properties!=0 then
+        -- unpack
+        item[k]=(fn or unpack_variant)()
+      end
+    end
+
+    local function pickup(owner,ref,qty)
+      ref=ref or item.id
+      owner[ref]=min((owner[ref] or 0)+(qty or item.amount),item.maxamount)
+      if(item.sound) sfx(item.sound)
+    end
+
+    if kind==0 then
+      -- default inventory item (ex: lock)
+      item.pickup=function(actor)
+        pickup(actor,id)
+      end
+    elseif kind==1 then
+      -- ammo familly
+      local ammotype=unpack_variant()
+      item.pickup=function(actor)
+        pickup(actor,item.ammotype)
+      end
+    elseif kind==2 then
+      -- weapon
+      local ammouse,ammogive,ammotype=unpack_variant(),unpack_variant(),item.ammotype
+      item.pickup=function(actor)
+        pickup(actor,ammotype,ammogive)
+        -- todo: switch weapon logic
+      end
+      item.trigger=function(actor,pos,height,angle)
+        local newqty=actor[ammotype]-ammouse
+        if newqty>=0 then
+          actor[ammotype]=newqty
+          -- todo: projectile vs. bullet/invisible ammo
+          -- if(item.projectile) make_projectile(item.projectile,pos,height,angle)
+          add(things,{
+            pos[1],pos[2],
+            height=height,
+            v={cos(angle),sin(angle)},
+             -- link to underlying actor
+            actor=item.projectile,
+            angle=angle
+          })
+          -- todo: firing delay
         end
       end
-    elseif kind==7 then
-      -- projectile
-      item.damage=unpack_variant()
-      item.speed=unpack_variant()
-    elseif kind==8 or kind==6 then
-      -- player or monster
-      item.health=unpack_variant()
-      item.armor=unpack_variant()
-      unpack_array(function()
-        local startitem,amount=actors[unpack_variant()],unpack_variant()
-        if startitem.kind==2 then
-          -- weapon
-          local weapons=item.weapons or {}
-          weapons[startitem.slot]=startitem
-          item.weapons=weapons
-          -- set initial weapon selection
-          if(not item.selected_slot) item.selected_slot=startitem.slot
-        else
-          item[startitem.id]=amount
-        end
-      end)
+    elseif kind==3 then
+      -- health pickup
+      item.pickup=function(actor)
+        pickup(actor,"health")
+      end
+    elseif kind==4 then
+      -- armor pickup
+      item.pickup=function(actor)
+        pickup(actor,"armor")
+      end
     end
 
     -- register
