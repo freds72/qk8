@@ -146,10 +146,16 @@ function v2_make(a,b)
   return {b[1]-a[1],b[2]-a[2]}
 end
 
+-- bold print helper
+function printb(txt,x,y,c1,c2)
+  print(txt,x,y+1,c2)
+  print(txt,x,y,c1)
+end
+
 function polyfill(v,offset,tex,light)
   poke4(0x5f38,tex)
 
-  local ca,sa,cx,cy,cz=_cam.u,_cam.v,plyr[1]>>4,(plyr.height+45-offset)<<3,plyr[2]>>4
+  local ca,sa,cx,cy,cz=_cam.u,_cam.v,plyr[1]>>4,(plyr[3]+45-offset)<<3,plyr[2]>>4
 
   local v0,spans,pal0=v[#v],{}
   local x0,w0=v0.x,v0.w
@@ -486,7 +492,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
   for _,thing in pairs(_things) do
     local actor=thing.actor
     -- is actor solid?
-    if actor and actor.flags&0x1>0 and thing.subs[segs] then
+    if thing.subs[segs] then
       -- overflow 'safe' coordinates
       local m,r={(px-thing[1])>>8,(pz-thing[2])>>8},actor.radius>>8
       local b,c=v2_dot(m,d),v2_dot(m,m)-r*r
@@ -550,7 +556,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
 
   if tmin<=tmax and tmax_seg then
     -- don't record node compiler lines
-    if(tmax_seg.line) add(res,{t=tmax,seg=tmax_seg})
+    if(tmax_seg.line) add(res,{t=tmax,seg=tmax_seg,n=tmax_seg[5]})
     -- any remaining segment to check?
     if(tmax<_tmax and tmax_seg.partner) intersect_sub_sector(tmax_seg.partner,p,d,tmax,_tmax,res)
   end
@@ -572,35 +578,308 @@ local depthsorted_cls={
   end
 }
 
+function make_thing(actor,x,y,z,angle)
+  -- all sub-sectors that thing touches
+  -- used for rendering and collision detection
+  local subs,pos={},{x,y}
+  find_ssector_thick(_bsp,pos,actor.radius,subs)
+  -- default height
+  local ss=find_sub_sector(_bsp,pos)
+  -- attach instance properties to new thing
+  return actor:attach({
+    -- z: altitude
+    x,y,ss.sector.floor,
+    actor=actor,
+    angle=angle,
+    subs=subs,
+    sector=ss.sector,
+    ssector=ss
+  })
+end
+
+function with_physic(thing)
+  local actor=thing.actor
+  -- actor properties
+  local height,speed,radius,is_missile=actor.height,actor.speed,actor.radius,actor.flags&0x4>0
+  local ss=thing.ssector
+  -- init inventory
+  local forces,velocity={0,0},{0,0,0}
+  return setmetatable({
+    apply_forces=function(self,x,y)
+      forces[1]+=x
+      forces[2]+=y
+    end,
+    update=function(self)
+      -- integrate forces
+      velocity[1]+=forces[1]
+      velocity[2]+=forces[2]
+      velocity[3]+=-1
+
+      -- friction      
+      velocity[1]*=0.9
+      velocity[2]*=0.9
+      
+      -- check collision with world
+      local move_dir,move_len=v2_normal(velocity)
+      
+      if move_len>0 then
+        local hits,h={},self[3]
+        -- todo: always check intersection w/ additional contact radius (front only?)
+        intersect_sub_sector(ss,self,move_dir,-radius,move_len+radius,hits)    
+        -- fix position
+        for _,hit in ipairs(hits) do
+          local fix_move
+          if hit.seg then
+            -- bsp hit?
+            local ldef=hit.seg.line
+            local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
+            if otherside==nil then
+              fix_move=hit
+            elseif otherside.sector.floor-h>24 then
+              fix_move=hit
+            end
+            
+            -- cross special?
+            if ldef.trigger and ldef.flags&0x10>0 then
+              ldef.trigger(self)
+            end
+          elseif hit.thing!=self then
+            -- thing hit?
+            local actor=hit.thing.actor
+            if actor.pickup then
+              actor.pickup(self)
+              -- todo: optimize?
+              -- todo: flag to remove or not?
+              do_async(function()
+                -- remove from world
+                -- todo: optimize del!!!
+                del(_things,hit.thing)
+              end)
+            elseif actor.flags&0x1>0 then
+              -- solid actor?
+              fix_move=hit
+              fix_move.n=v2_normal(v2_make(self,hit.thing))
+            end
+          end
+
+          --if(fix_move) break
+          if fix_move then
+            if is_missile then
+              self:hit(hit.thing,hit.t)
+              return
+            else
+              local n=fix_move.n
+              local fix=-(radius-fix_move.t)*v2_dot(n,move_dir) 
+              -- avoid being pulled toward prop/wall
+              if fix<0 then
+                -- apply impulse (e.g. fix velocity)
+                velocity[1]+=fix*n[1]
+                velocity[2]+=fix*n[2]
+              end
+            end
+          end
+        end
+
+        -- check triggers/bumps/...
+        for _,hit in ipairs(hits) do
+          if hit.seg then
+            local ldef=hit.seg.line
+            -- buttons
+            if ldef.trigger and ldef.flags&0x8>0 then
+              -- use special?
+              if btn(4) then
+                ldef.trigger()
+              else
+                _msg="press (x) to activate"
+              end
+              -- trigger/message only closest hit
+              break
+            end
+          end
+        end
+
+        -- apply move
+        self[1]+=velocity[1]
+        self[2]+=velocity[2]
+              
+        -- refresh sector after fixed collision
+        ss=find_sub_sector(_bsp,self)
+        self.sector=ss.sector
+        self.ssector=ss
+      end
+      -- gravity
+      if is_missile==false then
+        local h=self[3]+velocity[3]
+        if h<self.sector.floor then
+          -- todo: fall damage
+          -- todo: sector damage
+          velocity[3]=0
+          h=self.sector.floor
+        end
+        self[3]=h
+      end
+
+      -- reset forces
+      forces={0,0}
+    end
+  },{__index=thing})
+end
+
+function with_health(thing)
+  -- base health (for gibs effect)
+  local health=thing.health
+  return setmetatable({
+    hit=function(self,dmg)
+      local hp=dmg
+      -- damage reduction?
+      if self.armor then
+        hp=max(dmg-self.armor)
+        self.armor=max(self.armor-dmg)
+      end
+      self.health=max(self.health-hp)
+      if self.health==0 then
+        -- todo: die state
+        do_async(function()
+          -- remove from world
+          -- todo: optimize del!!!
+          del(_things,self)
+        end)
+      end
+    end
+  },{__index=thing})
+end
+
+  -- helper function
+function make_projectile(thing)
+  local actor,angle=thing.actor,thing.angle
+  local ca,sa,speed,radius,ttl=cos(angle),sin(angle),actor.speed,actor.radius,120
+  return setmetatable({
+    control=function(self)
+      ttl-=1
+      if ttl<0 then
+        do_async(function()
+          del(_things,self)
+        end)
+      end
+      self:apply_forces(speed*ca,speed*sa)
+    end,
+    hit=function(self,thing,t)
+      if(thing and thing.hit) thing:hit(actor.damage)
+      -- todo: calc position at t + create blast
+      do_async(function()
+        del(_things,self)
+      end)
+    end
+  },{__index=with_physic(thing)})
+end
+
+function attach_plyr(thing)
+  local actor=thing.actor
+  local speed,da,wp,wp_slot,wp_yoffset,wp_y,reload_ttl,wp_switching=actor.speed,0,actor.weapons,actor.default_slot,0,0,0
+  local function wp_switch(inc)
+    local i=wp_slot+inc
+    while not wp[i] do
+      i+=inc
+      -- wrap
+      if(i>10) i=1
+      if(i<1) i=10
+      -- no weapon to switch to
+      if(i==wp_slot) return
+    end
+    wp_switching=true
+    do_async(function()
+      wp_yoffset=-16
+      wait_async(15)
+      wp_slot=i
+      wp_yoffset=0
+      wait_async(15)
+      wp_switching=nil
+    end)
+  end
+  return setmetatable({
+    control=function(self)
+      -- fire delay
+      reload_ttl-=1
+      wp_y=lerp(wp_y,wp_yoffset,0.3)
+
+      local dx,dz=0,0
+      -- cursor: fwd+rotate
+      -- cursor+x: weapon switch+rotate
+      -- wasd: fwd+strafe
+      -- o: fire
+      if btn(4) then
+        if(btn(0)) dx=1
+        if(btn(1)) dx=-1
+        if not wp_switching and reload_ttl<0 then
+          if(btn(2)) wp_switch(-1)
+          if(btn(3)) wp_switch(1)
+        end
+      else
+        if(btn(0)) da-=1
+        if(btn(1)) da+=1
+        if(btn(2)) dz=1
+        if(btn(3)) dz=-1
+      end
+      -- wasd
+      if(btn(0,1)) dx=1
+      if(btn(1,1)) dx=-1
+      if(btn(2,1)) dz=1
+      if(btn(3,1)) dz=-1
+
+      self.angle+=da/256
+      local ca,sa=cos(self.angle),sin(self.angle)
+      self:apply_forces(speed*(dz*ca-dx*sa),speed*(dz*sa+dx*ca))
+
+      if not wp_switching and btn(5) and reload_ttl<0 then
+        local weapon=wp[wp_slot]
+        if weapon.use(self) then
+          reload_ttl=15
+          add(_things,make_projectile(make_thing(weapon.projectile,self[1],self[2],self[3],self.angle)))
+        end
+      end
+
+      -- damping
+      da*=0.8
+    end,
+    hud=function(self)
+      printb("♥"..self.health,2,110,12)
+      printb("웃"..self.armor,2,120,3)
+      
+      -- weapon placeholder
+      rectfill(54,112-wp_y,74,128,9)
+
+      local ammotype=wp[wp_slot].ammotype
+      print(ammotype.icon..self.inventory[ammotype],2,100,8)  
+    end
+  },{__index=with_physic(thing)})
+end
+
 -->8
 -- game loop
 function _init()
-  -- mouse support
-	poke(0x5f2d,1)
-
-  _bsp,_things=unpack_map()
+  local root,things=unpack_map()
+  _bsp=root
+  _things={}
 
   -- todo: attach behaviors to things
-  for _,thing in pairs(_things) do 
-    -- all sub-sectors that thing touches
-    -- used for rendering and collision detection
-    thing.subs={}
-    find_ssector_thick(_bsp,thing,thing.actor.radius,thing.subs)
-    -- default height
-    local ss=find_sub_sector(_bsp,thing)
-    thing.height=ss.sector.floor
+  for k,thingdef in pairs(things) do 
+    local thing=make_thing(unpack(thingdef))
+    -- get direct access to player
+    local actor=thing.actor
+    if actor.flags&0x4>0 then
+      thing=with_health(thing)
+    end
+    if actor.id==1 then
+      plyr=attach_plyr(thing)
+      thing=plyr
+    end
+    add(_things,thing)
   end
 
   _cam=make_camera()
 end
 
--- mouse controller
-_mouselb,_mousex=false
-
 function _update()
-  -- mouse input
-	local mx,lmb=stat(32),stat(34)==1
-
   	-- any futures?
 	for k,f in pairs(_futures) do
 		local cs=costatus(f)
@@ -611,164 +890,23 @@ function _update()
 		end
 	end
 
-  local dx,dz=0,0
-  if(btn(0) or btn(0,1)) dx=1
-  if(btn(1) or btn(1,1)) dx=-1
-  if(btn(2) or btn(2,1)) dz=1
-  if(btn(3) or btn(3,1)) dz=-1
-  	
-	if _mousex then
-    --local da=atan2(64,64-_mousex)
-    --plyr.angle=lerp(plyr.angle,plyr.angle+da,0.1)
-    local da=(64-_mousex)/128
-    plyr.angle=lerp(plyr.angle,plyr.angle-da,0.05)
-  end
-
-  local speed,ca,sa=plyr.actor.speed,cos(plyr.angle),sin(plyr.angle)
-  local v={speed*(dz*ca-dx*sa),speed*(dz*sa+dx*ca)}
-  plyr.v[1]+=v[1]
-  plyr.v[2]+=v[2]
-  -- gravity
-  plyr.v[3]-=1
-  local move_dir,move_len=v2_normal(plyr.v)
-  if(move_len<0) move_dir={-move_dir[1],-move_dir[2]} move_len=-move_len
-
-  plyr[1]+=move_len*move_dir[1]
-  plyr[2]+=move_len*move_dir[2]
   -- 
   _msg=nil
 
   for _,thing in pairs(_things) do
-    local actor=thing.actor
-    if actor and actor.speed then
-      -- hit something?
-      -- local hits,ss={},find_sub_sector(_bsp,thing)
-
-      thing[1]+=actor.speed*thing.v[1]
-      thing[2]+=actor.speed*thing.v[2]
-      -- find all sectors where that thing is visible
-      thing.subs={}
-      find_ssector_thick(_bsp,thing,actor.radius,thing.subs)
-    end
+    if(thing.control) thing:control()
+    if(thing.update) thing:update()
   end
 
-  -- check collision with world
-  local ss=find_sub_sector(_bsp,plyr)
-  if ss then
-    -- todo: unify ray intersection w/ things
-    local hits={}
-    local radius,height=plyr.actor.radius,plyr.height
-    intersect_sub_sector(ss,plyr,move_dir,0,move_len+radius,hits)
-    if move_len!=0 then
-      -- move
-      plyr[1]+=move_len*move_dir[1]
-      plyr[2]+=move_len*move_dir[2]
-
-      -- fix position
-      for _,hit in ipairs(hits) do
-        local fix_move
-        if hit.seg then
-          -- bsp hit?
-          local ldef=hit.seg.line
-          local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
-          if otherside==nil then
-            fix_move=true
-          elseif otherside.sector.floor-height>24 then
-            fix_move=true
-          end
-          
-          -- cross special?
-          if ldef.trigger and ldef.flags&0x10>0 then
-            ldef.trigger(plyr)
-          end
-    
-          if fix_move then
-            -- clip move
-            local n=hit.seg[5]
-            local fix=-(move_len+radius-hit.t)*v2_dot(n,move_dir)
-            -- fix position
-            plyr[1]+=fix*n[1]
-            plyr[2]+=fix*n[2]
-          end
-        else
-          -- thing hit?
-          local actor=hit.thing.actor
-          if actor and actor.kind!=7 then
-            if hit.t<radius then
-              if actor.trigger then
-                actor.trigger(plyr.actor)
-                -- todo: optimize?
-                -- todo: flag to remove or not?
-                do_async(function()
-                  -- remove from world
-                  -- todo: optimize del!!!
-                  del(_things,thing)
-                end)
-              else
-                -- todo: check if blocking
-                local n=v2_normal(v2_make(hit.thing,plyr))
-                local fix=-(radius-hit.t)*v2_dot(n,move_dir)
-                -- avoid being pulled toward prop
-                if fix>0 then
-                  -- fix position
-                  plyr[1]+=fix*n[1]
-                  plyr[2]+=fix*n[2]
-                end
-              end
-            end
-          end
-        end
-      end
-    end
-
-    -- check triggers/bumps/...
-    for _,hit in ipairs(hits) do
-      if hit.seg then
-        local ldef=hit.seg.line
-        -- buttons
-        if ldef.trigger and ldef.flags&0x8>0 then
-          -- use special?
-          if btn(4) then
-            ldef.trigger()
-          else
-            _msg="press (x) to activate"
-          end
-          -- trigger/message only closest hit
-          break
-        end
-      end
-    end
-
-    -- refresh sector after fixed collision
-    ss=find_sub_sector(_bsp,plyr)
-    plyr.sector=ss.sector
-    plyr.subs=ss
-    height+=plyr.v[3]
-    if height<ss.sector.floor then
-      -- todo: fall damage
-      plyr.v[3]=0
-      height=ss.sector.floor
-    end
-    plyr.height=height
-  end
-
-  _cam:track(plyr,plyr.angle,plyr.height+45)
-
-  local pactor=plyr.actor
-
-  if btnp(4) and pactor.selected_slot then
-    local wp=pactor.weapons[5]
-    wp.trigger(pactor,plyr,plyr.height+32,plyr.angle)
-  end
+  _cam:track(plyr,plyr.angle,plyr[3]+45)
 
   -- damping
-  plyr.v[1]*=0.8
-  plyr.v[2]*=0.8
+  -- plyr.v[1]*=0.8
+  -- plyr.v[2]*=0.8
 
-  _mousex=mx
-	_mouselb=lmb
 end
 
+-- todo: read from spritesheet
 _screen_pal={140,1,3,131,4,132,133,7,6,134,5,8,2,9,10}
 function _draw()
   
@@ -798,7 +936,7 @@ function _draw()
     line(64,64,127,0,2)
     line(64,64,0,0,2)
     ]]
-    local pvs=plyr.subs.pvs
+    local pvs=plyr.ssector.pvs
     visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
       if node.leaf[side] then
         local subs=node[side]
@@ -881,7 +1019,7 @@ function _draw()
     print("sectors: "..sectors,2,8,8)
 
   else
-    local pvs,v_cache=plyr.subs.pvs,{}
+    local pvs,v_cache=plyr.ssector.pvs,{}
 
     -- 
     local sorted_things=setmetatable({},depthsorted_cls)
@@ -897,7 +1035,7 @@ function _draw()
         local ax,az=v[1],v[3]
         if az>_znear and 2*ax<az and -2*ax<az then
           -- h: thing offset+cam offset
-          local w,h=128/az,thing.height+v[2]
+          local w,h=128/az,thing[3]+v[2]
           local x,y=63.5+ax*w,63.5-h*w
           -- insertion sort into each sub
           for sub,_ in pairs(thing.subs) do
@@ -952,22 +1090,14 @@ function _draw()
     end
     ]]
 
-    
+    plyr:hud()
+
     if(_msg) print(_msg,64-#_msg*2,120,15)
 
     -- debug messages
     local cpu=stat(1).."|"..stat(0)
     print(cpu,2,3,3)
     print(cpu,2,2,8)
-
-    local actor=plyr.actor
-    print("♥"..actor.health,2,111,13)
-    print("♥"..actor.health,2,110,12)
-    print("웃"..actor.armor,2,121,4)
-    print("웃"..actor.armor,2,120,3)
-    local ammo=actor[actor.weapons[5].ammotype]
-    print("∧"..ammo,2,101,9)
-    print("∧"..ammo,2,100,8)
     
     --[[
     local y=64
@@ -977,8 +1107,6 @@ function _draw()
         y+=6
       end
     end]]
-
-    pset(_mousex,64,15)
   end
 end
 
@@ -1304,7 +1432,9 @@ function unpack_map()
   local nodes={}
   unpack_array(function()
     local node=add(nodes,{
+      -- normal packed in struct to save memory
       unpack_fixed(),unpack_fixed(),
+      -- distance to plane
       unpack_fixed(),
       bbox={},
       leaf={}})
@@ -1329,91 +1459,9 @@ function unpack_map()
     return actors[unpack_variant()]
   end
 
-  -- helper function
-  local make_projectile=function(projectile,pos,height,angle)
-    local ca,sa,speed,radius,ttl=cos(angle),sin(angle),projectile.speed,projectile.radius,120
-    add(things,{
-      pos[1],
-      pos[2],
-      angle=angle,
-      height=height,
-      subs={},
-      actor=projectile,
-      update=function(self)
-        -- hit something?
-        local hits,ss={},find_sub_sector(_bsp,self)
-        intersect_sub_sector(ss,self,{ca,sa},0,speed+radius,hits)
-      
-        -- hit something?
-        local kill
-        for _,hit in ipairs(hits) do
-          if hit.seg then
-            local ldef=hit.seg.line
-            -- 
-            if hit.t<speed+radius then
-              local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
-              if otherside==nil then
-                -- solid wall?
-                kill=hit
-              elseif otherside.sector.floor>height-radius or otherside.sector.ceil<height+radius then
-                -- opening?
-                kill=hit
-              end
-            end
-          else
-            -- hit thing
-            local otheractor=hit.thing.actor
-            -- shootable?
-            if otheractor.flags&0x2>0 then
-              kill=hit
-              -- todo: hit
-              -- hit.thing:hit(projectile.dmg,projectile.dmgtype)
-            end
-          end
-          if(kill) break
-        end
-
-        if kill then
-          local x0,y0,t=self[1],self[2],kill.t
-          do_async(function()
-            local subs,ttl={},10
-            find_ssector_thick(_bsp,{x0,y0},radius,subs)
-            add(things,{
-              x0+t*ca,
-              y0+t*sa,
-              height=height,
-              subs=subs,
-              update=function(self)
-                ttl-=1
-                -- todo: factorize
-                if(ttl<0) do_async(function() del(things,self) end)
-              end,
-              draw=function(self,x,y,w)
-                local r=8*w*ttl/10
-                circfill(x,y-4*w,r,2)
-              end
-            })
-            del(things,self) 
-          end)
-          return
-        end
-
-        self[1]+=speed*ca
-        self[2]+=speed*sa
-        -- find all sectors where that thing is visible
-        self.subs={}
-        find_ssector_thick(_bsp,self,radius,self.subs)
-
-        -- todo: other things
-        ttl-=1
-        if ttl<0 then
-          do_async(function() del(things,self) end)
-        end
-      end
-    })
-  end
   unpack_array(function()
     local kind,id=unpack_variant(),unpack_variant()
+    local inventory={}
     local item={
       id=id,
       kind=kind,
@@ -1423,7 +1471,17 @@ function unpack_map()
       -- 0x2: shootable
       -- 0x4: missile
       flags=mpeek(),
-      frames={}
+      frames={},
+      -- attach items qty to thing instance
+      attach=function(self,thing)
+        thing.health=self.health
+        thing.armor=self.armor
+        thing.inventory={}
+        for k,v in pairs(inventory) do
+          thing.inventory[k]=v
+        end
+        return thing
+      end
     }
     -- sprites
     unpack_array(function()
@@ -1445,7 +1503,7 @@ function unpack_map()
       {0x0.0040,"projectile",unpack_actor_ref},
       {0x0.0080,"speed"},
       {0x0.0100,"damage"},
-      {0x0.0200,"ammotype"},
+      {0x0.0200,"ammotype",unpack_actor_ref},
       {0x0.0400,"",function()
         -- 
         unpack_array(function()
@@ -1456,14 +1514,13 @@ function unpack_map()
             weapons[startitem.slot]=startitem
             item.weapons=weapons
             -- set initial weapon selection
-            if(not item.selected_slot) item.selected_slot=startitem.slot
+            if(not item.default_slot) item.default_slot=startitem.slot
           else
-            item[startitem.id]=amount
+            inventory[startitem]=amount
           end
         end)
       end}
     }
-
     -- decode 
     for _,props in ipairs(properties_factory) do
       local mask,k,fn=unpack(props)
@@ -1474,55 +1531,47 @@ function unpack_map()
     end
 
     local function pickup(owner,ref,qty)
-      ref=ref or item.id
+      ref=ref or item
       owner[ref]=min((owner[ref] or 0)+(qty or item.amount),item.maxamount)
       if(item.sound) sfx(item.sound)
     end
 
     if kind==0 then
       -- default inventory item (ex: lock)
-      item.pickup=function(actor)
-        pickup(actor,id)
+      item.pickup=function(thing)
+        pickup(thing.inventory)
       end
     elseif kind==1 then
       -- ammo familly
-      local ammotype=unpack_variant()
+      local ammotype=unpack_actor_ref()
       item.pickup=function(actor)
-        pickup(actor,item.ammotype)
+        pickup(actor.inventory,ammotype)
       end
     elseif kind==2 then
       -- weapon
       local ammouse,ammogive,ammotype=unpack_variant(),unpack_variant(),item.ammotype
-      item.pickup=function(actor)
-        pickup(actor,ammotype,ammogive)
+      item.pickup=function(thing)
+        pickup(thing.inventory,ammotype,ammogive)
         -- todo: switch weapon logic
       end
-      item.trigger=function(actor,pos,height,angle)
-        local newqty=actor[ammotype]-ammouse
+      item.use=function(thing)
+        local inventory=thing.inventory
+        local newqty=inventory[ammotype]-ammouse
         if newqty>=0 then
-          actor[ammotype]=newqty
-          -- todo: projectile vs. bullet/invisible ammo
-          -- if(item.projectile) make_projectile(item.projectile,pos,height,angle)
-          add(things,{
-            pos[1],pos[2],
-            height=height,
-            v={cos(angle),sin(angle)},
-             -- link to underlying actor
-            actor=item.projectile,
-            angle=angle
-          })
-          -- todo: firing delay
+          inventory[ammotype]=newqty
+          -- todo: return delay?
+          return true         
         end
       end
     elseif kind==3 then
       -- health pickup
-      item.pickup=function(actor)
-        pickup(actor,"health")
+      item.pickup=function(thing)
+        pickup(thing,"health")
       end
     elseif kind==4 then
       -- armor pickup
-      item.pickup=function(actor)
-        pickup(actor,"armor")
+      item.pickup=function(thing)
+        pickup(thing,"armor")
       end
     end
 
@@ -1531,30 +1580,21 @@ function unpack_map()
   end)
 
   -- things
+  
   unpack_array(function()
     local id=unpack_variant()
-    if id==1 then
-      -- todo: unify
-      plyr={
-        -- coordinates
-        unpack_fixed(),
-        unpack_fixed(),
-        actor=actors[id],
-        v={0,0,0},
-        angle=unpack_variant()/360,
-        height=0,
-        ammo={}
-      }
-    else
-      add(things,{
-        -- link to underlying actor
-        actor=actors[id],
-        -- coordinates
-        unpack_fixed(),
-        unpack_fixed(),
-        angle=unpack_variant()/360
-      })
-    end
+    add(things,{
+      -- link to underlying actor
+      actors[id],
+      -- coordinates
+      unpack_fixed(),
+      unpack_fixed(),
+      -- height
+      0,
+      -- angle
+      unpack_variant()/360,
+    })
+    -- todo: use spawn state to setup?
   end)
 
   -- texture pairs

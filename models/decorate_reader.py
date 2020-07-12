@@ -27,31 +27,27 @@ builtin_actors = {
     'amount': 1,
     'maxamount':1,
     'radius': 20,
-    'solid': True
+    'icon': 10
   },
   'ammo':{
     'kind': ACTOR_KIND.AMMO,
-    'radius': 20,
-    'solid': True
+    'radius': 20
   },
   'weapon':{
     'kind': ACTOR_KIND.WEAPON,
     'radius': 20,
     'amount': 0,
-    'maxamount': 1,
-    'solid': True
+    'maxamount': 1
   },
   'health':{
     'kind': ACTOR_KIND.HEALTH,
     'radius': 20,
-    'maxamount': 200,
-    'solid': True
+    'maxamount': 200
   },
   'armor':{
     'kind': ACTOR_KIND.ARMOR,
     'radius': 20,
-    'maxamount': 200,
-    'solid': True
+    'maxamount': 200
   },
   'player':{
     'kind': ACTOR_KIND.PLAYER,
