@@ -1,13 +1,12 @@
 pico-8 cartridge // http://www.pico-8.com
-version 27
+version 29
 __lua__
 
 -- globals
-local _bsp=nil
-local _cam,plyr,_things=nil
+local _bsp,_cam,plyr,_things,_sprite_cache,_tiles
 local _onoff_textures={}
 local _znear=16
-local _msg=nil
+local _msg
 
 --local k_far,k_near=0,2
 --local k_right,k_left=4,8
@@ -20,7 +19,6 @@ for i=0,15 do
    mem+=1
   end
 end
-
 
 function cam_to_screen2d(v)
   local x,y=v[1]/8,v[3]/8
@@ -152,6 +150,99 @@ function printb(txt,x,y,c1,c2)
   print(txt,x,y,c1)
 end
 
+-->8
+-- virtual sprites
+function vspr(frame,sx,sy,scale)
+  palt(3,true)
+  palt(0,false)
+	local w,h,tiles=unpack(frame)
+	for i,tile in pairs(tiles) do
+		local ssx,ssy=_sprite_cache:use(tile,_tiles)
+		sspr(ssx,ssy,16,16,sx+(i%w-w/2)*scale,sy+(i\w-h+0.5)*scale,scale,scale)
+  end
+  palt()
+end
+
+-- https://github.com/luapower/linkedlist/blob/master/linkedlist.lua
+function make_sprite_cache(maxlen)
+	local len,index,first,last=0,{}
+
+	local function remove(t)
+		if t._next then
+			if t._prev then
+				t._next._prev = t._prev
+				t._prev._next = t._next
+			else
+				t._next._prev = nil
+				first = t._next
+			end
+		elseif t._prev then
+			t._prev._next = nil
+			last = t._prev
+		else
+			first = nil
+			last = nil
+		end
+		-- gc
+		t._next = nil
+		t._prev = nil
+		len-=1
+		return t
+	end
+	
+	return {
+		use=function(self,id,tiles)
+			local entry=index[id]
+			if entry then
+				-- existing item?
+				-- force refresh
+				remove(entry)
+			else
+				-- allocate a new 16x16 entry
+				-- todo: optimize
+				local sx,sy=(len<<4)&127,64+(((len<<4)\128)<<4)
+				-- list too large?
+				if len+1>maxlen then
+					local old=remove(first)
+					-- reuse cache entry
+					sx,sy=old[1],old[2]
+					index[old.id]=nil
+				end
+				-- new (or relocate)
+				-- copy data to sprite sheet
+				local mem=sx\2|sy<<6
+				for j=0,31 do
+					poke4(mem|(j&1)<<2|(j\2)<<6,tiles[id+j])
+				end		
+				--
+				entry={sx,sy,id=id}
+				-- reverse lookup
+				index[id]=entry
+			end
+			-- insert 'fresh'
+			local anchor=last
+			if anchor then
+				if anchor._next then
+					anchor._next._prev=entry
+					entry._next=anchor._next
+				else
+					last=entry
+				end
+				entry._prev=anchor
+				anchor._next=entry
+			else
+			 -- empty list use case
+				first,last=entry,entry
+			end
+			len+=1
+			-- return sprite sheet coords
+			return entry[1],entry[2]
+		end
+	}
+end
+
+-->8
+-- bsp rendering
 function polyfill(v,offset,tex,light)
   poke4(0x5f38,tex)
 
@@ -182,7 +273,6 @@ function polyfill(v,offset,tex,light)
           local a,b=x0,span
           if(a>b) a=span b=x0
           -- collect boundaries
-          -- spans[y]={a,b}
           -- color shifing
           local pal1=light\w0
           if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
@@ -205,7 +295,6 @@ function polyfill(v,offset,tex,light)
     y0=_y1
     w0=_w1
   end
-  --return spans
 end
 
 function draw_segs2d(segs,pos,txt)
@@ -432,8 +521,9 @@ function draw_flats(v_cache,segs,things)
               angle=(angle%1+1)%1
               side=(#sides*angle)\1+1
             end
-            local sy,sx,sh,sw,ox,flipx=unpack(sides[side])
-            sspr(sx,sy,sw,sh,x0-ox*w0,y0-sh*w0,sw*w0,sh*w0,flipx)
+            --local sy,sx,sh,sw,ox,flipx=unpack(sides[side])
+            --sspr(sx,sy,sw,sh,x0-ox*w0,y0-sh*w0,sw*w0,sh*w0,flipx)
+            vspr(sides[side],x0,y0,16*w0)
             --pset(x0,y0,15)
           end 
         end
@@ -606,8 +696,9 @@ function with_physic(thing)
   local forces,velocity={0,0},{0,0,0}
   return setmetatable({
     apply_forces=function(self,x,y)
-      forces[1]+=x
-      forces[2]+=y
+      -- todo: revisit force vs. impulse
+      forces[1]+=x/2
+      forces[2]+=y/2
     end,
     update=function(self)
       -- integrate forces
@@ -615,9 +706,10 @@ function with_physic(thing)
       velocity[2]+=forces[2]
       velocity[3]+=-1
 
-      -- friction      
-      velocity[1]*=0.9
-      velocity[2]*=0.9
+      -- friction     
+      local friction=is_missile and 0.9967 or 0.9062
+      velocity[1]*=friction
+      velocity[2]*=friction
       
       -- check collision with world
       local move_dir,move_len=v2_normal(velocity)
@@ -637,8 +729,10 @@ function with_physic(thing)
               fix_move=hit
             elseif otherside.sector.floor-h>24 then
               fix_move=hit
+            elseif h+actor.height>otherside.sector.ceil then
+              fix_move=hit
             end
-            
+
             -- cross special?
             if ldef.trigger and ldef.flags&0x10>0 then
               ldef.trigger(self)
@@ -669,7 +763,7 @@ function with_physic(thing)
               return
             else
               local n=fix_move.n
-              local fix=-(radius-fix_move.t)*v2_dot(n,move_dir) 
+              local fix=(fix_move.t-radius)*v2_dot(n,move_dir)
               -- avoid being pulled toward prop/wall
               if fix<0 then
                 -- apply impulse (e.g. fix velocity)
@@ -750,9 +844,12 @@ function with_health(thing)
 end
 
   -- helper function
-function make_projectile(thing)
+function make_projectile(thing,z)
   local actor,angle=thing.actor,thing.angle
   local ca,sa,speed,radius,ttl=cos(angle),sin(angle),actor.speed,actor.radius,120
+  thing=with_physic(thing)
+  thing[3]=z
+  thing:apply_forces(speed*ca,speed*sa)
   return setmetatable({
     control=function(self)
       ttl-=1
@@ -761,7 +858,6 @@ function make_projectile(thing)
           del(_things,self)
         end)
       end
-      self:apply_forces(speed*ca,speed*sa)
     end,
     hit=function(self,thing,t)
       if(thing and thing.hit) thing:hit(actor.damage)
@@ -770,7 +866,7 @@ function make_projectile(thing)
         del(_things,self)
       end)
     end
-  },{__index=with_physic(thing)})
+  },{__index=thing})
 end
 
 function attach_plyr(thing)
@@ -834,7 +930,7 @@ function attach_plyr(thing)
         local weapon=wp[wp_slot]
         if weapon.use(self) then
           reload_ttl=15
-          add(_things,make_projectile(make_thing(weapon.projectile,self[1],self[2],self[3],self.angle)))
+          add(_things,make_projectile(make_thing(weapon.projectile,self[1],self[2],0,self.angle),self[3]+24))
         end
       end
 
@@ -857,12 +953,14 @@ end
 -->8
 -- game loop
 function _init()
-  local root,things=unpack_map()
+  local root,thingdefs,tiles=unpack_map()
   _bsp=root
   _things={}
+  _tiles=tiles
+  _sprite_cache=make_sprite_cache(32)
 
   -- todo: attach behaviors to things
-  for k,thingdef in pairs(things) do 
+  for k,thingdef in pairs(thingdefs) do 
     local thing=make_thing(unpack(thingdef))
     -- get direct access to player
     local actor=thing.actor
@@ -1070,7 +1168,7 @@ function _draw()
     
     -- restore palette
     -- memcpy(0x5f10,0x4300,16)
-    -- pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
+    -- pal({140,1,139,3,4,132,133,7,6,134,5,8,2,9,10},1)
     pal(_screen_pal,1)
 
     --[[
@@ -1326,6 +1424,83 @@ function unpack_texture()
   return tex!=0 and tex
 end
 
+function unpack_states(actor)
+  local states={}
+  unpack_array(function()
+    local state,loop,steps=unpack_string(),mpeek(),{}
+    unpack_array(function()
+      local step=add(steps,{
+        -- pointer to frame set
+        pose=unpack_variant(),
+        -- ttl
+        ttl=unpack_variant()
+      })
+      local fn=_ENV["a_"..unpack_string()]
+      -- unpack parameter function (if any)
+      if fn then
+        step.action=fn() 
+      end
+    end)
+    states[state]=function(thing)
+      while true do
+        for _,step in ipairs(steps) do
+          thing.pose[actor]=step.pose
+          if(step.fn) step.fn(thing)
+          wait_async(step.ttl)
+        end
+        if(loop==0) break
+        yield()
+      end
+    end
+  end)
+  return states
+end
+
+function a_fire()
+  local spread,dmg=5,3
+  return function(thing)
+  end
+end
+
+function a_jump()
+  local state=unpack_string()
+  return function(thing)
+    thing:next_state(state)
+  end
+end
+
+function a_wander()
+  return function(thing)
+    thing:apply_forces(rnd(),rnd())
+  end
+end
+
+function a_spawn()
+  local actor=unpack_actor_ref()
+  return function(thing)
+    -- todo: beef up make_thing to fully build a new thing from flags
+    make_thing(actor,unpack(thing))
+  end
+end
+
+function with_states(thing)
+  local states=thing.actor.states
+  local spawn=states.spawn
+  local update_async=spawn and cocreate(spawn)
+  return setmetatable({
+    next_state=function(self,state)
+      state=states[state]
+      update_async=state and cocreate(state)
+    end,
+    update=function(self)
+      if(update_async) update_async=run_async(update_async,self)
+
+      -- call nested
+      thing.update(thing)
+    end
+  },{__index=thing})
+end
+
 function unpack_map()
   -- jump to data cart
   cart_id,mem=0,0
@@ -1453,6 +1628,29 @@ function unpack_map()
     unpack_node(false,flags&0x2>0)
   end)
 
+  -- texture pairs
+  unpack_array(function()
+    _onoff_textures[unpack_fixed()]=unpack_fixed()
+  end)
+    
+  -- sprites
+	local frames,tiles={},{}
+	unpack_array(function()
+		-- width/height
+		local frame=add(frames,{mpeek(),mpeek(),{}})
+		unpack_array(function()
+			-- tiles index
+			frame[3][mpeek()]=unpack_variant()
+    end)
+  end)
+  
+	unpack_array(function()
+		-- 16 rows of 2*8 pixels
+		for k=0,31 do
+			add(tiles,unpack_fixed())
+		end
+	end)
+
   -- inventory & things
   local things,actors={},{}
   local unpack_actor_ref=function()
@@ -1466,6 +1664,7 @@ function unpack_map()
       id=id,
       kind=kind,
       radius=unpack_fixed(),
+      height=unpack_fixed(),
       -- flags layout:
       -- 0x1: solid
       -- 0x2: shootable
@@ -1485,10 +1684,10 @@ function unpack_map()
     }
     -- sprites
     unpack_array(function()
-      local pose={ticks=unpack_fixed(),sides={}}
+      local pose={ticks=unpack_fixed(),flip=mpeek(),sides={}}
       -- get all pose sides
       unpack_array(function(i)
-        add(pose.sides,{mpeek(),mpeek(),mpeek(),mpeek(),unpack_fixed(),i>5})
+        add(pose.sides,frames[unpack_variant()])
       end)
       add(item.frames,pose)
     end)
@@ -1597,14 +1796,9 @@ function unpack_map()
     -- todo: use spawn state to setup?
   end)
 
-  -- texture pairs
-  unpack_array(function()
-    _onoff_textures[unpack_fixed()]=unpack_fixed()
-  end)
-
   -- restore main cart
   reload()
-  return nodes[#nodes],things
+  return nodes[#nodes],things,tiles
 end
 
 __gfx__

@@ -9,5 +9,8 @@ activity_log.txt
 sdl_controllers.txt
 .antlr
 models/__pycache__
+/models/resized
+/models/orig
+
 
 

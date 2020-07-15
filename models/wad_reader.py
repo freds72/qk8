@@ -17,6 +17,7 @@ from python2pico import pack_int32
 from bsp_compiler import Polygon
 from bsp_compiler import POLYGON_CLASSIFICATION
 from bsp_compiler import normal,ortho
+from image_reader import WADImageReader
 
 # debug/draw
 import sys, pygame
@@ -280,6 +281,37 @@ def pack_special(line, lines, sides, sectors):
     s += "{:02x}".format(line.arg1)
   return s
 
+# returns reference to image frame(s) (multiple sides if any)
+def get_image_frames(lumps,image,variant):
+  pattern = "{}{}".format(image,variant)
+  frames = []
+  if pattern+"1" in lumps:
+    # multi-sided image
+    angles = [
+      re.compile("({}{}1)".format(image,variant)),
+      re.compile("({}{}2)".format(image,variant)),
+      re.compile("({}{}3)".format(image,variant)),
+      re.compile("({}{}4)".format(image,variant)),
+      re.compile("({}{}5)".format(image,variant)),
+      re.compile("({}{}6)|({}{}4{}6)".format(image,variant,image,variant,variant)),
+      re.compile("({}{}7)|({}{}3{}7)".format(image,variant,image,variant,variant)),
+      re.compile("({}{}8)|({}{}2{}8)".format(image,variant,image,variant,variant))]
+    for angle in angles:
+      match = [m for m in map(angle.match, lumps) if m is not None][0]
+      if match:
+        if match.group(1):
+          frames.append((match.string, False))
+        elif match.group(2):
+          frames.append((match.string, True))
+      else:
+        raise Exception("Missing angle: {} for image: {} {}".format(angle,image,variant))
+  elif pattern+"0" in lumps:
+    # single image
+    frames.append((pattern+"0",False))
+  else:
+    raise Exception("Missing image: {} {}".format(image,variant))
+  return frames
+
 def pack_thing(thing, actors):
   if thing.type not in [actor.id for actor in actors]:
     raise Exception("Thing: {} references unknown actor: {}".format(thing, thing.type))
@@ -294,7 +326,7 @@ def pack_thing(thing, actors):
 def pack_flag(owner, name):
   return owner.get(name,False) and 1 or 0
 
-def pack_zmap(map, textures, actors):
+def pack_zmap(map, textures):
   # shortcut to wall textures
   flats = textures.flats
 
@@ -378,11 +410,65 @@ def pack_zmap(map, textures, actors):
       s += pack_aabb(node.aabb[1])
       s += pack_variant(node.child[1]+1)
 
+  # pack texture switches
+  texture_pairs = {}
+  for name,texture in flats.items():
+    other_texture = None 
+    if '_ON' in name:
+      other_texture = flats.get(name.replace('_ON','_OFF'))
+    elif '_OFF' in name:
+      other_texture = flats.get(name.replace('_OFF','_ON'))
+    
+    if other_texture is not None:
+      texture_pairs[name] = other_texture
+
+  s += pack_variant(len(flats))
+  for name,texture in flats.items():
+    s+= pack_texture(texture)
+    # get pair or self
+    s+= pack_texture(texture_pairs.get(name, texture))
+  return s
+
+def pack_actors(file, lumps, map, actors):
+  s = ""
   # actors/inventory (e.g. items with assigned unique id)
   concrete_actors = [actor for actor in actors.values() if actor.id!=-1]
   
-  # actor images
-  sprites = textures.sprites
+  # collect active images
+  images = []
+  image_reader = WADImageReader()
+  frames_by_name = {}
+  for actor in concrete_actors:
+    # todo: rename to 'state step'
+    for pose in actor.frames:
+      image_name = "{}{}".format(pose.image,pose.variant)
+      frames = get_image_frames(lumps, pose.image, pose.variant)
+      frames_by_name[image_name] = frames
+      # remove "flipped" duplicate sprites for serialization
+      for frame in [frame for frame in frames if frame[1]==False]:
+        images.append(image_reader.read(file, lumps, frame[0]))
+  
+  s += pack_variant(len(images))
+  # export frame metadata
+  tiles_count = 0
+  sprites = {}
+  for i,image_data in enumerate(images):
+    print("Packing sprite: {}".format(image_data.name))
+    sprites[image_data.name] = i
+    s += "{:02x}{:02x}".format(image_data.width,image_data.height)
+    tiles = image_data.tiles
+    s += pack_variant(len(tiles))
+    for i,tile in tiles.items():
+      s += "{:02x}{}".format(i,pack_variant((tiles_count+tile)*32+1))
+    tiles_count += len(tiles)
+
+  # export all images bytes
+  print("Packing {} 16x16 tiles".format(tiles_count))
+  image_s = pack_variant(tiles_count)
+  for image_bytes in [img.data for img in images]:
+    for b in image_bytes:
+      image_s += "{:02x}".format(b)
+  s += image_s
 
   s += pack_variant(len(concrete_actors))
   for actor in concrete_actors:
@@ -391,32 +477,24 @@ def pack_zmap(map, textures, actors):
     s += pack_variant(actor.id)
     # mandatory/shared properties
     s += pack_fixed(actor.radius)
+    s += pack_fixed(actor.height)
     # behavior flags
     flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2
     s += "{:02x}".format(flags)
-    # frames
+    # todo: rename to states/steps
     s += pack_variant(len(actor.frames))
-    for frame in actor.frames:
+    for pose in actor.frames:
       # pack all sides for a given pose (variant)
-      s += pack_fixed(frame.ticks)
-      pattern = "{}{}".format(frame.image,frame.variant)
-      if pattern+"1" in sprites:
-        # multiple side sprite
-        s += pack_variant(8)
-        angles = ["1","2","3","4","5","4","3","2"]
-        for angle in angles:
-          texture = sprites[pattern+angle]
-          s += pack_texture(texture)
-          # offsets
-          s += pack_fixed(texture.xoffset)
-      elif pattern+"0" in sprites:
-        # single frame sprite
-        s += pack_variant(1)
-        texture = sprites[pattern+"0"]
-        s += pack_texture(texture)
-        s += pack_fixed(texture.xoffset)
-      else:
-        raise Exception("Unknown frame: {}x in TEXTURES".format(pattern))
+      s += pack_fixed(pose.ticks)
+      pattern = "{}{}".format(pose.image,pose.variant)
+      frames = frames_by_name[pattern]
+      # flipped?
+      # todo: convert to 8 bits field
+      s += "{:02x}".format(0)
+      s += pack_variant(len(frames))
+      for frame in frames:
+        # index to sprite metadata
+        s += pack_variant(sprites[frame[0]]+1)
     
     properties = 0
 #{0x0.0001,"health"},
@@ -486,25 +564,7 @@ def pack_zmap(map, textures, actors):
   for thing in map.things:
     s += pack_thing(thing, concrete_actors)
 
-  # pack texture switches
-  texture_pairs = {}
-  for name,texture in flats.items():
-    other_texture = None 
-    if '_ON' in name:
-      other_texture = flats.get(name.replace('_ON','_OFF'))
-    elif '_OFF' in name:
-      other_texture = flats.get(name.replace('_OFF','_ON'))
-    
-    if other_texture is not None:
-      texture_pairs[name] = other_texture
-
-  s += pack_variant(len(flats))
-  for name,texture in flats.items():
-    s+= pack_texture(texture)
-    # get pair or self
-    s+= pack_texture(texture_pairs.get(name, texture))
-
-  to_multicart(s, "poom")
+  return s
 
 def load_WAD(filepath,mapname):
   with open(filepath, 'rb') as file:
@@ -515,6 +575,7 @@ def load_WAD(filepath,mapname):
     print("WAD type: {}".format(header.type))
 
     maps = {}
+    lumps = {}
     textures_entry = None
     decorate_entry = None
     # go to directory
@@ -526,6 +587,8 @@ def load_WAD(filepath,mapname):
       lump_name = entry.lump_name.decode('ascii').rstrip('\x00')
       # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_glnodes.cpp
       # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_setup.cpp
+      lumps[lump_name] = entry
+      print("lump: {}".format(lump_name))
       if re.match("E[0-9]M[0-9]",lump_name):
         # read UDMF
         map_dir = MAPDirectory(file, lump_name, entry)
@@ -536,8 +599,6 @@ def load_WAD(filepath,mapname):
         textures_entry = entry
       elif lump_name == 'DECORATE':
         decorate_entry = entry
-      else:
-        print("skipping: {}".format(lump_name))
       i += 1
 
     # decode textures
@@ -549,15 +610,16 @@ def load_WAD(filepath,mapname):
 
     # decode actors
     actors = {}
+    image_reader = WADImageReader()
     if decorate_entry is not None:
       file.seek(decorate_entry.lump_ofs)
       textmap_data = file.read(decorate_entry.lump_size).decode('ascii')
       actors = ACTORS(textmap_data).actors
-      print(actors)
-
+    
     # pick map
     zmap = maps[mapname].read(file)
-    pack_zmap(zmap, textures, actors)
+    data = pack_zmap(zmap, textures) + pack_actors(file, lumps, zmap, actors)
+    to_multicart(data, "poom")
 
 def to_float(n):
   return float((n-0x100000000)/65535.0) if n>0x7fffffff else float(n/65535.0)

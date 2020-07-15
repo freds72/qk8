@@ -94,7 +94,9 @@ class DecorateWalker(DECORATEListener):
         id = int(ctx.uid().getText())
       properties = dotdict({
         'id': id,
-        'kind': ACTOR_KIND.DEFAULT
+        'kind': ACTOR_KIND.DEFAULT,
+        'radius': 20,
+        'height': 16
       })
       if ctx.parent():
         parent = ctx.parent().KEYWORD().getText().lower()

@@ -12,5 +12,5 @@ REM magick convert MISLB0.png MISLC0.png MISLD0.png -resize 50%% -remap palette_
 
 REM python ..\..\PicoImageProc\convert.py --use-palette palette.txt converted_%~n1.png ..\carts\%~n1.p8
 
-
-for /f %%f in ('dir /b cybr') do magick cybr\%%f -resize 50%% -dither None -remap palette_line.png -background none -extent "%%[fx:16*(int(w/16)+1)]x%%[fx:16*(int(h/16)+1)]!" resized\%%f
+for /f %%f in ('dir /b %1') do magick %1\%%f +dither -remap palette_line.png -interpolate Nearest -filter Point -resize 50%% resized\%%f
+REM magick %1\POSSA3A7.png -dither Riemersma -remap palette_line.png -resize 50%% +dither -remap palette_line.png resized\POSSA3A7.PNG
