@@ -455,7 +455,7 @@ def pack_actors(file, lumps, map, actors):
   for i,image_data in enumerate(images):
     print("Packing sprite: {}".format(image_data.name))
     sprites[image_data.name] = i
-    s += "{:02x}{:02x}".format(image_data.width,image_data.height)
+    s += "{:02x}{:02x}".format(image_data.width|image_data.height<<4,image_data.xoffset|image_data.yoffset<<4)
     tiles = image_data.tiles
     s += pack_variant(len(tiles))
     for i,tile in tiles.items():

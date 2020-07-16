@@ -41,20 +41,21 @@ class WADImageReader():
     # get offsets (if any)
 
     src = Image.open(io.BytesIO(image_data))
-    print("image: {} mode: {}".format(name, src.mode))
-    width, height = src.size
+    src_width, src_height = src.size
 
     # resize to multiple of 16x16
     # + force known image format
-    img = Image.new('RGBA', (16*(math.ceil(width/16)), 16*(math.ceil(height/16))), (0,0,0,0))
-    img.paste(src, (0,0,width,height))
-
-    width, height = img.size
+    width = 16*(math.ceil(src_width/16))
+    height = 16*(math.ceil(src_height/16))
     if width>64 or height>64:
       raise Exception("Image: {} too large: {}x{} - must be 64x64 max.".format(name,width,height))
+
+    img = Image.new('RGBA', (width, height), (0,0,0,0))
+    img.paste(src, (0,0,src_width,src_height))
+
     tw = math.floor(width/16)
     th = math.floor(height/16)
-    print("Processing: {} - {}x{} pix".format(name,width,height))
+    print("Processing: {} - {}x{} pix -> {}x{}".format(name,src_width,src_height,width,height))
 
     data = bytes([])
     frame_tiles = {}
@@ -87,6 +88,6 @@ class WADImageReader():
       'tiles': frame_tiles,
       'width':  tw,
       'height': th,
-      'xoffset': 0,
-      'yoffset': 0,
+      'xoffset': width-src_width,
+      'yoffset': height-src_height,
       'data': data})

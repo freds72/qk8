@@ -152,13 +152,19 @@ end
 
 -->8
 -- virtual sprites
-function vspr(frame,sx,sy,scale)
+function vspr(frame,sx,sy,scale,flipx)
   palt(3,true)
   palt(0,false)
-	local w,h,tiles=unpack(frame)
+	local w,h,xoffset,yoffset,tiles=unpack(frame)
+	local sw,xscale=w*scale>>1,flipx and -scale or scale
+  pset(sx,sy,8)
+	sx-=sw
+	if(flipx) sx+=sw  
+	sy+=(yoffset-h)*scale
 	for i,tile in pairs(tiles) do
 		local ssx,ssy=_sprite_cache:use(tile,_tiles)
-		sspr(ssx,ssy,16,16,sx+(i%w-w/2)*scale,sy+(i\w-h+0.5)*scale,scale,scale)
+		sspr(ssx,ssy,16,16,sx+(i%w+xoffset)*xscale,sy+(i\w)*scale,scale,scale,flipx)
+		-- print(tile,(i%w)*16,(i\w)*16,7)
   end
   palt()
 end
@@ -1636,11 +1642,13 @@ function unpack_map()
   -- sprites
 	local frames,tiles={},{}
 	unpack_array(function()
-		-- width/height
-		local frame=add(frames,{mpeek(),mpeek(),{}})
+    -- width/height
+    --xoffset(center)/yoffset in tiles unit (16x16)
+    local size,offset=mpeek(),mpeek()
+		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/32,flr(offset>>4)/16,{}})
 		unpack_array(function()
 			-- tiles index
-			frame[3][mpeek()]=unpack_variant()
+			frame[5][mpeek()]=unpack_variant()
     end)
   end)
   
