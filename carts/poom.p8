@@ -509,11 +509,9 @@ function draw_flats(v_cache,segs,things)
       -- draw things (if any)
       local head,pal0=things[1].next
       while head do
-        local thing=head.thing
-        local x0,y0,w0=head.x,head.y,head.w
-        local pal1=0--4\w0
-        if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1    
-        palt(0,true)
+        local thing,x0,y0,w0=head.thing,head.x,head.y,head.w
+        local pal1=2\w0
+        if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1            
         w0*=2
         if thing.draw then
           thing:draw(x0,y0,w0)
@@ -521,15 +519,16 @@ function draw_flats(v_cache,segs,things)
           local frame=thing.actor.frames[1]
           if frame then
             -- pick side (if any)
-            local sides,side=frame.sides,1
+            local sides,side,flipx=frame.sides,0
             if #sides>1 then
               local angle=atan2(-thing[1]+plyr[1],thing[2]-plyr[2])-thing.angle+0.0625
               angle=(angle%1+1)%1
-              side=(#sides*angle)\1+1
+              side=(#sides*angle)\1
+              flipx=frame.flip&(1<<side)!=0
             end
             --local sy,sx,sh,sw,ox,flipx=unpack(sides[side])
             --sspr(sx,sy,sw,sh,x0-ox*w0,y0-sh*w0,sw*w0,sh*w0,flipx)
-            vspr(sides[side],x0,y0,16*w0)
+            vspr(sides[side+1],x0,y0,w0<<4,flipx)
             --pset(x0,y0,15)
           end 
         end

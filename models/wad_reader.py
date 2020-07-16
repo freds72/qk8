@@ -489,8 +489,10 @@ def pack_actors(file, lumps, map, actors):
       pattern = "{}{}".format(pose.image,pose.variant)
       frames = frames_by_name[pattern]
       # flipped?
-      # todo: convert to 8 bits field
-      s += "{:02x}".format(0)
+      flipbits = 0
+      for i,frame in enumerate(frames):
+        flipbits|=(frame[1]==True and 1 or 0)<<i
+      s += "{:02x}".format(flipbits)
       s += pack_variant(len(frames))
       for frame in frames:
         # index to sprite metadata

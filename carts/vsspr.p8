@@ -8,22 +8,30 @@ function _init()
 	_sprite_cache=make_sprite_cache(32)
 end
 
-function vspr(sx,sy,angle,scale)
-	palt(15,true)
+function vspr(sx,sy,angle,scale,flipx)
+	--palt(3,true)
 	local frame=_frames[flr(angle*#_frames)+1]
 	local w,h,tiles=unpack(frame)
-  --local scale=16--((abs(cos(time()/4))+2)<<4)\1+1
+	--local scale=16--((abs(cos(time()/4))+2)<<4)\1+1
+	local sw,xscale=w*scale>>1,flipx and -scale or scale
+	sx-=sw
+	if(flipx) sx+=sw  
+	sy-=h*scale
 	for i,tile in pairs(tiles) do
 		local ssx,ssy=_sprite_cache:use(tile,_tiles)
-		sspr(ssx,ssy,16,16,sx+(i%w-w/2)*scale,sy+(i\w-h)*scale,scale,scale)
+		local dx,dy=sx+(i%w)*xscale,sy+(i\w)*scale
+		sspr(ssx,ssy,16,16,dx,dy,scale+dx%1,scale+dy%1,flipx)
 		-- print(tile,(i%w)*16,(i\w)*16,7)
 	end
+	pset(sx,sy,8)
 end
 
-local angle=0
+local angle,scale=0,16
 function _update()
-	if(btnp(0)) angle-=0.05
-	if(btnp(1)) angle+=0.05
+	if(btnp(0)) angle-=0.01
+	if(btnp(1)) angle+=0.01
+	if(btnp(2)) scale-=0.25
+	if(btnp(3)) scale+=0.25
 	angle=(angle%1+1)%1
 end
 
@@ -32,18 +40,21 @@ function _draw()
 	--vsspr(1,64,64,1)
 	--spr(0,0,64,16,8)
 	palt(0,false)
-	for i=16,96,32 do
-		vspr(i,64,angle,16)
-	end
+	--for i=16,96,32 do
+		vspr(32,96,angle,scale,btn(4))
+
+		--vspr2(96,96,angle,scale,btn(4))
+
+		--end
 	palt()
 
 	-- spr(0,0,64,16,8)
 
 	--_sprite_cache:print(2,16,7)
 	--_sprite_cache:draw(64)
-	print(stat(1).."\n"..stat(0),90,2,8)
+	print(stat(1).."\n"..stat(0).."\n"..scale,90,2,8)
 
-	pal({140,1,3,131,4,132,133,7,6,134,5,8,2,9,10},1)
+	pal({140,1,139,3,4,132,133,7,6,134,5,8,2,9,10},1)
 end
 -->8
 -- https://github.com/luapower/linkedlist/blob/master/linkedlist.lua
@@ -74,7 +85,6 @@ function make_sprite_cache(maxlen)
 	end
 	
 	return {
-		index={},
 		use=function(self,id,tiles)
 			local entry=index[id]
 			if entry then
