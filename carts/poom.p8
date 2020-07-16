@@ -157,13 +157,13 @@ function vspr(frame,sx,sy,scale,flipx)
   palt(0,false)
 	local w,h,xoffset,yoffset,tiles=unpack(frame)
 	local sw,xscale=w*scale>>1,flipx and -scale or scale
-  pset(sx,sy,8)
 	sx-=sw
 	if(flipx) sx+=sw  
 	sy+=(yoffset-h)*scale
 	for i,tile in pairs(tiles) do
-		local ssx,ssy=_sprite_cache:use(tile,_tiles)
-		sspr(ssx,ssy,16,16,sx+(i%w+xoffset)*xscale,sy+(i\w)*scale,scale,scale,flipx)
+    local dx,dy,ssx,ssy=sx+(i%w+xoffset)*xscale,sy+(i\w)*scale,_sprite_cache:use(tile,_tiles)
+    -- scale sub-pixel fix 
+    sspr(ssx,ssy,16,16,dx,dy,scale+dx%1,scale+dy%1,flipx)
 		-- print(tile,(i%w)*16,(i\w)*16,7)
   end
   palt()
