@@ -153,9 +153,10 @@ end
 -->8
 -- virtual sprites
 function vspr(frame,sx,sy,scale,flipx)
-  palt(3,true)
-  palt(0,false)
-	local w,h,xoffset,yoffset,tiles=unpack(frame)
+  -- faster equivalent to: palt(0,false)
+  poke(0x5f00,0)
+  local w,h,xoffset,yoffset,tc,tiles=unpack(frame)
+  palt(tc,true)
 	local sw,xscale=w*scale>>1,flipx and -scale or scale
 	sx-=sw
 	if(flipx) sx+=sw  
@@ -164,7 +165,7 @@ function vspr(frame,sx,sy,scale,flipx)
     local dx,dy,ssx,ssy=sx+(i%w+xoffset)*xscale,sy+(i\w)*scale,_sprite_cache:use(tile,_tiles)
     -- scale sub-pixel fix 
     sspr(ssx,ssy,16,16,dx,dy,scale+dx%1,scale+dy%1,flipx)
-		-- print(tile,(i%w)*16,(i\w)*16,7)
+    -- print(tile,(i%w)*16,(i\w)*16,7)
   end
   palt()
 end
@@ -849,7 +850,7 @@ end
   -- helper function
 function make_projectile(thing,z)
   local actor,angle=thing.actor,thing.angle
-  local ca,sa,speed,radius,ttl=cos(angle),sin(angle),actor.speed,actor.radius,120
+  local ca,sa,speed,radius,ttl=cos(angle),sin(angle),2*actor.speed,actor.radius,120
   thing=with_physic(thing)
   thing[3]=z
   thing:apply_forces(speed*ca,speed*sa)
@@ -887,7 +888,7 @@ function attach_plyr(thing)
     end
     wp_switching=true
     do_async(function()
-      wp_yoffset=-16
+      wp_yoffset=-32
       wait_async(15)
       wp_slot=i
       wp_yoffset=0
@@ -944,10 +945,10 @@ function attach_plyr(thing)
       printb("♥"..self.health,2,110,12)
       printb("웃"..self.armor,2,120,3)
       
-      -- weapon placeholder
-      rectfill(54,112-wp_y,74,128,9)
+      local active_wp=wp[wp_slot]
+      vspr(active_wp.frames[reload_ttl<2 and 1 or 2].sides[1],64,128-wp_y,16)
 
-      local ammotype=wp[wp_slot].ammotype
+      local ammotype=active_wp.ammotype
       print(ammotype.icon..self.inventory[ammotype],2,100,8)  
     end
   },{__index=with_physic(thing)})
@@ -1196,7 +1197,7 @@ function _draw()
     if(_msg) print(_msg,64-#_msg*2,120,15)
 
     -- debug messages
-    local cpu=stat(1).."|"..stat(0).."\n"..plyr.sector.id
+    local cpu=stat(1).."|"..stat(0).."\n"
     print(cpu,2,3,3)
     print(cpu,2,2,8)
     
@@ -1641,11 +1642,11 @@ function unpack_map()
 	unpack_array(function()
     -- width/height
     --xoffset(center)/yoffset in tiles unit (16x16)
-    local size,offset=mpeek(),mpeek()
-		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/32,flr(offset>>4)/16,{}})
+    local size,offset,tc=mpeek(),mpeek(),mpeek()
+		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/32,flr(offset>>4)/16,tc,{}})
 		unpack_array(function()
 			-- tiles index
-			frame[5][mpeek()]=unpack_variant()
+			frame[6][mpeek()]=unpack_variant()
     end)
   end)
   

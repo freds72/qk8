@@ -11,9 +11,6 @@ from python2pico import pack_fixed
 from python2pico import to_multicart
 from python2pico import pack_int32
 from PIL import Image, ImageFilter
-
-def rgba_to_string(rgba):
-  return "{:02x}{:02x}{:02x}{:02x}".format(rgba[0],rgba[1],rgba[2],rgba[3])
 class WADImageReader():  
   def __init__(self):
     # cache already processed tiles
@@ -25,9 +22,9 @@ class WADImageReader():
     self.rgba_to_pico = {}
     for x in range(17):
       rgba = img.getpixel((x,0))
-      self.rgba_to_pico[rgba_to_string(rgba)] = x==0 and 3 or x-1
-    # alternate transparency color
-    self.rgba_to_pico["00000000"] = 3
+      self.rgba_to_pico[rgba] = x-1
+    # forced transparency color
+    self.rgba_to_pico[(00,00,00,00)] = -1
 
   # convert a wad image into a pair of tiles address and tiles data (binary)
   def read(self, file, lumps, name):
@@ -53,6 +50,17 @@ class WADImageReader():
     img = Image.new('RGBA', (width, height), (0,0,0,0))
     img.paste(src, (0,0,src_width,src_height))
 
+    # find a transparency color
+    all_colors = set([rgba for rgba,i in self.rgba_to_pico.items()])
+
+    for j in range(src_height):
+      for i in range(src_width):
+        rgba = img.getpixel((i,j))
+        if rgba in all_colors: all_colors.remove(rgba)
+    pico8_transparency = 0
+    # pick a random color to act as transparent color
+    if len(rgba)>0: pico8_transparency = self.rgba_to_pico[all_colors.pop()]
+
     tw = math.floor(width/16)
     th = math.floor(height/16)
     print("Processing: {} - {}x{} pix -> {}x{}".format(name,src_width,src_height,width,height))
@@ -71,13 +79,15 @@ class WADImageReader():
               # image is using the pico palette (+transparency)
               # print(indexed_to_rgba[img.getpixel((i*16 + x + n, j*16 + y))])
               low = img.getpixel((i*16 + x + n, j*16 + y))
-              low = self.rgba_to_pico[rgba_to_string(low)]
+              low = self.rgba_to_pico[low]
+              if low==-1: low = pico8_transparency
               high = img.getpixel((i*16 + x + n + 1, j*16 + y))
-              high = self.rgba_to_pico[rgba_to_string(high)]
+              high = self.rgba_to_pico[high]
+              if high==-1: high = pico8_transparency
               pixels.append(low|high<<4)
             image_data += bytes(pixels[::-1])
         # skip fully transparent tile
-        if not all(b==0xff for b in image_data):
+        if not all(b==pico8_transparency|pico8_transparency<<4 for b in image_data):
           data += image_data
           # reference to corresponding tiles
           frame_tiles[j*tw+i] = tiles
@@ -90,4 +100,5 @@ class WADImageReader():
       'height': th,
       'xoffset': width-src_width,
       'yoffset': height-src_height,
+      'background': pico8_transparency,
       'data': data})
