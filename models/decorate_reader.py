@@ -1,4 +1,5 @@
 import sys
+import copy
 from antlr4 import *
 from DECORATELexer import DECORATELexer
 from DECORATEParser import DECORATEParser
@@ -76,15 +77,18 @@ builtin_actors = {
 class DecorateWalker(DECORATEListener):     
     def __init__(self):
       self.result = {}
-      self.frames = []
+      self.labels = {}
+      self.last_label = None
+      self.states = []
 
     def enterBlock(self, ctx):
-      # clear frames
-      self.frames = []
+      # clear states
+      self.labels = {}
+      self.last_label = None
+      self.states = []
 
     def exitBlock(self, ctx):  
       name = ctx.name().KEYWORD().getText().lower()
-      print("end of actor: {}".format(name))
 
       if name in builtin_actors:
         raise Exception("Cannot redefine base actor: {}".format(name))
@@ -93,6 +97,8 @@ class DecorateWalker(DECORATEListener):
       if ctx.uid():
         id = int(ctx.uid().getText())
       properties = dotdict({
+        # debug/error mgt purpose only
+        'name': name,
         'id': id,
         'kind': ACTOR_KIND.DEFAULT,
         'radius': 20,
@@ -150,22 +156,58 @@ class DecorateWalker(DECORATEListener):
         attribute = flag.keyword().getText().lower()
         properties[attribute] = activated=='+'
       
-      # add sprite frames
-      frames = []
-      for frame in self.frames:
-        frames.append(frame)
-      properties['frames'] = frames
+      # loop/goto index is encoded in a byte
+      if len(self.states)>255:
+        raise Exception("Exceeded max. number of states: {}/255".format(len(self.state)))
+
+      # states
+      states = []
+      for i,state in enumerate(self.states):
+        if 'goto' in state:
+          label = state.goto
+          if label not in self.labels:
+            raise Exception("Unknown goto label: {} in {}".format(label,list(self.labels.keys())))
+          # replace with line number
+          state = dotdict({
+            'goto': self.labels[label]
+          })
+        states.append(state)
+        # print("{}: {}".format(i,state))
+
+      properties['_states'] = states
+      properties['_labels'] = copy.deepcopy(self.labels)
+
       self.result[name] = properties
 
     def exitState_block(self, ctx):
-      state = ctx.name().KEYWORD().getText().lower()
-      if state=='spawn':
-        for i in range(len(ctx.image())):
-          self.frames.append(dotdict({
-            'image': ctx.image(i).getText(),
-            'variant': ctx.variant(i).getText(),
-            'ticks': int(ctx.ticks(i).getText())
-          }))
+      if ctx.label():
+        label = ctx.label().KEYWORD().getText()
+        self.labels[label] = len(self.states)
+        self.last_label = label 
+      elif ctx.state_command():
+        state = ctx.state_command()
+        self.states.append(dotdict({
+          'image': state.image().getText(),
+          'variant': state.variant().getText(),
+          'ticks': int(state.ticks().getText())
+        }))
+      elif ctx.state_stop():
+        self.states.append(dotdict({
+          'stop': True
+        }))
+      elif ctx.state_loop():
+        if self.last_label is None:
+          raise Exception("No state label to loop to.")
+        self.states.append(dotdict({
+          'loop': self.labels[self.last_label]
+        }))
+      elif ctx.state_goto():
+        label = ctx.state_goto().KEYWORD().getText()
+        # go to yet undeclared label is possible !!
+        # to be resolved later on
+        self.states.append(dotdict({
+          'goto': label
+        }))
 
 class ACTORS():
   def __init__(self, data):

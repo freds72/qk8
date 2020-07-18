@@ -439,10 +439,9 @@ def pack_actors(file, lumps, map, actors):
   image_reader = WADImageReader()
   frames_by_name = {}
   for actor in concrete_actors:
-    # todo: rename to 'state step'
-    for pose in actor.frames:
-      image_name = "{}{}".format(pose.image,pose.variant)
-      frames = get_image_frames(lumps, pose.image, pose.variant)
+    for state in [state for state in actor._states if 'image' in state]:
+      image_name = "{}{}".format(state.image,state.variant)
+      frames = get_image_frames(lumps, state.image, state.variant)
       frames_by_name[image_name] = frames
       # remove "flipped" duplicate sprites for serialization
       for frame in [frame for frame in frames if frame[1]==False]:
@@ -463,12 +462,18 @@ def pack_actors(file, lumps, map, actors):
     tiles_count += len(tiles)
 
   # export all images bytes
+  if tiles_count>32763-32:
+    # exceeded pico8 array size?
+    raise Exception("Tiles count ({}) exceeds PICO8 table size - not yet supported".format(tiles_count))
   print("Packing {} 16x16 tiles".format(tiles_count))
   image_s = pack_variant(tiles_count)
   for image_bytes in [img.data for img in images]:
     for b in image_bytes:
       image_s += "{:02x}".format(b)
   s += image_s
+
+  # know state names
+  all_states = ['Spawn','Idle','See','Melee','Missile','Death','XDeath','Ready','Hold','Fire']
 
   s += pack_variant(len(concrete_actors))
   for actor in concrete_actors:
@@ -481,22 +486,41 @@ def pack_actors(file, lumps, map, actors):
     # behavior flags
     flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2
     s += "{:02x}".format(flags)
-    # todo: rename to states/steps
-    s += pack_variant(len(actor.frames))
-    for pose in actor.frames:
-      # pack all sides for a given pose (variant)
-      s += pack_fixed(pose.ticks)
-      pattern = "{}{}".format(pose.image,pose.variant)
-      frames = frames_by_name[pattern]
-      # flipped?
-      flipbits = 0
-      for i,frame in enumerate(frames):
-        flipbits|=(frame[1]==True and 1 or 0)<<i
-      s += "{:02x}".format(flipbits)
-      s += pack_variant(len(frames))
-      for frame in frames:
-        # index to sprite metadata
-        s += pack_variant(sprites[frame[0]]+1)
+    # export state jump table
+    s += pack_variant(len(actor._labels))
+    for state_label,state_address in actor._labels.items():
+      if state_label not in all_states:
+        raise Exception("Unkown state: {} for actor: {} - Custom state names are not supported.".format(state_label.actor.name))
+      s += "{:02x}{:02x}".format(all_states.index(state_label),state_address+1)
+    # export states
+    s += pack_variant(len(actor._states))
+    for state in actor._states:
+      state_s = ""
+      flags = 0
+      if 'stop' in state:
+        flags=1
+      elif 'loop' in state:
+        flags=2
+        flags|=(state.loop+1)<<4
+      elif 'goto' in state:
+        flags=3
+        flags|=(state.goto+1)<<4
+      else:
+        # pack all sides for a given pose (variant)
+        state_s += pack_fixed(state.ticks)
+        pattern = "{}{}".format(state.image,state.variant)
+        frames = frames_by_name[pattern]
+        # flipped?
+        flipbits = 0
+        for i,frame in enumerate(frames):
+          flipbits|=(frame[1]==True and 1 or 0)<<i
+        state_s += "{:02x}".format(flipbits)
+        state_s += pack_variant(len(frames))
+        for frame in frames:
+          # index to sprite metadata
+          state_s += pack_variant(sprites[frame[0]]+1)
+      s += "{:02x}".format(flags)
+      s += state_s
     
     properties = 0
 #{0x0.0001,"health"},

@@ -27,13 +27,30 @@ states:
   'States' '{' state_block* '}'
   ;
 
-state_control:
-  'Stop' | 
-  'Loop'
+state_block:
+  label|state_command|state_stop|state_loop|state_goto
   ;
 
-state_block:
-  name ':' (image variant ticks function?)+ state_control
+state_stop:
+  'Stop'
+  ;
+state_loop:
+  'Loop'
+  ;
+state_goto:
+  'Goto' KEYWORD
+  ;
+
+label:
+  KEYWORD ':'
+  ;
+
+state_command:
+ image variant ticks image_modifier? function?
+ ;
+
+image_modifier:
+  'BRIGHT'
   ;
 
 image:

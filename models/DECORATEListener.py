@@ -62,21 +62,66 @@ class DECORATEListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by DECORATEParser#state_control.
-    def enterState_control(self, ctx:DECORATEParser.State_controlContext):
-        pass
-
-    # Exit a parse tree produced by DECORATEParser#state_control.
-    def exitState_control(self, ctx:DECORATEParser.State_controlContext):
-        pass
-
-
     # Enter a parse tree produced by DECORATEParser#state_block.
     def enterState_block(self, ctx:DECORATEParser.State_blockContext):
         pass
 
     # Exit a parse tree produced by DECORATEParser#state_block.
     def exitState_block(self, ctx:DECORATEParser.State_blockContext):
+        pass
+
+
+    # Enter a parse tree produced by DECORATEParser#state_stop.
+    def enterState_stop(self, ctx:DECORATEParser.State_stopContext):
+        pass
+
+    # Exit a parse tree produced by DECORATEParser#state_stop.
+    def exitState_stop(self, ctx:DECORATEParser.State_stopContext):
+        pass
+
+
+    # Enter a parse tree produced by DECORATEParser#state_loop.
+    def enterState_loop(self, ctx:DECORATEParser.State_loopContext):
+        pass
+
+    # Exit a parse tree produced by DECORATEParser#state_loop.
+    def exitState_loop(self, ctx:DECORATEParser.State_loopContext):
+        pass
+
+
+    # Enter a parse tree produced by DECORATEParser#state_goto.
+    def enterState_goto(self, ctx:DECORATEParser.State_gotoContext):
+        pass
+
+    # Exit a parse tree produced by DECORATEParser#state_goto.
+    def exitState_goto(self, ctx:DECORATEParser.State_gotoContext):
+        pass
+
+
+    # Enter a parse tree produced by DECORATEParser#label.
+    def enterLabel(self, ctx:DECORATEParser.LabelContext):
+        pass
+
+    # Exit a parse tree produced by DECORATEParser#label.
+    def exitLabel(self, ctx:DECORATEParser.LabelContext):
+        pass
+
+
+    # Enter a parse tree produced by DECORATEParser#state_command.
+    def enterState_command(self, ctx:DECORATEParser.State_commandContext):
+        pass
+
+    # Exit a parse tree produced by DECORATEParser#state_command.
+    def exitState_command(self, ctx:DECORATEParser.State_commandContext):
+        pass
+
+
+    # Enter a parse tree produced by DECORATEParser#image_modifier.
+    def enterImage_modifier(self, ctx:DECORATEParser.Image_modifierContext):
+        pass
+
+    # Exit a parse tree produced by DECORATEParser#image_modifier.
+    def exitImage_modifier(self, ctx:DECORATEParser.Image_modifierContext):
         pass
 
 

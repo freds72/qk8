@@ -39,13 +39,38 @@ class DECORATEVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by DECORATEParser#state_control.
-    def visitState_control(self, ctx:DECORATEParser.State_controlContext):
+    # Visit a parse tree produced by DECORATEParser#state_block.
+    def visitState_block(self, ctx:DECORATEParser.State_blockContext):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by DECORATEParser#state_block.
-    def visitState_block(self, ctx:DECORATEParser.State_blockContext):
+    # Visit a parse tree produced by DECORATEParser#state_stop.
+    def visitState_stop(self, ctx:DECORATEParser.State_stopContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by DECORATEParser#state_loop.
+    def visitState_loop(self, ctx:DECORATEParser.State_loopContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by DECORATEParser#state_goto.
+    def visitState_goto(self, ctx:DECORATEParser.State_gotoContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by DECORATEParser#label.
+    def visitLabel(self, ctx:DECORATEParser.LabelContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by DECORATEParser#state_command.
+    def visitState_command(self, ctx:DECORATEParser.State_commandContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by DECORATEParser#image_modifier.
+    def visitImage_modifier(self, ctx:DECORATEParser.Image_modifierContext):
         return self.visitChildren(ctx)
 
 
