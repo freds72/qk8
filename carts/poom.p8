@@ -517,8 +517,8 @@ function draw_flats(v_cache,segs,things)
         if thing.draw then
           thing:draw(x0,y0,w0)
         else
-          -- first state instruction
-          local frame=thing.actor.states[1]
+          -- get image from current state
+          local frame=thing.state
           -- pick side (if any)
           local sides,side,flipx=frame.sides,0
           if #sides>1 then
@@ -996,6 +996,7 @@ function _update()
 
   for _,thing in pairs(_things) do
     if(thing.control) thing:control()
+    thing:run_vm()
     if(thing.update) thing:update()
   end
 
@@ -1427,38 +1428,6 @@ function unpack_texture()
   return tex!=0 and tex
 end
 
-function unpack_states(actor)
-  local states={}
-  unpack_array(function()
-    local state,loop,steps=unpack_string(),mpeek(),{}
-    unpack_array(function()
-      local step=add(steps,{
-        -- pointer to frame set
-        pose=unpack_variant(),
-        -- ttl
-        ttl=unpack_variant()
-      })
-      local fn=_ENV["a_"..unpack_string()]
-      -- unpack parameter function (if any)
-      if fn then
-        step.action=fn() 
-      end
-    end)
-    states[state]=function(thing)
-      while true do
-        for _,step in ipairs(steps) do
-          thing.pose[actor]=step.pose
-          if(step.fn) step.fn(thing)
-          wait_async(step.ttl)
-        end
-        if(loop==0) break
-        yield()
-      end
-    end
-  end)
-  return states
-end
-
 function a_fire()
   local spread,dmg=5,3
   return function(thing)
@@ -1484,24 +1453,6 @@ function a_spawn()
     -- todo: beef up make_thing to fully build a new thing from flags
     make_thing(actor,unpack(thing))
   end
-end
-
-function with_states(thing)
-  local states=thing.actor.states
-  local spawn=states.spawn
-  local update_async=spawn and cocreate(spawn)
-  return setmetatable({
-    next_state=function(self,state)
-      state=states[state]
-      update_async=state and cocreate(state)
-    end,
-    update=function(self)
-      if(update_async) update_async=run_async(update_async,self)
-
-      -- call nested
-      thing.update(thing)
-    end
-  },{__index=thing})
 end
 
 function unpack_map()
@@ -1663,8 +1614,7 @@ function unpack_map()
   end
 
   unpack_array(function()
-    local kind,id=unpack_variant(),unpack_variant()
-    local inventory={}
+    local kind,id,inventory,state_labels,states=unpack_variant(),unpack_variant(),{},{},{}
     local item={
       id=id,
       kind=kind,
@@ -1675,43 +1625,81 @@ function unpack_map()
       -- 0x2: shootable
       -- 0x4: missile
       flags=mpeek(),
-      -- state entry points
-      labels={},
-      -- state commands
-      states={},
-      -- attach items qty to thing instance
+      -- attach actor to this thing
       attach=function(self,thing)
-        thing.actor=self
-        thing.health=self.health
-        thing.armor=self.armor
-        thing.inventory={}
+        -- vm state (starts at spawn)
+        local i,ticks=state_labels[0],-2
+        thing=setmetatable({
+          actor=self,
+          health=self.health,
+          armor=self.armor,
+          inventory={},
+          -- jump to a vm label
+          jump_to=function(self,id)
+            i,ticks=state_labels[id],-2
+          end,
+          -- vm update
+          run_vm=function(self)
+            while ticks!=-1 do
+              -- wait
+              if(ticks>0) ticks-=1 return
+              -- done, next step
+              if(ticks==0) i+=1
+::loop::
+              local state=states[i]
+              -- stop (or end of vm instructions)
+              if(state.jmp==-1 or not state) do_async(function() del(_things,self) end) return
+              -- loop or goto
+              if(state.jmp) self:jump_to(state.jmp) goto loop
+
+              -- effective state
+              self.state=state
+              -- todo: exec function
+              -- get ticks
+              ticks=state.ticks
+            end
+          end,
+          -- debug: remove
+          draw_vm=function(self,x,y)
+            print(i..":"..ticks,x,y,8)
+          end
+        },{__index=thing})
+
+        -- init inventory
         for k,v in pairs(inventory) do
           thing.inventory[k]=v
         end
+
         return thing
       end
     }
     -- 
     unpack_array(function()
       -- map label id to state command line number
-      item.labels[mpeek()]=mpeek()
+      state_labels[mpeek()]=mpeek()
     end)
     -- states & sprites
     unpack_array(function()
       local flags=mpeek()
-      -- control command
-      local cmd={flags=flags}
-      -- normal command
-      if flags&0x3==0 then
-        -- todo: use a reference to poses (too many duplicates for complex states)
-        cmd={flags=flags,ticks=unpack_fixed(),flip=mpeek(),sides={}}
+      local ctrl=flags&0x3
+      -- stop
+      local cmd={jmp=-1}
+      if ctrl==2 or ctrl==3 then
+        -- loop or goto      
+        cmd={jmp=state_labels[flr(flags>>4)]}
+      elseif ctrl==0 then
+        -- normal command
+        -- todo: use a reference to sprite sides (too many duplicates for complex states)
+        -- or merge sides into array
+        cmd={ticks=unpack_fixed(),flip=mpeek(),sides={}}
         -- get all pose sides
         unpack_array(function(i)
           add(cmd.sides,frames[unpack_variant()])
         end)
       end
-      add(item.states,cmd)
+      add(states,cmd)
     end)
+
     -- misc. actor properties
     local properties,properties_factory=unpack_fixed(),{
       {0x0.0001,"health"},

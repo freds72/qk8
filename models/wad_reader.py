@@ -496,6 +496,11 @@ def pack_actors(file, lumps, map, actors):
     s += pack_variant(len(actor._states))
     for state in actor._states:
       state_s = ""
+      # layout:
+      # 0-1: control type (0/1/2/3)
+      # 2: sprite modifier
+      # 3: custom function
+      # 4-7: jump label address
       flags = 0
       if 'stop' in state:
         flags=1
