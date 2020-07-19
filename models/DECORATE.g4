@@ -12,7 +12,7 @@ block:
   ;
 
 pair:
-  (parent '.')? keyword value args
+  (parent '.')? keyword value args ';'?
   ;
   
 keyword:
@@ -20,7 +20,7 @@ keyword:
   ;
 
 flags:
-  ENABLED keyword
+  ENABLED keyword ';'?
   ;
 
 states:
@@ -28,7 +28,7 @@ states:
   ;
 
 state_block:
-  label|state_command|state_stop|state_loop|state_goto
+  (label|state_command|state_stop|state_loop|state_goto) ';'?
   ;
 
 state_stop:
@@ -50,7 +50,9 @@ state_command:
  ;
 
 image_modifier:
-  'BRIGHT'
+  'BRIGHT'|
+  'Bright'|
+  'bright'
   ;
 
 image:

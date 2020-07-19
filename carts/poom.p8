@@ -511,14 +511,15 @@ function draw_flats(v_cache,segs,things)
       local head,pal0=things[1].next
       while head do
         local thing,x0,y0,w0=head.thing,head.x,head.y,head.w
-        local pal1=2\w0
-        if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1            
-        w0*=2
         if thing.draw then
           thing:draw(x0,y0,w0)
         else
           -- get image from current state
           local frame=thing.state
+
+          -- use frame brightness level
+          local pal1=frame.light\w0
+          if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1            
           -- pick side (if any)
           local sides,side,flipx=frame.sides,0
           if #sides>1 then
@@ -527,7 +528,7 @@ function draw_flats(v_cache,segs,things)
             side=(#sides*angle)\1
             flipx=frame.flip&(1<<side)!=0
           end
-          vspr(sides[side+1],x0,y0,w0<<4,flipx)
+          vspr(sides[side+1],x0,y0,w0<<5,flipx)
           --thing:draw_vm(x0,y0)
         end
         head=head.next
@@ -1621,6 +1622,7 @@ function unpack_map()
           actor=self,
           health=self.health,
           armor=self.armor,
+          -- for player only
           weapons=weapons,
           active_slot=active_slot,
           inventory={},
@@ -1681,7 +1683,7 @@ function unpack_map()
         -- normal command
         -- todo: use a reference to sprite sides (too many duplicates for complex states)
         -- or merge sides into array
-        cmd={ticks=unpack_fixed(),flip=mpeek(),sides={}}
+        cmd={light=flags&0x4>0 and 0 or 2,ticks=unpack_fixed(),flip=mpeek(),sides={}}
         -- get all pose sides
         unpack_array(function(i)
           add(cmd.sides,frames[unpack_variant()])

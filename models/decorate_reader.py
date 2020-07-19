@@ -185,6 +185,7 @@ class DecorateWalker(DECORATEListener):
         self.states.append(dotdict({
           'image': state.image().getText(),
           'variant': state.variant().getText(),
+          'bright': state.image_modifier() is not None,
           'ticks': int(state.ticks().getText())
         }))
       elif ctx.state_stop():

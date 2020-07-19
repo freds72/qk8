@@ -503,11 +503,14 @@ def pack_actors(file, lumps, map, actors):
       # 4-7: jump label id
       flags = 0
       if 'stop' in state:
-        flags=1
+        flags=0x1
       elif 'goto' in state:
-        flags=2
+        flags=0x2
         flags|=all_states.index(state.goto)<<4
       else:
+        # bright?
+        if state.bright:
+          flags|=0x4
         # pack all sides for a given pose (variant)
         state_s += pack_fixed(state.ticks)
         pattern = "{}{}".format(state.image,state.variant)

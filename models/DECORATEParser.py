@@ -11,58 +11,62 @@ else:
 
 def serializedATN():
     with StringIO() as buf:
-        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\27")
-        buf.write("\u009d\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7")
+        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\32")
+        buf.write("\u00a4\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7")
         buf.write("\4\b\t\b\4\t\t\t\4\n\t\n\4\13\t\13\4\f\t\f\4\r\t\r\4\16")
         buf.write("\t\16\4\17\t\17\4\20\t\20\4\21\t\21\4\22\t\22\4\23\t\23")
         buf.write("\4\24\t\24\4\25\t\25\4\26\t\26\4\27\t\27\3\2\7\2\60\n")
         buf.write("\2\f\2\16\2\63\13\2\3\2\3\2\3\3\3\3\3\3\3\3\5\3;\n\3\3")
         buf.write("\3\5\3>\n\3\3\3\3\3\7\3B\n\3\f\3\16\3E\13\3\3\3\7\3H\n")
         buf.write("\3\f\3\16\3K\13\3\3\3\5\3N\n\3\3\3\3\3\3\4\3\4\3\4\5\4")
-        buf.write("U\n\4\3\4\3\4\3\4\3\4\3\5\3\5\3\6\3\6\3\6\3\7\3\7\3\7")
-        buf.write("\7\7c\n\7\f\7\16\7f\13\7\3\7\3\7\3\b\3\b\3\b\3\b\3\b\5")
-        buf.write("\bo\n\b\3\t\3\t\3\n\3\n\3\13\3\13\3\13\3\f\3\f\3\f\3\r")
-        buf.write("\3\r\3\r\3\r\5\r\177\n\r\3\r\5\r\u0082\n\r\3\16\3\16\3")
-        buf.write("\17\3\17\3\20\3\20\3\21\3\21\3\22\3\22\3\23\3\23\3\24")
-        buf.write("\3\24\3\25\3\25\3\26\3\26\7\26\u0096\n\26\f\26\16\26\u0099")
-        buf.write("\13\26\3\27\3\27\3\27\2\2\30\2\4\6\b\n\f\16\20\22\24\26")
-        buf.write("\30\32\34\36 \"$&(*,\2\4\3\2\3\4\4\2\20\21\23\23\2\u0095")
-        buf.write("\2\61\3\2\2\2\4\66\3\2\2\2\6T\3\2\2\2\bZ\3\2\2\2\n\\\3")
-        buf.write("\2\2\2\f_\3\2\2\2\16n\3\2\2\2\20p\3\2\2\2\22r\3\2\2\2")
-        buf.write("\24t\3\2\2\2\26w\3\2\2\2\30z\3\2\2\2\32\u0083\3\2\2\2")
-        buf.write("\34\u0085\3\2\2\2\36\u0087\3\2\2\2 \u0089\3\2\2\2\"\u008b")
-        buf.write("\3\2\2\2$\u008d\3\2\2\2&\u008f\3\2\2\2(\u0091\3\2\2\2")
-        buf.write("*\u0097\3\2\2\2,\u009a\3\2\2\2.\60\5\4\3\2/.\3\2\2\2\60")
-        buf.write("\63\3\2\2\2\61/\3\2\2\2\61\62\3\2\2\2\62\64\3\2\2\2\63")
-        buf.write("\61\3\2\2\2\64\65\7\2\2\3\65\3\3\2\2\2\66\67\t\2\2\2\67")
-        buf.write(":\5\"\22\289\7\5\2\29;\5(\25\2:8\3\2\2\2:;\3\2\2\2;=\3")
-        buf.write("\2\2\2<>\5&\24\2=<\3\2\2\2=>\3\2\2\2>?\3\2\2\2?C\7\6\2")
-        buf.write("\2@B\5\6\4\2A@\3\2\2\2BE\3\2\2\2CA\3\2\2\2CD\3\2\2\2D")
-        buf.write("I\3\2\2\2EC\3\2\2\2FH\5\n\6\2GF\3\2\2\2HK\3\2\2\2IG\3")
-        buf.write("\2\2\2IJ\3\2\2\2JM\3\2\2\2KI\3\2\2\2LN\5\f\7\2ML\3\2\2")
-        buf.write("\2MN\3\2\2\2NO\3\2\2\2OP\7\7\2\2P\5\3\2\2\2QR\5(\25\2")
-        buf.write("RS\7\b\2\2SU\3\2\2\2TQ\3\2\2\2TU\3\2\2\2UV\3\2\2\2VW\5")
-        buf.write("\b\5\2WX\5,\27\2XY\5*\26\2Y\7\3\2\2\2Z[\7\24\2\2[\t\3")
-        buf.write("\2\2\2\\]\7\17\2\2]^\5\b\5\2^\13\3\2\2\2_`\7\t\2\2`d\7")
-        buf.write("\6\2\2ac\5\16\b\2ba\3\2\2\2cf\3\2\2\2db\3\2\2\2de\3\2")
-        buf.write("\2\2eg\3\2\2\2fd\3\2\2\2gh\7\7\2\2h\r\3\2\2\2io\5\26\f")
-        buf.write("\2jo\5\30\r\2ko\5\20\t\2lo\5\22\n\2mo\5\24\13\2ni\3\2")
-        buf.write("\2\2nj\3\2\2\2nk\3\2\2\2nl\3\2\2\2nm\3\2\2\2o\17\3\2\2")
-        buf.write("\2pq\7\n\2\2q\21\3\2\2\2rs\7\13\2\2s\23\3\2\2\2tu\7\f")
-        buf.write("\2\2uv\7\24\2\2v\25\3\2\2\2wx\7\24\2\2xy\7\5\2\2y\27\3")
-        buf.write("\2\2\2z{\5\34\17\2{|\5\36\20\2|~\5 \21\2}\177\5\32\16")
-        buf.write("\2~}\3\2\2\2~\177\3\2\2\2\177\u0081\3\2\2\2\u0080\u0082")
-        buf.write("\5$\23\2\u0081\u0080\3\2\2\2\u0081\u0082\3\2\2\2\u0082")
-        buf.write("\31\3\2\2\2\u0083\u0084\7\r\2\2\u0084\33\3\2\2\2\u0085")
-        buf.write("\u0086\7\24\2\2\u0086\35\3\2\2\2\u0087\u0088\7\22\2\2")
-        buf.write("\u0088\37\3\2\2\2\u0089\u008a\7\20\2\2\u008a!\3\2\2\2")
-        buf.write("\u008b\u008c\7\24\2\2\u008c#\3\2\2\2\u008d\u008e\7\23")
-        buf.write("\2\2\u008e%\3\2\2\2\u008f\u0090\7\20\2\2\u0090\'\3\2\2")
-        buf.write("\2\u0091\u0092\7\24\2\2\u0092)\3\2\2\2\u0093\u0094\7\16")
-        buf.write("\2\2\u0094\u0096\5,\27\2\u0095\u0093\3\2\2\2\u0096\u0099")
-        buf.write("\3\2\2\2\u0097\u0095\3\2\2\2\u0097\u0098\3\2\2\2\u0098")
-        buf.write("+\3\2\2\2\u0099\u0097\3\2\2\2\u009a\u009b\t\3\2\2\u009b")
-        buf.write("-\3\2\2\2\16\61:=CIMTdn~\u0081\u0097")
+        buf.write("U\n\4\3\4\3\4\3\4\3\4\5\4[\n\4\3\5\3\5\3\6\3\6\3\6\5\6")
+        buf.write("b\n\6\3\7\3\7\3\7\7\7g\n\7\f\7\16\7j\13\7\3\7\3\7\3\b")
+        buf.write("\3\b\3\b\3\b\3\b\5\bs\n\b\3\b\5\bv\n\b\3\t\3\t\3\n\3\n")
+        buf.write("\3\13\3\13\3\13\3\f\3\f\3\f\3\r\3\r\3\r\3\r\5\r\u0086")
+        buf.write("\n\r\3\r\5\r\u0089\n\r\3\16\3\16\3\17\3\17\3\20\3\20\3")
+        buf.write("\21\3\21\3\22\3\22\3\23\3\23\3\24\3\24\3\25\3\25\3\26")
+        buf.write("\3\26\7\26\u009d\n\26\f\26\16\26\u00a0\13\26\3\27\3\27")
+        buf.write("\3\27\2\2\30\2\4\6\b\n\f\16\20\22\24\26\30\32\34\36 \"")
+        buf.write("$&(*,\2\5\3\2\3\4\3\2\16\20\4\2\23\24\26\26\2\u009f\2")
+        buf.write("\61\3\2\2\2\4\66\3\2\2\2\6T\3\2\2\2\b\\\3\2\2\2\n^\3\2")
+        buf.write("\2\2\fc\3\2\2\2\16r\3\2\2\2\20w\3\2\2\2\22y\3\2\2\2\24")
+        buf.write("{\3\2\2\2\26~\3\2\2\2\30\u0081\3\2\2\2\32\u008a\3\2\2")
+        buf.write("\2\34\u008c\3\2\2\2\36\u008e\3\2\2\2 \u0090\3\2\2\2\"")
+        buf.write("\u0092\3\2\2\2$\u0094\3\2\2\2&\u0096\3\2\2\2(\u0098\3")
+        buf.write("\2\2\2*\u009e\3\2\2\2,\u00a1\3\2\2\2.\60\5\4\3\2/.\3\2")
+        buf.write("\2\2\60\63\3\2\2\2\61/\3\2\2\2\61\62\3\2\2\2\62\64\3\2")
+        buf.write("\2\2\63\61\3\2\2\2\64\65\7\2\2\3\65\3\3\2\2\2\66\67\t")
+        buf.write("\2\2\2\67:\5\"\22\289\7\5\2\29;\5(\25\2:8\3\2\2\2:;\3")
+        buf.write("\2\2\2;=\3\2\2\2<>\5&\24\2=<\3\2\2\2=>\3\2\2\2>?\3\2\2")
+        buf.write("\2?C\7\6\2\2@B\5\6\4\2A@\3\2\2\2BE\3\2\2\2CA\3\2\2\2C")
+        buf.write("D\3\2\2\2DI\3\2\2\2EC\3\2\2\2FH\5\n\6\2GF\3\2\2\2HK\3")
+        buf.write("\2\2\2IG\3\2\2\2IJ\3\2\2\2JM\3\2\2\2KI\3\2\2\2LN\5\f\7")
+        buf.write("\2ML\3\2\2\2MN\3\2\2\2NO\3\2\2\2OP\7\7\2\2P\5\3\2\2\2")
+        buf.write("QR\5(\25\2RS\7\b\2\2SU\3\2\2\2TQ\3\2\2\2TU\3\2\2\2UV\3")
+        buf.write("\2\2\2VW\5\b\5\2WX\5,\27\2XZ\5*\26\2Y[\7\t\2\2ZY\3\2\2")
+        buf.write("\2Z[\3\2\2\2[\7\3\2\2\2\\]\7\27\2\2]\t\3\2\2\2^_\7\22")
+        buf.write("\2\2_a\5\b\5\2`b\7\t\2\2a`\3\2\2\2ab\3\2\2\2b\13\3\2\2")
+        buf.write("\2cd\7\n\2\2dh\7\6\2\2eg\5\16\b\2fe\3\2\2\2gj\3\2\2\2")
+        buf.write("hf\3\2\2\2hi\3\2\2\2ik\3\2\2\2jh\3\2\2\2kl\7\7\2\2l\r")
+        buf.write("\3\2\2\2ms\5\26\f\2ns\5\30\r\2os\5\20\t\2ps\5\22\n\2q")
+        buf.write("s\5\24\13\2rm\3\2\2\2rn\3\2\2\2ro\3\2\2\2rp\3\2\2\2rq")
+        buf.write("\3\2\2\2su\3\2\2\2tv\7\t\2\2ut\3\2\2\2uv\3\2\2\2v\17\3")
+        buf.write("\2\2\2wx\7\13\2\2x\21\3\2\2\2yz\7\f\2\2z\23\3\2\2\2{|")
+        buf.write("\7\r\2\2|}\7\27\2\2}\25\3\2\2\2~\177\7\27\2\2\177\u0080")
+        buf.write("\7\5\2\2\u0080\27\3\2\2\2\u0081\u0082\5\34\17\2\u0082")
+        buf.write("\u0083\5\36\20\2\u0083\u0085\5 \21\2\u0084\u0086\5\32")
+        buf.write("\16\2\u0085\u0084\3\2\2\2\u0085\u0086\3\2\2\2\u0086\u0088")
+        buf.write("\3\2\2\2\u0087\u0089\5$\23\2\u0088\u0087\3\2\2\2\u0088")
+        buf.write("\u0089\3\2\2\2\u0089\31\3\2\2\2\u008a\u008b\t\3\2\2\u008b")
+        buf.write("\33\3\2\2\2\u008c\u008d\7\27\2\2\u008d\35\3\2\2\2\u008e")
+        buf.write("\u008f\7\25\2\2\u008f\37\3\2\2\2\u0090\u0091\7\23\2\2")
+        buf.write("\u0091!\3\2\2\2\u0092\u0093\7\27\2\2\u0093#\3\2\2\2\u0094")
+        buf.write("\u0095\7\26\2\2\u0095%\3\2\2\2\u0096\u0097\7\23\2\2\u0097")
+        buf.write("\'\3\2\2\2\u0098\u0099\7\27\2\2\u0099)\3\2\2\2\u009a\u009b")
+        buf.write("\7\21\2\2\u009b\u009d\5,\27\2\u009c\u009a\3\2\2\2\u009d")
+        buf.write("\u00a0\3\2\2\2\u009e\u009c\3\2\2\2\u009e\u009f\3\2\2\2")
+        buf.write("\u009f+\3\2\2\2\u00a0\u009e\3\2\2\2\u00a1\u00a2\t\4\2")
+        buf.write("\2\u00a2-\3\2\2\2\21\61:=CIMTZahru\u0085\u0088\u009e")
         return buf.getvalue()
 
 
@@ -77,15 +81,16 @@ class DECORATEParser ( Parser ):
     sharedContextCache = PredictionContextCache()
 
     literalNames = [ "<INVALID>", "'ACTOR'", "'actor'", "':'", "'{'", "'}'", 
-                     "'.'", "'States'", "'Stop'", "'Loop'", "'Goto'", "'BRIGHT'", 
-                     "','" ]
+                     "'.'", "';'", "'States'", "'Stop'", "'Loop'", "'Goto'", 
+                     "'BRIGHT'", "'Bright'", "'bright'", "','" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                      "<INVALID>", "ENABLED", "NUMBER", "BOOLEAN_VALUE", 
-                      "SINGLE_CHAR", "QUOTED_STRING", "KEYWORD", "BLOCKCOMMENT", 
-                      "LINECOMMENT", "WS" ]
+                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
+                      "ENABLED", "NUMBER", "BOOLEAN_VALUE", "SINGLE_CHAR", 
+                      "QUOTED_STRING", "KEYWORD", "BLOCKCOMMENT", "LINECOMMENT", 
+                      "WS" ]
 
     RULE_actors = 0
     RULE_block = 1
@@ -129,15 +134,18 @@ class DECORATEParser ( Parser ):
     T__9=10
     T__10=11
     T__11=12
-    ENABLED=13
-    NUMBER=14
-    BOOLEAN_VALUE=15
-    SINGLE_CHAR=16
-    QUOTED_STRING=17
-    KEYWORD=18
-    BLOCKCOMMENT=19
-    LINECOMMENT=20
-    WS=21
+    T__12=13
+    T__13=14
+    T__14=15
+    ENABLED=16
+    NUMBER=17
+    BOOLEAN_VALUE=18
+    SINGLE_CHAR=19
+    QUOTED_STRING=20
+    KEYWORD=21
+    BLOCKCOMMENT=22
+    LINECOMMENT=23
+    WS=24
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -327,7 +335,7 @@ class DECORATEParser ( Parser ):
             self.state = 75
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if _la==DECORATEParser.T__6:
+            if _la==DECORATEParser.T__7:
                 self.state = 74
                 self.states()
 
@@ -389,6 +397,7 @@ class DECORATEParser ( Parser ):
 
         localctx = DECORATEParser.PairContext(self, self._ctx, self.state)
         self.enterRule(localctx, 4, self.RULE_pair)
+        self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
             self.state = 82
@@ -407,6 +416,14 @@ class DECORATEParser ( Parser ):
             self.value()
             self.state = 86
             self.args()
+            self.state = 88
+            self._errHandler.sync(self)
+            _la = self._input.LA(1)
+            if _la==DECORATEParser.T__6:
+                self.state = 87
+                self.match(DECORATEParser.T__6)
+
+
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -451,7 +468,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 6, self.RULE_keyword)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 88
+            self.state = 90
             self.match(DECORATEParser.KEYWORD)
         except RecognitionException as re:
             localctx.exception = re
@@ -499,12 +516,21 @@ class DECORATEParser ( Parser ):
 
         localctx = DECORATEParser.FlagsContext(self, self._ctx, self.state)
         self.enterRule(localctx, 8, self.RULE_flags)
+        self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 90
+            self.state = 92
             self.match(DECORATEParser.ENABLED)
-            self.state = 91
+            self.state = 93
             self.keyword()
+            self.state = 95
+            self._errHandler.sync(self)
+            _la = self._input.LA(1)
+            if _la==DECORATEParser.T__6:
+                self.state = 94
+                self.match(DECORATEParser.T__6)
+
+
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -554,21 +580,21 @@ class DECORATEParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 93
-            self.match(DECORATEParser.T__6)
-            self.state = 94
-            self.match(DECORATEParser.T__3)
+            self.state = 97
+            self.match(DECORATEParser.T__7)
             self.state = 98
+            self.match(DECORATEParser.T__3)
+            self.state = 102
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            while (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << DECORATEParser.T__7) | (1 << DECORATEParser.T__8) | (1 << DECORATEParser.T__9) | (1 << DECORATEParser.KEYWORD))) != 0):
-                self.state = 95
+            while (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << DECORATEParser.T__8) | (1 << DECORATEParser.T__9) | (1 << DECORATEParser.T__10) | (1 << DECORATEParser.KEYWORD))) != 0):
+                self.state = 99
                 self.state_block()
-                self.state = 100
+                self.state = 104
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
-            self.state = 101
+            self.state = 105
             self.match(DECORATEParser.T__4)
         except RecognitionException as re:
             localctx.exception = re
@@ -629,39 +655,44 @@ class DECORATEParser ( Parser ):
 
         localctx = DECORATEParser.State_blockContext(self, self._ctx, self.state)
         self.enterRule(localctx, 12, self.RULE_state_block)
+        self._la = 0 # Token type
         try:
-            self.state = 108
+            self.enterOuterAlt(localctx, 1)
+            self.state = 112
             self._errHandler.sync(self)
-            la_ = self._interp.adaptivePredict(self._input,8,self._ctx)
+            la_ = self._interp.adaptivePredict(self._input,10,self._ctx)
             if la_ == 1:
-                self.enterOuterAlt(localctx, 1)
-                self.state = 103
+                self.state = 107
                 self.label()
                 pass
 
             elif la_ == 2:
-                self.enterOuterAlt(localctx, 2)
-                self.state = 104
+                self.state = 108
                 self.state_command()
                 pass
 
             elif la_ == 3:
-                self.enterOuterAlt(localctx, 3)
-                self.state = 105
+                self.state = 109
                 self.state_stop()
                 pass
 
             elif la_ == 4:
-                self.enterOuterAlt(localctx, 4)
-                self.state = 106
+                self.state = 110
                 self.state_loop()
                 pass
 
             elif la_ == 5:
-                self.enterOuterAlt(localctx, 5)
-                self.state = 107
+                self.state = 111
                 self.state_goto()
                 pass
+
+
+            self.state = 115
+            self._errHandler.sync(self)
+            _la = self._input.LA(1)
+            if _la==DECORATEParser.T__6:
+                self.state = 114
+                self.match(DECORATEParser.T__6)
 
 
         except RecognitionException as re:
@@ -706,8 +737,8 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 14, self.RULE_state_stop)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 110
-            self.match(DECORATEParser.T__7)
+            self.state = 117
+            self.match(DECORATEParser.T__8)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -750,8 +781,8 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 16, self.RULE_state_loop)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 112
-            self.match(DECORATEParser.T__8)
+            self.state = 119
+            self.match(DECORATEParser.T__9)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -796,9 +827,9 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 18, self.RULE_state_goto)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 114
-            self.match(DECORATEParser.T__9)
-            self.state = 115
+            self.state = 121
+            self.match(DECORATEParser.T__10)
+            self.state = 122
             self.match(DECORATEParser.KEYWORD)
         except RecognitionException as re:
             localctx.exception = re
@@ -844,9 +875,9 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 20, self.RULE_label)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 117
+            self.state = 124
             self.match(DECORATEParser.KEYWORD)
-            self.state = 118
+            self.state = 125
             self.match(DECORATEParser.T__2)
         except RecognitionException as re:
             localctx.exception = re
@@ -910,25 +941,25 @@ class DECORATEParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 120
+            self.state = 127
             self.image()
-            self.state = 121
+            self.state = 128
             self.variant()
-            self.state = 122
+            self.state = 129
             self.ticks()
-            self.state = 124
+            self.state = 131
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if _la==DECORATEParser.T__10:
-                self.state = 123
+            if (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << DECORATEParser.T__11) | (1 << DECORATEParser.T__12) | (1 << DECORATEParser.T__13))) != 0):
+                self.state = 130
                 self.image_modifier()
 
 
-            self.state = 127
+            self.state = 134
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             if _la==DECORATEParser.QUOTED_STRING:
-                self.state = 126
+                self.state = 133
                 self.function()
 
 
@@ -972,10 +1003,16 @@ class DECORATEParser ( Parser ):
 
         localctx = DECORATEParser.Image_modifierContext(self, self._ctx, self.state)
         self.enterRule(localctx, 24, self.RULE_image_modifier)
+        self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 129
-            self.match(DECORATEParser.T__10)
+            self.state = 136
+            _la = self._input.LA(1)
+            if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << DECORATEParser.T__11) | (1 << DECORATEParser.T__12) | (1 << DECORATEParser.T__13))) != 0)):
+                self._errHandler.recoverInline(self)
+            else:
+                self._errHandler.reportMatch(self)
+                self.consume()
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -1020,7 +1057,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 26, self.RULE_image)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 131
+            self.state = 138
             self.match(DECORATEParser.KEYWORD)
         except RecognitionException as re:
             localctx.exception = re
@@ -1066,7 +1103,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 28, self.RULE_variant)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 133
+            self.state = 140
             self.match(DECORATEParser.SINGLE_CHAR)
         except RecognitionException as re:
             localctx.exception = re
@@ -1112,7 +1149,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 30, self.RULE_ticks)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 135
+            self.state = 142
             self.match(DECORATEParser.NUMBER)
         except RecognitionException as re:
             localctx.exception = re
@@ -1158,7 +1195,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 32, self.RULE_name)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 137
+            self.state = 144
             self.match(DECORATEParser.KEYWORD)
         except RecognitionException as re:
             localctx.exception = re
@@ -1204,7 +1241,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 34, self.RULE_function)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 139
+            self.state = 146
             self.match(DECORATEParser.QUOTED_STRING)
         except RecognitionException as re:
             localctx.exception = re
@@ -1250,7 +1287,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 36, self.RULE_uid)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 141
+            self.state = 148
             self.match(DECORATEParser.NUMBER)
         except RecognitionException as re:
             localctx.exception = re
@@ -1296,7 +1333,7 @@ class DECORATEParser ( Parser ):
         self.enterRule(localctx, 38, self.RULE_parent)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 143
+            self.state = 150
             self.match(DECORATEParser.KEYWORD)
         except RecognitionException as re:
             localctx.exception = re
@@ -1347,15 +1384,15 @@ class DECORATEParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 149
+            self.state = 156
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            while _la==DECORATEParser.T__11:
-                self.state = 145
-                self.match(DECORATEParser.T__11)
-                self.state = 146
+            while _la==DECORATEParser.T__14:
+                self.state = 152
+                self.match(DECORATEParser.T__14)
+                self.state = 153
                 self.value()
-                self.state = 151
+                self.state = 158
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
@@ -1410,7 +1447,7 @@ class DECORATEParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 152
+            self.state = 159
             _la = self._input.LA(1)
             if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << DECORATEParser.NUMBER) | (1 << DECORATEParser.BOOLEAN_VALUE) | (1 << DECORATEParser.QUOTED_STRING))) != 0)):
                 self._errHandler.recoverInline(self)
