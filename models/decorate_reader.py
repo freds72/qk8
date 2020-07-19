@@ -167,12 +167,8 @@ class DecorateWalker(DECORATEListener):
           label = state.goto
           if label not in self.labels:
             raise Exception("Unknown goto label: {} in {}".format(label,list(self.labels.keys())))
-          # replace with line number
-          state = dotdict({
-            'goto': self.labels[label]
-          })
         states.append(state)
-        # print("{}: {}".format(i,state))
+        print("{}: {}".format(i,state))
 
       properties['_states'] = states
       properties['_labels'] = copy.deepcopy(self.labels)
@@ -199,7 +195,7 @@ class DecorateWalker(DECORATEListener):
         if self.last_label is None:
           raise Exception("No state label to loop to.")
         self.states.append(dotdict({
-          'loop': self.labels[self.last_label]
+          'goto': self.last_label
         }))
       elif ctx.state_goto():
         label = ctx.state_goto().KEYWORD().getText()

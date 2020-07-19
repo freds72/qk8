@@ -500,16 +500,13 @@ def pack_actors(file, lumps, map, actors):
       # 0-1: control type (0/1/2/3)
       # 2: sprite modifier
       # 3: custom function
-      # 4-7: jump label address
+      # 4-7: jump label id
       flags = 0
       if 'stop' in state:
         flags=1
-      elif 'loop' in state:
-        flags=2
-        flags|=(state.loop+1)<<4
       elif 'goto' in state:
-        flags=3
-        flags|=(state.goto+1)<<4
+        flags=2
+        flags|=all_states.index(state.goto)<<4
       else:
         # pack all sides for a given pose (variant)
         state_s += pack_fixed(state.ticks)
@@ -524,6 +521,7 @@ def pack_actors(file, lumps, map, actors):
         for frame in frames:
           # index to sprite metadata
           state_s += pack_variant(sprites[frame[0]]+1)
+      print("{} -> 0x{:02x}".format(state, flags))
       s += "{:02x}".format(flags)
       s += state_s
     

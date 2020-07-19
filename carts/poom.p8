@@ -528,6 +528,7 @@ function draw_flats(v_cache,segs,things)
             flipx=frame.flip&(1<<side)!=0
           end
           vspr(sides[side+1],x0,y0,w0<<4,flipx)
+          --thing:draw_vm(x0,y0)
         end
         head=head.next
       end
@@ -675,7 +676,7 @@ function make_thing(actor,x,y,z,angle)
   -- default height & sector specs
   local ss=find_sub_sector(_bsp,pos)
   -- attach instance properties to new thing
-  return actor:attach({
+  local thing=actor:attach({
     -- z: altitude
     x,y,ss.sector.floor,
     angle=angle,
@@ -683,6 +684,11 @@ function make_thing(actor,x,y,z,angle)
     sector=ss.sector,
     ssector=ss
   })
+  if actor.flags&0x2>0 then
+    -- shootable
+    thing=with_health(thing)
+  end
+  return thing
 end
 
 function with_physic(thing)
@@ -737,9 +743,9 @@ function with_physic(thing)
             end
           elseif hit.thing!=self then
             -- thing hit?
-            local actor=hit.thing.actor
-            if actor.pickup then
-              actor.pickup(self)
+            local otheractor=hit.thing.actor
+            if otheractor.pickup then
+              otheractor.pickup(self)
               -- todo: optimize?
               -- todo: flag to remove or not?
               do_async(function()
@@ -747,7 +753,7 @@ function with_physic(thing)
                 -- todo: optimize del!!!
                 del(_things,hit.thing)
               end)
-            elseif actor.flags&0x1>0 then
+            elseif otheractor.flags&0x1>0 then
               -- solid actor?
               fix_move=hit
               fix_move.n=v2_normal(v2_make(self,hit.thing))
@@ -757,8 +763,16 @@ function with_physic(thing)
           --if(fix_move) break
           if fix_move then
             if is_missile then
-              self:hit(hit.thing,hit.t)
-              return
+              -- fix position & velocity
+              self[1]+=(fix_move.t-radius)*move_dir[1]
+              self[2]+=(fix_move.t-radius)*move_dir[2]
+              velocity={0,0,0}
+              -- death state
+              self:jump_to(5)
+              -- hit thing
+              local otherthing=fix_move.thing
+              if(otherthing and otherthing.hit) otherthing:hit(actor.damage)
+              break
             else
               local n=fix_move.n
               local fix=(fix_move.t-radius)*v2_dot(n,move_dir)
@@ -824,7 +838,6 @@ end
 
 function with_health(thing)
   -- base health (for gibs effect)
-  local health=thing.health
   return setmetatable({
     hit=function(self,dmg)
       local hp=dmg
@@ -835,46 +848,24 @@ function with_health(thing)
       end
       self.health=max(self.health-hp)
       if self.health==0 then
-        -- todo: die state
-        do_async(function()
-          -- remove from world
-          -- todo: optimize del!!!
-          del(_things,self)
-        end)
+        -- death state
+        self:jump_to(5)
       end
     end
   },{__index=thing})
 end
 
-  -- helper function
+-- helper function
 function make_projectile(thing,z)
-  local actor,angle=thing.actor,thing.angle
-  local ca,sa,speed,radius,ttl=cos(angle),sin(angle),2*actor.speed,actor.radius,120
+  local angle,speed=thing.angle,2*thing.actor.speed
   thing=with_physic(thing)
   thing[3]=z
-  thing:apply_forces(speed*ca,speed*sa)
-  return setmetatable({
-    control=function(self)
-      ttl-=1
-      if ttl<0 then
-        do_async(function()
-          del(_things,self)
-        end)
-      end
-    end,
-    hit=function(self,thing,t)
-      if(thing and thing.hit) thing:hit(actor.damage)
-      -- todo: calc position at t + create blast
-      do_async(function()
-        del(_things,self)
-      end)
-    end
-  },{__index=thing})
+  thing:apply_forces(speed*cos(angle),speed*sin(angle))
+  return thing
 end
 
-function attach_plyr(thing)
-  local actor=thing.actor
-  local speed,da,wp,wp_slot,wp_yoffset,wp_y,reload_ttl,wp_switching=actor.speed,0,actor.weapons,actor.default_slot,0,0,0
+function attach_plyr(thing,actor)
+  local speed,da,wp,wp_slot,wp_yoffset,wp_y,reload_ttl,wp_switching=actor.speed,0,thing.weapons,thing.active_slot,0,0,0
   local function wp_switch(inc)
     local i=wp_slot+inc
     while not wp[i] do
@@ -967,11 +958,8 @@ function _init()
     local thing=make_thing(unpack(thingdef))
     -- get direct access to player
     local actor=thing.actor
-    if actor.flags&0x4>0 then
-      thing=with_health(thing)
-    end
     if actor.id==1 then
-      plyr=attach_plyr(thing)
+      plyr=attach_plyr(thing,actor)
       thing=plyr
     end
     add(_things,thing)
@@ -1614,7 +1602,7 @@ function unpack_map()
   end
 
   unpack_array(function()
-    local kind,id,inventory,state_labels,states=unpack_variant(),unpack_variant(),{},{},{}
+    local kind,id,inventory,state_labels,states,weapons,active_slot=unpack_variant(),unpack_variant(),{},{},{}
     local item={
       id=id,
       kind=kind,
@@ -1633,6 +1621,8 @@ function unpack_map()
           actor=self,
           health=self.health,
           armor=self.armor,
+          weapons=weapons,
+          active_slot=active_slot,
           inventory={},
           -- jump to a vm label
           jump_to=function(self,id)
@@ -1648,7 +1638,7 @@ function unpack_map()
 ::loop::
               local state=states[i]
               -- stop (or end of vm instructions)
-              if(state.jmp==-1 or not state) do_async(function() del(_things,self) end) return
+              if(not state or state.jmp==-1) do_async(function() del(_things,self) end) return
               -- loop or goto
               if(state.jmp) self:jump_to(state.jmp) goto loop
 
@@ -1684,9 +1674,9 @@ function unpack_map()
       local ctrl=flags&0x3
       -- stop
       local cmd={jmp=-1}
-      if ctrl==2 or ctrl==3 then
-        -- loop or goto      
-        cmd={jmp=state_labels[flr(flags>>4)]}
+      if ctrl==2 then
+        -- loop or goto label id   
+        cmd={jmp=flr(flags>>4)}
       elseif ctrl==0 then
         -- normal command
         -- todo: use a reference to sprite sides (too many duplicates for complex states)
@@ -1718,11 +1708,10 @@ function unpack_map()
           local startitem,amount=unpack_actor_ref(),unpack_variant()
           if startitem.kind==2 then
             -- weapon
-            local weapons=item.weapons or {}
+            if(not weapons) weapons={}
             weapons[startitem.slot]=startitem
-            item.weapons=weapons
             -- set initial weapon selection
-            if(not item.default_slot) item.default_slot=startitem.slot
+            if(not active_slot) active_slot=startitem.slot
           else
             inventory[startitem]=amount
           end
