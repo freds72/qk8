@@ -516,19 +516,18 @@ function draw_flats(v_cache,segs,things)
         else
           -- get image from current state
           local frame=thing.state
-
+          local side,_,flipx,light,sides=0,unpack(frame)
           -- use frame brightness level
-          local pal1=frame.light\w0
+          local pal1=light\w0
           if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1            
           -- pick side (if any)
-          local sides,side,flipx=frame.sides,0
-          if #sides>1 then
+          if sides>1 then
             local angle=atan2(-thing[1]+plyr[1],thing[2]-plyr[2])-thing.angle+0.0625
             angle=(angle%1+1)%1
-            side=(#sides*angle)\1
-            flipx=frame.flip&(1<<side)!=0
+            side=(sides*angle)\1
+            flipx=flipx&(1<<side)!=0
           end
-          vspr(sides[side+1],x0,y0,w0<<5,flipx)
+          vspr(frame[side+5],x0,y0,w0<<5,flipx)
           --thing:draw_vm(x0,y0)
         end
         head=head.next
@@ -1648,7 +1647,7 @@ function unpack_map()
               self.state=state
               -- todo: exec function
               -- get ticks
-              ticks=state.ticks
+              ticks=state[1]
             end
           end,
           -- debug: remove
@@ -1683,10 +1682,17 @@ function unpack_map()
         -- normal command
         -- todo: use a reference to sprite sides (too many duplicates for complex states)
         -- or merge sides into array
-        cmd={light=flags&0x4>0 and 0 or 2,ticks=unpack_fixed(),flip=mpeek(),sides={}}
+        -- layout:
+        -- 1 ticks
+        -- 2 flipx
+        -- 3 light level
+        -- 4 number of sides
+        -- 5+ sides
+        cmd={unpack_fixed(),mpeek(),flags&0x4>0 and 0 or 2,0}
         -- get all pose sides
         unpack_array(function(i)
-          add(cmd.sides,frames[unpack_variant()])
+          add(cmd,frames[unpack_variant()])
+          cmd[4]=i
         end)
       end
       add(states,cmd)
