@@ -126,12 +126,6 @@ function v2_normal(v)
   return {v[1]/d,v[2]/d},d
 end
 
-function v2_dist(a,b)
-  local dx,dy=abs(b[1]-a[1]),abs(b[2]-a[2])
-  local d=max(dx,dy)
-  local n=min(dx,dy)/d
-  return d*sqrt(n*n + 1)
-end
 -- safe vector len
 function v2_len(a)
   local dx,dy=abs(a[1]),abs(a[2])
@@ -1422,13 +1416,6 @@ function a_fire()
   end
 end
 
-function a_jump()
-  local state=unpack_string()
-  return function(thing)
-    thing:next_state(state)
-  end
-end
-
 function a_wander()
   return function(thing)
     thing:apply_forces(rnd(),rnd())
@@ -1522,8 +1509,7 @@ function unpack_map()
     -- normals
     local s0=segs[#segs]
     local v0=s0[1]
-    for i=1,#segs do
-      local s1=segs[i]
+    for i,s1 in ipairs(segs) do
       local v1=s1[1]
       local n,len=v2_normal(v2_make(v0,v1))
       -- segment dir and len
@@ -1539,7 +1525,6 @@ function unpack_map()
 
       v0,s0=v1,s1
     end
-
     add(sub_sectors,segs)
   end)
   -- fix seg -> sub-sector link (e.g. portals)
@@ -1575,11 +1560,11 @@ function unpack_map()
     _onoff_textures[unpack_fixed()]=unpack_fixed()
   end)
     
-  -- sprites
+  -- sprite index
 	local frames,tiles={},{}
 	unpack_array(function()
     -- width/height
-    --xoffset(center)/yoffset in tiles unit (16x16)
+    -- xoffset(center)/yoffset in tiles unit (16x16)
     local size,offset,tc=mpeek(),mpeek(),mpeek()
 		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/32,flr(offset>>4)/16,tc,{}})
 		unpack_array(function()
@@ -1587,7 +1572,7 @@ function unpack_map()
 			frame[6][mpeek()]=unpack_variant()
     end)
   end)
-  
+  -- sprite tiles
 	unpack_array(function()
 		-- 16 rows of 2*8 pixels
 		for k=0,31 do
@@ -1649,10 +1634,6 @@ function unpack_map()
               -- get ticks
               ticks=state[1]
             end
-          end,
-          -- debug: remove
-          draw_vm=function(self,x,y)
-            print(i..":"..ticks,x,y,8)
           end
         },{__index=thing})
 
@@ -1692,6 +1673,7 @@ function unpack_map()
         -- get all pose sides
         unpack_array(function(i)
           add(cmd,frames[unpack_variant()])
+          -- number of sides
           cmd[4]=i
         end)
       end
