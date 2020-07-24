@@ -168,7 +168,7 @@ class DecorateWalker(DECORATEListener):
           if label not in self.labels:
             raise Exception("Unknown goto label: {} in {}".format(label,list(self.labels.keys())))
         states.append(state)
-        print("{}: {}".format(i,state))
+        # print("{}: {}".format(i,state))
 
       properties['_states'] = states
       properties['_labels'] = copy.deepcopy(self.labels)

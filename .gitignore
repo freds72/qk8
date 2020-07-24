@@ -11,6 +11,7 @@ sdl_controllers.txt
 models/__pycache__
 /models/resized
 /models/orig
+/levels/*.bak
 
 
 

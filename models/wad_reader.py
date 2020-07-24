@@ -473,7 +473,7 @@ def pack_actors(file, lumps, map, actors):
   s += image_s
 
   # know state names
-  all_states = ['Spawn','Idle','See','Melee','Missile','Death','XDeath','Ready','Hold','Fire']
+  all_states = ['Spawn','Idle','See','Melee','Missile','Death','XDeath','Ready','Hold','Fire','Pickup']
 
   s += pack_variant(len(concrete_actors))
   for actor in concrete_actors:
@@ -524,7 +524,7 @@ def pack_actors(file, lumps, map, actors):
         for frame in frames:
           # index to sprite metadata
           state_s += pack_variant(sprites[frame[0]]+1)
-      print("{} -> 0x{:02x}".format(state, flags))
+      # print("{} -> 0x{:02x}".format(state, flags))
       s += "{:02x}".format(flags)
       s += state_s
     
@@ -598,6 +598,55 @@ def pack_actors(file, lumps, map, actors):
 
   return s
 
+def requiredBits(value):
+    bits = 1
+    while(value > 0):
+        bits+=1
+        value = value >> 1
+    return bits
+
+# https://github.com/coells/100days
+def lzw_encode(data):
+    code, code_bits = {bytes([i]): i for i in range(256)}, 8
+    buffer, buffer_bits = 0, 0
+    index, aux = 0, []
+
+    while index < len(data):
+        # find word
+        for j in range(index + 1, len(data) + 1):
+            word = data[index:j]
+
+            # store word
+            if word not in code:
+                code[word] = len(code)
+                word = word[:-1]
+                break
+
+        # write buffer
+        buffer <<= code_bits
+        buffer |= code[word]
+        buffer_bits += code_bits
+
+        # code length
+        if len(code) > 2 ** code_bits:
+            code_bits += 1
+
+        # shift
+        index += len(word)
+
+        # buffer alignment
+        if index >= len(data) and buffer_bits % 8:
+            r = 8 - (buffer_bits % 8)
+            buffer <<= r
+            buffer_bits += r
+
+        # emit output
+        if not buffer_bits % 8:
+            aux += int.to_bytes(buffer, buffer_bits >> 3, 'big')
+            buffer, buffer_bits = 0, 0
+
+    return bytes(aux)
+
 def load_WAD(filepath,mapname):
   with open(filepath, 'rb') as file:
     # read file header
@@ -651,6 +700,7 @@ def load_WAD(filepath,mapname):
     # pick map
     zmap = maps[mapname].read(file)
     data = pack_zmap(zmap, textures) + pack_actors(file, lumps, zmap, actors)
+
     to_multicart(data, "poom")
 
 def to_float(n):
@@ -836,6 +886,7 @@ def display_WAD(filepath,mapname):
 
       pygame.display.flip()
 
-load_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
+local_dir = os.path.dirname(os.path.realpath(__file__))
+load_WAD("{}\\..\\levels\\poom.wad".format(local_dir), "E1M1")
 #display_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
 

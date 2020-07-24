@@ -516,8 +516,7 @@ function draw_flats(v_cache,segs,things)
           if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1            
           -- pick side (if any)
           if sides>1 then
-            local angle=atan2(-thing[1]+plyr[1],thing[2]-plyr[2])-thing.angle+0.0625
-            angle=(angle%1+1)%1
+            local angle=((atan2(-thing[1]+plyr[1],thing[2]-plyr[2])-thing.angle+0.0625)%1+1)%1
             side=(sides*angle)\1
             flipx=flipx&(1<<side)!=0
           end
@@ -739,14 +738,10 @@ function with_physic(thing)
             -- thing hit?
             local otheractor=hit.thing.actor
             if otheractor.pickup then
-              otheractor.pickup(self)
-              -- todo: optimize?
-              -- todo: flag to remove or not?
-              do_async(function()
-                -- remove from world
-                -- todo: optimize del!!!
-                del(_things,hit.thing)
-              end)
+              -- todo: avoid reentrancy!!
+              -- jump to pickup state
+              hit.thing:jump_to(10)
+              otheractor.pickup(hit.thing,self)
             elseif otheractor.flags&0x1>0 then
               -- solid actor?
               fix_move=hit
@@ -860,7 +855,19 @@ end
 
 function attach_plyr(thing,actor)
   local speed,da,wp,wp_slot,wp_yoffset,wp_y,reload_ttl,wp_switching=actor.speed,0,thing.weapons,thing.active_slot,0,0,0
-  local function wp_switch(inc)
+  local function wp_switch(slot)
+    if(wp_switching) return
+    wp_switching=true
+    do_async(function()
+      wp_yoffset=-32
+      wait_async(15)
+      wp_slot=slot
+      wp_yoffset=0
+      wait_async(15)
+      wp_switching=nil
+    end)
+  end
+  local function try_switch(inc)
     local i=wp_slot+inc
     while not wp[i] do
       i+=inc
@@ -870,16 +877,9 @@ function attach_plyr(thing,actor)
       -- no weapon to switch to
       if(i==wp_slot) return
     end
-    wp_switching=true
-    do_async(function()
-      wp_yoffset=-32
-      wait_async(15)
-      wp_slot=i
-      wp_yoffset=0
-      wait_async(15)
-      wp_switching=nil
-    end)
+    wp_switch(i)
   end
+
   return setmetatable({
     control=function(self)
       -- fire delay
@@ -894,9 +894,9 @@ function attach_plyr(thing,actor)
       if btn(4) then
         if(btn(0)) dx=1
         if(btn(1)) dx=-1
-        if not wp_switching and reload_ttl<0 then
-          if(btn(2)) wp_switch(-1)
-          if(btn(3)) wp_switch(1)
+        if reload_ttl<0 then
+          if(btn(2)) try_switch(-1)
+          if(btn(3)) try_switch(1)
         end
       else
         if(btn(0)) da-=1
@@ -915,24 +915,48 @@ function attach_plyr(thing,actor)
       self:apply_forces(speed*(dz*ca-dx*sa),speed*(dz*sa+dx*ca))
 
       if not wp_switching and btn(5) and reload_ttl<0 then
-        local weapon=wp[wp_slot]
-        if weapon.use(self) then
+        local active_wp=wp[wp_slot]
+        local weapondef=active_wp.actor
+        if weapondef.use(active_wp,self) then
           reload_ttl=15
-          add(_things,make_projectile(make_thing(weapon.projectile,self[1],self[2],0,self.angle),self[3]+24))
+          add(_things,make_projectile(make_thing(weapondef.projectile,self[1],self[2],0,self.angle),self[3]+24))
         end
       end
 
       -- damping
       da*=0.8
+
+      -- update weapon vm
+      wp[wp_slot]:run_vm()
+    end,
+    attach_weapon=function(self,weapon)
+      local slot=weapon.actor.slot
+      -- got weapon already?
+      if(wp[slot]) return
+
+      -- attach weapon
+      wp[slot]=weapon
+            
+      -- jump to ready state
+      thing:jump_to(7,true)
+      thing:run_vm()
+
+      -- auto switch
+      -- wp_switch(slot)
     end,
     hud=function(self)
       printb("♥"..self.health,2,110,12)
       printb("웃"..self.armor,2,120,3)
       
       local active_wp=wp[wp_slot]
-      --vspr(active_wp.frames[reload_ttl<2 and 1 or 2].sides[1],64,128-wp_y,16)
+      local frame=active_wp.state
+      local _,flipx,light,sides=unpack(frame)
 
-      local ammotype=active_wp.ammotype
+      -- active_wp:draw_vm(64,64)
+      -- draw current frame
+      vspr(frame[5],64,128-wp_y,16)
+
+      local ammotype=active_wp.actor.ammotype
       print(ammotype.icon..self.inventory[ammotype],2,100,8)  
     end
   },{__index=with_physic(thing)})
@@ -1566,7 +1590,7 @@ function unpack_map()
     -- width/height
     -- xoffset(center)/yoffset in tiles unit (16x16)
     local size,offset,tc=mpeek(),mpeek(),mpeek()
-		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/32,flr(offset>>4)/16,tc,{}})
+		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/16,flr(offset>>4)/16,tc,{}})
 		unpack_array(function()
 			-- tiles index
 			frame[6][mpeek()]=unpack_variant()
@@ -1611,8 +1635,8 @@ function unpack_map()
           active_slot=active_slot,
           inventory={},
           -- jump to a vm label
-          jump_to=function(self,id)
-            i,ticks=state_labels[id],-2
+          jump_to=function(self,label)
+            i,ticks=state_labels[label],-2
           end,
           -- vm update
           run_vm=function(self)
@@ -1634,6 +1658,14 @@ function unpack_map()
               -- get ticks
               ticks=state[1]
             end
+          end,
+          draw_vm=function(self,x,y)
+            local s=i.."|"..ticks
+            for k,j in pairs(state_labels) do
+              s=s.."\n"..k.."->"..j
+            end
+            print(s,x,y,8)
+
           end
         },{__index=thing})
 
@@ -1650,6 +1682,7 @@ function unpack_map()
       -- map label id to state command line number
       state_labels[mpeek()]=mpeek()
     end)
+
     -- states & sprites
     unpack_array(function()
       local flags=mpeek()
@@ -1699,7 +1732,11 @@ function unpack_map()
           if startitem.kind==2 then
             -- weapon
             if(not weapons) weapons={}
-            weapons[startitem.slot]=startitem
+            -- create a new "dummy" thing
+            local weapon_thing=startitem:attach({})
+            weapons[startitem.slot]=weapon_thing
+            -- force 'ready' state
+            weapon_thing:jump_to(7)
             -- set initial weapon selection
             if(not active_slot) active_slot=startitem.slot
           else
@@ -1725,40 +1762,45 @@ function unpack_map()
 
     if kind==0 then
       -- default inventory item (ex: lock)
-      item.pickup=function(thing)
-        pickup(thing.inventory)
+      item.pickup=function(thing,target)
+        pickup(target.inventory)
       end
     elseif kind==1 then
-      -- ammo familly
+      -- ammo family
       local ammotype=unpack_actor_ref()
-      item.pickup=function(actor)
-        pickup(actor.inventory,ammotype)
+      item.pickup=function(thing,target)
+        pickup(target.inventory,ammotype)
       end
     elseif kind==2 then
       -- weapon
       local ammouse,ammogive,ammotype=unpack_variant(),unpack_variant(),item.ammotype
-      item.pickup=function(thing)
-        pickup(thing.inventory,ammotype,ammogive)
-        -- todo: switch weapon logic
+      item.pickup=function(thing,target)
+        pickup(target.inventory,ammotype,ammogive)
+
+        target:attach_weapon(thing)
+        -- remove from things
+        do_async(function() del(_things,thing) end)
       end
-      item.use=function(thing)
-        local inventory=thing.inventory
+      item.use=function(thing,target)
+        local inventory=target.inventory
         local newqty=inventory[ammotype]-ammouse
         if newqty>=0 then
           inventory[ammotype]=newqty
+          -- fire state
+          thing:jump_to(9)
           -- todo: return delay?
           return true         
         end
       end
     elseif kind==3 then
       -- health pickup
-      item.pickup=function(thing)
-        pickup(thing,"health")
+      item.pickup=function(thing,target)
+        pickup(target,"health")
       end
     elseif kind==4 then
       -- armor pickup
-      item.pickup=function(thing)
-        pickup(thing,"armor")
+      item.pickup=function(thing,target)
+        pickup(target,"armor")
       end
     end
 
