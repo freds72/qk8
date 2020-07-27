@@ -377,6 +377,8 @@ def pack_zmap(map, textures):
       flags |= 16
     if 'repeatspecial' in line and line.repeatspecial==True:
       flags |= 32
+    if 'blocking' in line and line.blocking==True:
+      flags |= 64
     s += "{:02x}".format(flags)
     s += special_data
   
@@ -699,7 +701,7 @@ def load_WAD(filepath,mapname):
     
     # pick map
     zmap = maps[mapname].read(file)
-    data = pack_zmap(zmap, textures) + pack_actors(file, lumps, zmap, actors)
+    data = pack_actors(file, lumps, zmap, actors) + pack_zmap(zmap, textures)
 
     to_multicart(data, "poom")
 

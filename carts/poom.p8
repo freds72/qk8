@@ -3,7 +3,7 @@ version 29
 __lua__
 
 -- globals
-local _bsp,_cam,plyr,_things,_sprite_cache,_tiles
+local _bsp,_cam,_plyr,_things,_sprite_cache,_tiles
 local _onoff_textures={}
 local _znear=16
 local _msg
@@ -247,7 +247,7 @@ end
 function polyfill(v,offset,tex,light)
   poke4(0x5f38,tex)
 
-  local ca,sa,cx,cy,cz=_cam.u,_cam.v,plyr[1]>>4,(plyr[3]+45-offset)<<3,plyr[2]>>4
+  local ca,sa,cx,cy,cz=_cam.u,_cam.v,_plyr[1]>>4,(_plyr[3]+45-offset)<<3,_plyr[2]>>4
 
   local v0,spans,pal0=v[#v],{}
   local x0,w0=v0.x,v0.w
@@ -516,12 +516,13 @@ function draw_flats(v_cache,segs,things)
           if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1            
           -- pick side (if any)
           if sides>1 then
-            local angle=((atan2(-thing[1]+plyr[1],thing[2]-plyr[2])-thing.angle+0.0625)%1+1)%1
+            local angle=((atan2(-thing[1]+_plyr[1],thing[2]-_plyr[2])-thing.angle+0.0625)%1+1)%1
             side=(sides*angle)\1
             flipx=flipx&(1<<side)!=0
           end
           vspr(frame[side+5],x0,y0,w0<<5,flipx)
-          --thing:draw_vm(x0,y0)
+          -- thing:draw_vm(x0,y0)
+          -- pset(x0,y0,8)
         end
         head=head.next
       end
@@ -574,8 +575,8 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
   local things_hits={t=-32000}
   for _,thing in pairs(_things) do
     local actor=thing.actor
-    -- is actor solid?
-    if thing.subs[segs] then
+    -- not a missile
+    if actor.flags&0x4==0 and thing.subs[segs] then
       -- overflow 'safe' coordinates
       local m,r={(px-thing[1])>>8,(pz-thing[2])>>8},actor.radius>>8
       local b,c=v2_dot(m,d),v2_dot(m,m)-r*r
@@ -716,36 +717,40 @@ function with_physic(thing)
         -- todo: always check intersection w/ additional contact radius (front only?)
         intersect_sub_sector(ss,self,move_dir,-radius,move_len+radius,hits)    
         -- fix position
+        local stair_h=is_missile and 0 or 24
         for _,hit in ipairs(hits) do
           local fix_move
           if hit.seg then
             -- bsp hit?
             local ldef=hit.seg.line
             local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
-            if otherside==nil then
-              fix_move=hit
-            elseif otherside.sector.floor-h>24 then
-              fix_move=hit
-            elseif h+actor.height>otherside.sector.ceil then
+
+            if otherside==nil or 
+              (not is_missile and ldef.flags&0x40>0) or
+              h+actor.height>otherside.sector.ceil or 
+              h+stair_h<otherside.sector.floor then
               fix_move=hit
             end
-
+            
             -- cross special?
-            if ldef.trigger and ldef.flags&0x10>0 then
+            -- todo: supports monster activated triggers
+            if self==_plyr and ldef.trigger and ldef.flags&0x10>0 then
               ldef.trigger(self)
             end
           elseif hit.thing!=self then
             -- thing hit?
-            local otheractor=hit.thing.actor
-            if otheractor.pickup then
-              -- todo: avoid reentrancy!!
+            local otherthing=hit.thing
+            local otheractor=otherthing.actor
+            if otherthing.pickup then
+              -- avoid reentrancy
+              otherthing.pickup=nil
               -- jump to pickup state
-              hit.thing:jump_to(10)
-              otheractor.pickup(hit.thing,self)
+              otherthing:jump_to(10)
+              otheractor.pickup(otherthing,self)
             elseif otheractor.flags&0x1>0 then
               -- solid actor?
               fix_move=hit
-              fix_move.n=v2_normal(v2_make(self,hit.thing))
+              fix_move.n=v2_normal(v2_make(self,otherthing))
             end
           end
 
@@ -776,23 +781,24 @@ function with_physic(thing)
         end
 
         -- check triggers/bumps/...
-        for _,hit in ipairs(hits) do
-          if hit.seg then
-            local ldef=hit.seg.line
-            -- buttons
-            if ldef.trigger and ldef.flags&0x8>0 then
-              -- use special?
-              if btn(4) then
-                ldef.trigger()
-              else
-                _msg="press (x) to activate"
+        if self==_plyr then
+          for _,hit in ipairs(hits) do
+            if hit.seg then
+              local ldef=hit.seg.line
+              -- buttons
+              if ldef.trigger and ldef.flags&0x8>0 then
+                -- use special?
+                if btn(4) then
+                  ldef.trigger()
+                else
+                  _msg="press (x) to activate"
+                end
+                -- trigger/message only closest hit
+                break
               end
-              -- trigger/message only closest hit
-              break
             end
           end
         end
-
         -- apply move
         self[1]+=velocity[1]
         self[2]+=velocity[2]
@@ -938,11 +944,11 @@ function attach_plyr(thing,actor)
       wp[slot]=weapon
             
       -- jump to ready state
-      thing:jump_to(7,true)
-      thing:run_vm()
+      weapon:jump_to(7,true)
+      weapon:run_vm()
 
       -- auto switch
-      -- wp_switch(slot)
+      wp_switch(slot)
     end,
     hud=function(self)
       printb("♥"..self.health,2,110,12)
@@ -957,7 +963,7 @@ function attach_plyr(thing,actor)
       vspr(frame[5],64,128-wp_y,16)
 
       local ammotype=active_wp.actor.ammotype
-      print(ammotype.icon..self.inventory[ammotype],2,100,8)  
+      printb(ammotype.icon..self.inventory[ammotype],2,100,8)  
     end
   },{__index=with_physic(thing)})
 end
@@ -977,8 +983,8 @@ function _init()
     -- get direct access to player
     local actor=thing.actor
     if actor.id==1 then
-      plyr=attach_plyr(thing,actor)
-      thing=plyr
+      _plyr=attach_plyr(thing,actor)
+      thing=_plyr
     end
     add(_things,thing)
   end
@@ -1006,11 +1012,11 @@ function _update()
     if(thing.update) thing:update()
   end
 
-  _cam:track(plyr,plyr.angle,plyr[3]+45)
+  _cam:track(_plyr,_plyr.angle,_plyr[3]+45)
 
   -- damping
-  -- plyr.v[1]*=0.8
-  -- plyr.v[2]*=0.8
+  -- _plyr.v[1]*=0.8
+  -- _plyr.v[2]*=0.8
 
 end
 
@@ -1020,7 +1026,7 @@ function _draw()
   
   cls()
   --[[
-  local x0=-shl(plyr.angle,7)%128
+  local x0=-shl(_plyr.angle,7)%128
  	map(16,0,x0,0,16,16)
  	if x0>0 then
  	 map(16,0,x0-128,0,16,16)
@@ -1044,8 +1050,8 @@ function _draw()
     line(64,64,127,0,2)
     line(64,64,0,0,2)
     ]]
-    local pvs=plyr.ssector.pvs
-    visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
+    local pvs=_plyr.ssector.pvs
+    visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
       if node.leaf[side] then
         local subs=node[side]
         draw_segs2d(subs,pos,8)
@@ -1080,19 +1086,19 @@ function _draw()
       end
     end)
     
-    local ca,sa=cos(plyr.angle),sin(plyr.angle)
-    local x0,y0=cam_to_screen2d(_cam:project({plyr[1]+128*ca,plyr[2]+128*sa}))
+    local ca,sa=cos(_plyr.angle),sin(_plyr.angle)
+    local x0,y0=cam_to_screen2d(_cam:project({_plyr[1]+128*ca,_plyr[2]+128*sa}))
     --line(64,64,x0,y0,8)
 
     local hits={}
-    -- intersect(_bsp,plyr,{ca,sa},0,128,hits)
+    -- intersect(_bsp,_plyr,{ca,sa},0,128,hits)
 
-    local ss=find_sub_sector(_bsp,plyr)
+    local ss=find_sub_sector(_bsp,_plyr)
     if ss then
-      intersect_sub_sector(ss,plyr,{ca,sa},0,1024,hits)
+      intersect_sub_sector(ss,_plyr,{ca,sa},0,1024,hits)
     end
     
-    local px,py,lines=plyr[1],plyr[2],{}
+    local px,py,lines=_plyr[1],_plyr[2],{}
     for i,hit in pairs(hits) do
       local pt={
         px+hit.t*ca,
@@ -1119,7 +1125,7 @@ function _draw()
     pset(64,64,15)
 
     local res={}
-    find_ssector_thick(_bsp,plyr,32,res)
+    find_ssector_thick(_bsp,_plyr,32,res)
     sectors=""
     for sub,_ in pairs(res) do
       sectors=sectors.."|"..sub.id
@@ -1127,7 +1133,7 @@ function _draw()
     print("sectors: "..sectors,2,8,8)
 
   else
-    local pvs,v_cache=plyr.ssector.pvs,{}
+    local pvs,v_cache=_plyr.ssector.pvs,{}
 
     -- 
     local sorted_things=setmetatable({},depthsorted_cls)
@@ -1162,7 +1168,7 @@ function _draw()
       end
     end
 
-    visit_bsp(_bsp,plyr,function(node,side,pos,visitor)
+    visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
       side=not side
       if node.leaf[side] then
         local subs=node[side]
@@ -1198,7 +1204,7 @@ function _draw()
     end
     ]]
 
-    plyr:hud()
+    _plyr:hud()
 
     if(_msg) print(_msg,64-#_msg*2,120,15)
 
@@ -1310,22 +1316,23 @@ function unpack_bbox()
   return {l,b,l,t,r,t,r,b}
 end
 
-function unpack_special(special,line,sectors)
+function unpack_special(special,line,sectors,actors)
   local function switch_texture()
     line[true].midtex=_onoff_textures[line[true].midtex]
   end
   -- helper function - handles lock & repeat
-  local function trigger_async(fn,lockid)
-    return function(actor)
+  local function trigger_async(fn,actorlock)
+    return function(thing)
       -- need lock?
-      if lockid then
-        if not actor[lockid] or actor[lockid]==0 then
+      if actorlock then
+        local inventory=thing.inventory
+        if not inventory[actorlock] or inventory[actorlock]==0 then
           _msg="need key"
           -- todo: err sound
           return
         end
         -- consume item
-        actor[lockid]=0
+        inventory[actorlock]=0
       end
 
       -- backup trigger
@@ -1389,7 +1396,7 @@ function unpack_special(special,line,sectors)
       end
     end,
     -- lock id 0 is no lock
-    lock>0 and lock)  
+    actors[lock])  
   elseif special==64 then
     -- todo: unify with doors??
     -- elevator raise
@@ -1459,6 +1466,243 @@ function unpack_map()
   cart_id,mem=0,0
   reload(0,0,0x4300,"poom_"..cart_id..".p8")
   
+  -- sprite index
+	local frames,tiles={},{}
+	unpack_array(function()
+    -- width/height
+    -- xoffset(center)/yoffset in tiles unit (16x16)
+    local size,offset,tc=mpeek(),mpeek(),mpeek()
+		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/16,flr(offset>>4)/16,tc,{}})
+		unpack_array(function()
+			-- tiles index
+			frame[6][mpeek()]=unpack_variant()
+    end)
+  end)
+  -- sprite tiles
+	unpack_array(function()
+		-- 16 rows of 2*8 pixels
+		for k=0,31 do
+			add(tiles,unpack_fixed())
+		end
+  end)
+  
+  -- inventory & things
+  local things,actors={},{}
+  local unpack_actor_ref=function()
+    return actors[unpack_variant()]
+  end
+
+  unpack_array(function()
+    local kind,id,state_labels,states,weapons,active_slot,inventory=unpack_variant(),unpack_variant(),{},{},{}
+    local item={
+      id=id,
+      kind=kind,
+      radius=unpack_fixed(),
+      height=unpack_fixed(),
+      -- flags layout:
+      -- 0x1: solid
+      -- 0x2: shootable
+      -- 0x4: missile
+      flags=mpeek(),
+      -- attach actor to this thing
+      attach=function(self,thing)
+        -- vm state (starts at spawn)
+        local i,ticks=state_labels[0],-2
+        thing=setmetatable({
+          actor=self,
+          health=self.health,
+          armor=self.armor,
+          -- for player only
+          weapons=weapons,
+          active_slot=active_slot,
+          -- pickable things
+          pickup=self.pickup,          
+          -- jump to a vm label
+          jump_to=function(self,label)
+            i,ticks=state_labels[label],-2
+          end,
+          -- vm update
+          run_vm=function(self)
+            while ticks!=-1 do
+              -- wait
+              if(ticks>0) ticks-=1 return
+              -- done, next step
+              if(ticks==0) i+=1
+::loop::
+              local state=states[i]
+              -- stop (or end of vm instructions)
+              if(not state or state.jmp==-1) do_async(function() del(_things,self) end) return
+              -- loop or goto
+              if(state.jmp) self:jump_to(state.jmp) goto loop
+
+              -- effective state
+              self.state=state
+              -- todo: exec function
+              -- get ticks
+              ticks=state[1]
+            end
+          end
+        },{__index=thing})
+
+        -- clone startup inventory
+        if inventory then
+          thing.inventory={}
+          for k,v in pairs(inventory) do
+            thing.inventory[k]=v
+          end
+        end
+
+        return thing
+      end
+    }
+    -- 
+    unpack_array(function()
+      -- map label id to state command line number
+      state_labels[mpeek()]=mpeek()
+    end)
+
+    -- states & sprites
+    unpack_array(function()
+      local flags=mpeek()
+      local ctrl=flags&0x3
+      -- stop
+      local cmd={jmp=-1}
+      if ctrl==2 then
+        -- loop or goto label id   
+        cmd={jmp=flr(flags>>4)}
+      elseif ctrl==0 then
+        -- normal command
+        -- todo: use a reference to sprite sides (too many duplicates for complex states)
+        -- or merge sides into array
+        -- layout:
+        -- 1 ticks
+        -- 2 flipx
+        -- 3 light level (bright/normal)
+        -- 4 number of sides
+        -- 5+ sides
+        cmd={unpack_fixed(),mpeek(),flags&0x4>0 and 0 or 2,0}
+        -- get all pose sides
+        unpack_array(function(i)
+          add(cmd,frames[unpack_variant()])
+          -- number of sides
+          cmd[4]=i
+        end)
+      end
+      add(states,cmd)
+    end)
+
+    -- misc. actor properties
+    local properties,properties_factory=unpack_fixed(),{
+      {0x0.0001,"health"},
+      {0x0.0002,"armor"},
+      {0x0.0004,"amount"},
+      {0x0.0008,"maxamount"},
+      {0x0.0010,"icon",function() return chr(mpeek()) end},
+      {0x0.0020,"slot",mpeek},
+      {0x0.0040,"projectile",unpack_actor_ref},
+      {0x0.0080,"speed"},
+      {0x0.0100,"damage"},
+      {0x0.0200,"ammotype",unpack_actor_ref},
+      {0x0.0400,"",function()
+        -- 
+        unpack_array(function()
+          local startitem,amount=unpack_actor_ref(),unpack_variant()
+          if startitem.kind==2 then
+            -- weapon
+            if(not weapons) weapons={}
+            -- create a new "dummy" thing
+            local weapon_thing=startitem:attach({})
+            weapons[startitem.slot]=weapon_thing
+            -- force 'ready' state
+            weapon_thing:jump_to(7)
+            -- set initial weapon selection
+            if(not active_slot) active_slot=startitem.slot
+          else
+            inventory=inventory or {}
+            inventory[startitem]=amount
+          end
+        end)
+      end}
+    }
+    -- decode 
+    for _,props in ipairs(properties_factory) do
+      local mask,k,fn=unpack(props)
+      if mask&properties!=0 then
+        -- unpack
+        item[k]=(fn or unpack_variant)()
+      end
+    end
+    local function pickup(owner,ref,qty,maxqty)
+      ref=ref or item
+      owner[ref]=min((owner[ref] or 0)+(qty or item.amount),maxqty or item.maxamount)
+      if(item.sound) sfx(item.sound)
+    end
+    
+    if kind==0 then
+      -- default inventory item (ex: lock)
+      item.pickup=function(thing,target)
+        pickup(target.inventory)
+      end
+    elseif kind==1 then
+      -- ammo family
+      local ammotype=unpack_actor_ref()
+      item.pickup=function(thing,target)
+        pickup(target.inventory,ammotype)
+      end
+    elseif kind==2 then
+      -- weapon
+      local ammouse,ammogive,ammotype=unpack_variant(),unpack_variant(),item.ammotype
+      item.pickup=function(thing,target)
+        pickup(target.inventory,ammotype,ammogive,ammotype.maxamount)
+
+        target:attach_weapon(thing)
+        -- remove from things
+        do_async(function() del(_things,thing) end)
+      end
+      item.use=function(thing,target)
+        local inventory=target.inventory
+        local newqty=inventory[ammotype]-ammouse
+        if newqty>=0 then
+          inventory[ammotype]=newqty
+          -- fire state
+          thing:jump_to(9)
+          -- todo: return delay?
+          return true         
+        end
+      end
+    elseif kind==3 then
+      -- health pickup
+      item.pickup=function(thing,target)
+        pickup(target,"health")
+      end
+    elseif kind==4 then
+      -- armor pickup
+      item.pickup=function(thing,target)
+        pickup(target,"armor")
+      end
+    end
+
+    -- register
+    actors[id]=item
+  end)
+
+  -- things
+  unpack_array(function()
+    local id=unpack_variant()
+    add(things,{
+      -- link to underlying actor
+      actors[id],
+      -- coordinates
+      unpack_fixed(),
+      unpack_fixed(),
+      -- height
+      0,
+      -- angle
+      unpack_variant()/360,
+    })
+  end)
+
+  -- unpack level geometry
   -- sectors
   local sectors={}
   unpack_array(function(i)
@@ -1497,7 +1741,7 @@ function unpack_map()
       flags=mpeek()}
     -- special actions
     if line.flags&0x2>0 then
-      line.trigger=unpack_special(mpeek(),line,sectors)
+      line.trigger=unpack_special(mpeek(),line,sectors,actors)
     end
     add(lines,line)
   end)
@@ -1515,7 +1759,7 @@ function unpack_map()
       -- optional links
       if(flags&0x2>0) s.line=lines[unpack_variant()]
       if(flags&0x4>0) s.partner=unpack_variant()
-     
+      
       -- direct link to sector (if not already set)
       if s.line and not segs.sector then
         segs.sector=s.line[s.side].sector
@@ -1524,7 +1768,7 @@ function unpack_map()
       --assert(segs.sector,"missing sector")
       add(all_segs,s)
     end)
-    -- pvs (backed as a bit array)
+    -- pvs (packed as a bit array)
     unpack_array(function()
       local id=unpack_variant()
       local mask=segs.pvs[id\32] or 0
@@ -1583,249 +1827,7 @@ function unpack_map()
   unpack_array(function()
     _onoff_textures[unpack_fixed()]=unpack_fixed()
   end)
-    
-  -- sprite index
-	local frames,tiles={},{}
-	unpack_array(function()
-    -- width/height
-    -- xoffset(center)/yoffset in tiles unit (16x16)
-    local size,offset,tc=mpeek(),mpeek(),mpeek()
-		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/16,flr(offset>>4)/16,tc,{}})
-		unpack_array(function()
-			-- tiles index
-			frame[6][mpeek()]=unpack_variant()
-    end)
-  end)
-  -- sprite tiles
-	unpack_array(function()
-		-- 16 rows of 2*8 pixels
-		for k=0,31 do
-			add(tiles,unpack_fixed())
-		end
-	end)
-
-  -- inventory & things
-  local things,actors={},{}
-  local unpack_actor_ref=function()
-    return actors[unpack_variant()]
-  end
-
-  unpack_array(function()
-    local kind,id,inventory,state_labels,states,weapons,active_slot=unpack_variant(),unpack_variant(),{},{},{}
-    local item={
-      id=id,
-      kind=kind,
-      radius=unpack_fixed(),
-      height=unpack_fixed(),
-      -- flags layout:
-      -- 0x1: solid
-      -- 0x2: shootable
-      -- 0x4: missile
-      flags=mpeek(),
-      -- attach actor to this thing
-      attach=function(self,thing)
-        -- vm state (starts at spawn)
-        local i,ticks=state_labels[0],-2
-        thing=setmetatable({
-          actor=self,
-          health=self.health,
-          armor=self.armor,
-          -- for player only
-          weapons=weapons,
-          active_slot=active_slot,
-          inventory={},
-          -- jump to a vm label
-          jump_to=function(self,label)
-            i,ticks=state_labels[label],-2
-          end,
-          -- vm update
-          run_vm=function(self)
-            while ticks!=-1 do
-              -- wait
-              if(ticks>0) ticks-=1 return
-              -- done, next step
-              if(ticks==0) i+=1
-::loop::
-              local state=states[i]
-              -- stop (or end of vm instructions)
-              if(not state or state.jmp==-1) do_async(function() del(_things,self) end) return
-              -- loop or goto
-              if(state.jmp) self:jump_to(state.jmp) goto loop
-
-              -- effective state
-              self.state=state
-              -- todo: exec function
-              -- get ticks
-              ticks=state[1]
-            end
-          end,
-          draw_vm=function(self,x,y)
-            local s=i.."|"..ticks
-            for k,j in pairs(state_labels) do
-              s=s.."\n"..k.."->"..j
-            end
-            print(s,x,y,8)
-
-          end
-        },{__index=thing})
-
-        -- init inventory
-        for k,v in pairs(inventory) do
-          thing.inventory[k]=v
-        end
-
-        return thing
-      end
-    }
-    -- 
-    unpack_array(function()
-      -- map label id to state command line number
-      state_labels[mpeek()]=mpeek()
-    end)
-
-    -- states & sprites
-    unpack_array(function()
-      local flags=mpeek()
-      local ctrl=flags&0x3
-      -- stop
-      local cmd={jmp=-1}
-      if ctrl==2 then
-        -- loop or goto label id   
-        cmd={jmp=flr(flags>>4)}
-      elseif ctrl==0 then
-        -- normal command
-        -- todo: use a reference to sprite sides (too many duplicates for complex states)
-        -- or merge sides into array
-        -- layout:
-        -- 1 ticks
-        -- 2 flipx
-        -- 3 light level
-        -- 4 number of sides
-        -- 5+ sides
-        cmd={unpack_fixed(),mpeek(),flags&0x4>0 and 0 or 2,0}
-        -- get all pose sides
-        unpack_array(function(i)
-          add(cmd,frames[unpack_variant()])
-          -- number of sides
-          cmd[4]=i
-        end)
-      end
-      add(states,cmd)
-    end)
-
-    -- misc. actor properties
-    local properties,properties_factory=unpack_fixed(),{
-      {0x0.0001,"health"},
-      {0x0.0002,"armor"},
-      {0x0.0004,"amount"},
-      {0x0.0008,"maxamount"},
-      {0x0.0010,"icon",function() return chr(mpeek()) end},
-      {0x0.0020,"slot",mpeek},
-      {0x0.0040,"projectile",unpack_actor_ref},
-      {0x0.0080,"speed"},
-      {0x0.0100,"damage"},
-      {0x0.0200,"ammotype",unpack_actor_ref},
-      {0x0.0400,"",function()
-        -- 
-        unpack_array(function()
-          local startitem,amount=unpack_actor_ref(),unpack_variant()
-          if startitem.kind==2 then
-            -- weapon
-            if(not weapons) weapons={}
-            -- create a new "dummy" thing
-            local weapon_thing=startitem:attach({})
-            weapons[startitem.slot]=weapon_thing
-            -- force 'ready' state
-            weapon_thing:jump_to(7)
-            -- set initial weapon selection
-            if(not active_slot) active_slot=startitem.slot
-          else
-            inventory[startitem]=amount
-          end
-        end)
-      end}
-    }
-    -- decode 
-    for _,props in ipairs(properties_factory) do
-      local mask,k,fn=unpack(props)
-      if mask&properties!=0 then
-        -- unpack
-        item[k]=(fn or unpack_variant)()
-      end
-    end
-
-    local function pickup(owner,ref,qty)
-      ref=ref or item
-      owner[ref]=min((owner[ref] or 0)+(qty or item.amount),item.maxamount)
-      if(item.sound) sfx(item.sound)
-    end
-
-    if kind==0 then
-      -- default inventory item (ex: lock)
-      item.pickup=function(thing,target)
-        pickup(target.inventory)
-      end
-    elseif kind==1 then
-      -- ammo family
-      local ammotype=unpack_actor_ref()
-      item.pickup=function(thing,target)
-        pickup(target.inventory,ammotype)
-      end
-    elseif kind==2 then
-      -- weapon
-      local ammouse,ammogive,ammotype=unpack_variant(),unpack_variant(),item.ammotype
-      item.pickup=function(thing,target)
-        pickup(target.inventory,ammotype,ammogive)
-
-        target:attach_weapon(thing)
-        -- remove from things
-        do_async(function() del(_things,thing) end)
-      end
-      item.use=function(thing,target)
-        local inventory=target.inventory
-        local newqty=inventory[ammotype]-ammouse
-        if newqty>=0 then
-          inventory[ammotype]=newqty
-          -- fire state
-          thing:jump_to(9)
-          -- todo: return delay?
-          return true         
-        end
-      end
-    elseif kind==3 then
-      -- health pickup
-      item.pickup=function(thing,target)
-        pickup(target,"health")
-      end
-    elseif kind==4 then
-      -- armor pickup
-      item.pickup=function(thing,target)
-        pickup(target,"armor")
-      end
-    end
-
-    -- register
-    actors[id]=item
-  end)
-
-  -- things
   
-  unpack_array(function()
-    local id=unpack_variant()
-    add(things,{
-      -- link to underlying actor
-      actors[id],
-      -- coordinates
-      unpack_fixed(),
-      unpack_fixed(),
-      -- height
-      0,
-      -- angle
-      unpack_variant()/360,
-    })
-    -- todo: use spawn state to setup?
-  end)
-
   -- restore main cart
   reload()
   return nodes[#nodes],things,tiles
