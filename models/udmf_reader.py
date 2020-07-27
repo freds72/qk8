@@ -68,14 +68,15 @@ class SectorWalker(udmfListener):
     def exitBlock(self, ctx):  
         block = ctx.keyword().getText()  
         if block=='sector':
-          # default
+          # defaults
           sector = dotdict({
             'heightfloor' : 0,
-            'heightceiling' : 128})
+            'heightceiling' : 128,
+            'special' : 0})
           for pair in ctx.pair():
             attribute = pair.keyword().getText()
             value = pair.value().getText().strip('"')
-            if attribute in ['heightfloor','heightceiling','id']:
+            if attribute in ['heightfloor','heightceiling','id','special']:
               value = int(value)
             sector[attribute] = value
           self.result.append(sector)

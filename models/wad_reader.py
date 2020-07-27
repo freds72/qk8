@@ -333,6 +333,7 @@ def pack_zmap(map, textures):
   # export data
   s = pack_variant(len(map.sectors))
   for sector in map.sectors:
+    s += "{:02x}".format(sector.special)
     s += pack_int(sector.heightceiling)
     s += pack_int(sector.heightfloor)
     # sector ceiling/floor textures

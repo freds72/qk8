@@ -688,7 +688,7 @@ end
 function with_physic(thing)
   local actor=thing.actor
   -- actor properties
-  local height,speed,radius,is_missile=actor.height,actor.speed,actor.radius,actor.flags&0x4>0
+  local height,speed,radius,is_missile=actor.height,actor.speed,actor.radius,actor.flags&0x4>0 and true
   local ss=thing.ssector
   -- init inventory
   local forces,velocity={0,0},{0,0,0}
@@ -814,13 +814,17 @@ function with_physic(thing)
         self.subs=subs
       end
       -- gravity
-      if is_missile==false then
-        local h=self[3]+velocity[3]
-        if h<self.sector.floor then
+      if not is_missile then
+        local h,sector=self[3]+velocity[3],self.sector
+        if h<sector.floor then
           -- todo: fall damage
           -- todo: sector damage
+          -- sector damage
+          if sector.special==80 then
+            self:hit(5)
+          end
           velocity[3]=0
-          h=self.sector.floor
+          h=sector.floor
         end
         self[3]=h
       end
@@ -844,6 +848,7 @@ function with_health(thing)
       self.health=max(self.health-hp)
       if self.health==0 then
         -- death state
+        self.dead=true
         self:jump_to(5)
       end
     end
@@ -1012,11 +1017,8 @@ function _update()
     if(thing.update) thing:update()
   end
 
+  -- todo: if plyr dead, drop to floor & track attacker
   _cam:track(_plyr,_plyr.angle,_plyr[3]+45)
-
-  -- damping
-  -- _plyr.v[1]*=0.8
-  -- _plyr.v[2]*=0.8
 
 end
 
@@ -1702,12 +1704,15 @@ function unpack_map()
     })
   end)
 
+  -----------------------------------
   -- unpack level geometry
   -- sectors
   local sectors={}
   unpack_array(function(i)
     add(sectors,{
       id=i,
+      -- sector attributes
+      special=mpeek(),
       -- ceiling/floor height
       ceil=unpack_int(2),
       floor=unpack_int(2),
