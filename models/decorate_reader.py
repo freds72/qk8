@@ -122,7 +122,7 @@ class DecorateWalker(DECORATEListener):
 
       for pair in ctx.pair():
         attribute = pair.keyword().getText().lower()
-        value = pair.value().getText().lower().strip('"')
+        value = pair.value(0).getText().lower().strip('"')
         if attribute in []:
           value = value=='true'
         elif attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon']:
@@ -140,9 +140,8 @@ class DecorateWalker(DECORATEListener):
           # default amount
           amount = 1
           # so far, only ammo can have startitem params
-          values = pair.args().value
-          if otheractor.kind == ACTOR_KIND.AMMO and len(values())>0:
-            amount = int(values(0).getText())
+          if otheractor.kind == ACTOR_KIND.AMMO:
+            amount = int(pair.value(1).getText())
           startitems.append((otheractor.id, amount))
           value = startitems
           attribute = 'startitems'
@@ -182,11 +181,34 @@ class DecorateWalker(DECORATEListener):
         self.last_label = label 
       elif ctx.state_command():
         state = ctx.state_command()
+        fn = None
+        args = []
+        if state.function():
+          # custom function name
+          fn = state.function().KEYWORD().getText()
+          # args?
+          values = state.function().value
+          for i in range(len(values())):
+            value = values(i)
+            if value.NUMBER():
+              value = float(value.getText())
+            elif value.BOOLEAN_VALUE():
+              value = value.getText()=='true'
+            elif value.QUOTED_STRING():
+              value = value.getText().lower().strip('"')
+              if value not in self.result:
+                raise Exception("State references unknown actor: {} ({})".format(value,",".join(self.result.keys())))
+              value = self.result[value].id
+            args.append(value)
+          print("{}({})".format(fn, ",".join(map(str, args))))
+
         self.states.append(dotdict({
           'image': state.image().getText(),
           'variant': state.variant().getText(),
           'bright': state.image_modifier() is not None,
-          'ticks': int(state.ticks().getText())
+          'ticks': int(state.ticks().getText()),
+          'function': fn,
+          'args': args
         }))
       elif ctx.state_stop():
         self.states.append(dotdict({
@@ -205,6 +227,7 @@ class DecorateWalker(DECORATEListener):
         self.states.append(dotdict({
           'goto': label
         }))
+
 
 class ACTORS():
   def __init__(self, data):

@@ -188,15 +188,6 @@ class DECORATEListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by DECORATEParser#args.
-    def enterArgs(self, ctx:DECORATEParser.ArgsContext):
-        pass
-
-    # Exit a parse tree produced by DECORATEParser#args.
-    def exitArgs(self, ctx:DECORATEParser.ArgsContext):
-        pass
-
-
     # Enter a parse tree produced by DECORATEParser#value.
     def enterValue(self, ctx:DECORATEParser.ValueContext):
         pass

@@ -109,11 +109,6 @@ class DECORATEVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by DECORATEParser#args.
-    def visitArgs(self, ctx:DECORATEParser.ArgsContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by DECORATEParser#value.
     def visitValue(self, ctx:DECORATEParser.ValueContext):
         return self.visitChildren(ctx)

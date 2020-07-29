@@ -12,6 +12,7 @@ from dotdict import dotdict
 from python2pico import pack_int
 from python2pico import pack_variant
 from python2pico import pack_fixed
+from python2pico import pack_byte
 from python2pico import to_multicart
 from python2pico import pack_int32
 from bsp_compiler import Polygon
@@ -333,6 +334,7 @@ def pack_zmap(map, textures):
   # export data
   s = pack_variant(len(map.sectors))
   for sector in map.sectors:
+    # see: https://zdoom.org/wiki/Sector_specials
     s += "{:02x}".format(sector.special)
     s += pack_int(sector.heightceiling)
     s += pack_int(sector.heightfloor)
@@ -476,7 +478,16 @@ def pack_actors(file, lumps, map, actors):
   s += image_s
 
   # know state names
+  # max: 16
   all_states = ['Spawn','Idle','See','Melee','Missile','Death','XDeath','Ready','Hold','Fire','Pickup']
+
+  # known functions
+  # max: 256
+  all_functions = dotdict({
+    'A_FireBullets': dotdict({'id':1, 'args':[pack_fixed,pack_fixed,pack_byte,pack_byte]}),
+    'A_PlaySound': dotdict({'id':2, 'args':[pack_byte]}),
+    'A_FireProjectile': dotdict({'id':3, 'args': [pack_variant]})
+  })
 
   s += pack_variant(len(concrete_actors))
   for actor in concrete_actors:
@@ -527,6 +538,14 @@ def pack_actors(file, lumps, map, actors):
         for frame in frames:
           # index to sprite metadata
           state_s += pack_variant(sprites[frame[0]]+1)
+        if state.function is not None:
+          if state.function not in all_functions:
+            raise Exception("Unknown state function: {}".format(state.function))
+          flags|=0x8
+          fn = all_functions[state.function]
+          state_s += "{:02x}".format(fn.id)
+          for i,arg_pack in enumerate(fn.args):
+            state_s += arg_pack(state.args[i]) 
       # print("{} -> 0x{:02x}".format(state, flags))
       s += "{:02x}".format(flags)
       s += state_s

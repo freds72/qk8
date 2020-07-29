@@ -3,7 +3,7 @@ version 29
 __lua__
 
 -- globals
-local _bsp,_cam,_plyr,_things,_sprite_cache,_tiles
+local _bsp,_cam,_plyr,_things,_sprite_cache
 local _onoff_textures={}
 local _znear=16
 local _msg
@@ -156,7 +156,7 @@ function vspr(frame,sx,sy,scale,flipx)
 	if(flipx) sx+=sw  
 	sy+=(yoffset-h)*scale
 	for i,tile in pairs(tiles) do
-    local dx,dy,ssx,ssy=sx+(i%w+xoffset)*xscale,sy+(i\w)*scale,_sprite_cache:use(tile,_tiles)
+    local dx,dy,ssx,ssy=sx+(i%w+xoffset)*xscale,sy+(i\w)*scale,_sprite_cache:use(tile)
     -- scale sub-pixel fix 
     sspr(ssx,ssy,16,16,dx,dy,scale+dx%1,scale+dy%1,flipx)
     -- print(tile,(i%w)*16,(i\w)*16,7)
@@ -165,7 +165,7 @@ function vspr(frame,sx,sy,scale,flipx)
 end
 
 -- https://github.com/luapower/linkedlist/blob/master/linkedlist.lua
-function make_sprite_cache(maxlen)
+function make_sprite_cache(tiles,maxlen)
 	local len,index,first,last=0,{}
 
 	local function remove(t)
@@ -192,7 +192,7 @@ function make_sprite_cache(maxlen)
 	end
 	
 	return {
-		use=function(self,id,tiles)
+		use=function(self,id)
 			local entry=index[id]
 			if entry then
 				-- existing item?
@@ -685,6 +685,15 @@ function make_thing(actor,x,y,z,angle)
   return thing
 end
 
+-- sector damage
+local _sector_dmg={
+  [71]=5,
+  [69]=10,
+  [80]=20,
+  -- instadeath
+  [115]=-1
+}
+
 function with_physic(thing)
   local actor=thing.actor
   -- actor properties
@@ -702,7 +711,7 @@ function with_physic(thing)
       -- integrate forces
       velocity[1]+=forces[1]
       velocity[2]+=forces[2]
-      velocity[3]+=-1
+      velocity[3]-=1
 
       -- friction     
       local friction=is_missile and 0.9967 or 0.9062
@@ -715,7 +724,7 @@ function with_physic(thing)
       if move_len>0 then
         local hits,h={},self[3]
         -- todo: always check intersection w/ additional contact radius (front only?)
-        intersect_sub_sector(ss,self,move_dir,-radius,move_len+radius,hits)    
+        intersect_sub_sector(ss,self,move_dir,0,move_len+radius,hits)    
         -- fix position
         local stair_h=is_missile and 0 or 24
         for _,hit in ipairs(hits) do
@@ -815,14 +824,17 @@ function with_physic(thing)
       end
       -- gravity
       if not is_missile then
-        local h,sector=self[3]+velocity[3],self.sector
+        local dz=velocity[3]
+        local h,sector=self[3]+dz,self.sector
         if h<sector.floor then
-          -- todo: fall damage
-          -- todo: sector damage
-          -- sector damage
-          if sector.special==80 then
-            self:hit(5)
-          end
+          -- fall damage
+          -- see: https://zdoom.org/wiki/Falling_damage
+          local dmg=(((dz*dz)>>7)*11-30)\2
+          if(dmg>0) self:hit(dmg) 
+          
+          -- sector damage (if any)
+          self:hit_sector(_sector_dmg[sector.special])
+
           velocity[3]=0
           h=sector.floor
         end
@@ -836,9 +848,19 @@ function with_physic(thing)
 end
 
 function with_health(thing)
+  local dmg_ttl,dead=0
+  local function die(self)
+    self.dead=true
+    -- lock state
+    dead=true
+    -- death state
+    self:jump_to(5)
+  end
   -- base health (for gibs effect)
   return setmetatable({
     hit=function(self,dmg)
+      -- avoid reentrancy
+      if(dead) return
       local hp=dmg
       -- damage reduction?
       if self.armor then
@@ -847,9 +869,23 @@ function with_health(thing)
       end
       self.health=max(self.health-hp)
       if self.health==0 then
-        -- death state
-        self.dead=true
-        self:jump_to(5)
+        die(self)
+      end
+    end,
+    hit_sector=function(self,dmg)
+      if(dead) return
+      -- instadeath
+      if(dmg==-1) then
+        self.health=0
+        die(self)
+        return
+      end
+      -- clear damage
+      if(not dmg) dmg_ttl=0 return
+      dmg_ttl-=1
+      if dmg_ttl<0 then
+        dmg_ttl=30
+        self:hit(dmg)
       end
     end
   },{__index=thing})
@@ -930,7 +966,7 @@ function attach_plyr(thing,actor)
         local weapondef=active_wp.actor
         if weapondef.use(active_wp,self) then
           reload_ttl=15
-          add(_things,make_projectile(make_thing(weapondef.projectile,self[1],self[2],0,self.angle),self[3]+24))
+          --add(_things,make_projectile(make_thing(weapondef.projectile,self[1],self[2],0,self.angle),self[3]+24))
         end
       end
 
@@ -974,15 +1010,45 @@ function attach_plyr(thing,actor)
 end
 
 -->8
+-- game states
+function next_state(fn,...)
+  _update_state,_draw_state=fn(...)
+end
+
+function play_state()
+  return 
+    -- update
+    function()
+      if _plyr.dead then
+        next_state(gameover_state,_plyr,_plyr.angle,45)
+      end
+
+      _cam:track(_plyr,_plyr.angle,_plyr[3]+45)
+    end,
+    -- draw
+    function()
+      _plyr:hud()
+    end
+end
+
+function gameover_state(pos,angle,h)
+  return
+    function()
+      -- fall to ground
+      h=lerp(h,10,0.2)
+      _cam:track(pos,angle,pos[3]+h)
+    end,
+    function()
+    end
+end
+
+-->8
 -- game loop
 function _init()
   local root,thingdefs,tiles=unpack_map()
-  _bsp=root
-  _things={}
-  _tiles=tiles
-  _sprite_cache=make_sprite_cache(32)
+  _bsp,_things,_sprite_cache=root,{},make_sprite_cache(tiles,32)
 
-  -- todo: attach behaviors to things
+  -- attach behaviors to things
   for k,thingdef in pairs(thingdefs) do 
     local thing=make_thing(unpack(thingdef))
     -- get direct access to player
@@ -995,6 +1061,9 @@ function _init()
   end
 
   _cam=make_camera()
+
+  next_state(play_state)
+
 end
 
 function _update()
@@ -1006,19 +1075,19 @@ function _update()
 		elseif cs=="dead" then
 			_futures[k]=nil
 		end
-	end
-
-  -- 
-  _msg=nil
-
+  end
+  
+  -- keep world running
   for _,thing in pairs(_things) do
     if(thing.control) thing:control()
     thing:run_vm()
     if(thing.update) thing:update()
   end
 
-  -- todo: if plyr dead, drop to floor & track attacker
-  _cam:track(_plyr,_plyr.angle,_plyr[3]+45)
+  _update_state()
+
+  -- 
+  _msg=nil
 
 end
 
@@ -1183,30 +1252,13 @@ function _draw()
         visit_bsp(node[side],pos,visitor)
       end
     end)
-    
+  
     -- restore palette
     -- memcpy(0x5f10,0x4300,16)
     -- pal({140,1,139,3,4,132,133,7,6,134,5,8,2,9,10},1)
     pal(_screen_pal,1)
 
-    --[[
-    palt(0,false)
-    palt(15,true)
-    -- inventory/weapon
-    sspr(unpack(_weapons[_selected_wp].sprite[_wp_frame]))
-    palt()
-    ]]
-
-    --[[
-    if rnd()>0.9 then
-      fillp(0xa5a5.f)
-      circfill(-150,64,180,12)
-      fillp()
-      circfill(-160,64,170,12)
-    end
-    ]]
-
-    _plyr:hud()
+    _draw_state()
 
     if(_msg) print(_msg,64-#_msg*2,120,15)
 
@@ -1539,7 +1591,7 @@ function unpack_map()
 
               -- effective state
               self.state=state
-              -- todo: exec function
+              if(state.fn) state.fn(self,self.owner)
               -- get ticks
               ticks=state[1]
             end
@@ -1563,6 +1615,32 @@ function unpack_map()
       state_labels[mpeek()]=mpeek()
     end)
 
+    -- actors functions
+    local function_factory={
+      -- A_FireBullets
+      function()
+        local xspread,yspread,bullets,dmg=unpack_fixed(),unpack_fixed(),mpeek(),mpeek()
+        return function(thing,owner)
+          assert(false,xspread.."|"..yspread)
+        end
+      end,
+      -- A_PlaySound
+      function()
+        local s=mpeek()
+        return function()
+          sfx(s)
+        end
+      end,
+      -- A_FireProjectile
+      function()
+        local projectile=unpack_actor_ref()
+        assert(projectile)
+        return function(thing,owner)
+          -- todo: get height from properties
+          add(_things,make_projectile(make_thing(projectile,owner[1],owner[2],0,owner.angle),owner[3]+24))
+        end
+      end
+    }
     -- states & sprites
     unpack_array(function()
       local flags=mpeek()
@@ -1589,6 +1667,10 @@ function unpack_map()
           -- number of sides
           cmd[4]=i
         end)
+        -- function?
+        if flags&0x8>0 then
+          cmd.fn=function_factory[mpeek()]()
+        end
       end
       add(states,cmd)
     end)
@@ -1601,7 +1683,7 @@ function unpack_map()
       {0x0.0008,"maxamount"},
       {0x0.0010,"icon",function() return chr(mpeek()) end},
       {0x0.0020,"slot",mpeek},
-      {0x0.0040,"projectile",unpack_actor_ref},
+      --{0x0.0040,"projectile",unpack_actor_ref},
       {0x0.0080,"speed"},
       {0x0.0100,"damage"},
       {0x0.0200,"ammotype",unpack_actor_ref},

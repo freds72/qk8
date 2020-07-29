@@ -12,7 +12,7 @@ block:
   ;
 
 pair:
-  (parent '.')? keyword value args ';'?
+  (parent '.')? keyword value (',' value)* ';'?
   ;
   
 keyword:
@@ -72,7 +72,7 @@ name:
   ;
 
 function:
-  QUOTED_STRING
+  KEYWORD ('(' value (',' value)* ')')?
   ;
 
 uid:
@@ -81,10 +81,6 @@ uid:
 
 parent:
   KEYWORD
-  ;
-
-args:
-  (',' value)*
   ;
 
 value:
@@ -119,7 +115,7 @@ KEYWORD:
   ;
 
 fragment CHAR:
-  ('a'..'z'|'A'..'Z')
+  ('a'..'z'|'A'..'Z'|'_')
   ;
 
 fragment DIGIT

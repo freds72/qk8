@@ -41,6 +41,13 @@ def pack_variant(x):
         raise Exception('Unable to convert: {} into a byte: {}'.format(x,h))
     return h
 
+# single byte (unsigned short)
+def pack_byte(x):
+    h = tohex(x,8)
+    if len(h)!=2:
+        raise Exception('Unable to convert: {} into a byte: {}'.format(x,h))
+    return h
+    
 # short must be between -32000/32000
 def pack_int(x):
     h = tohex(x,16)
