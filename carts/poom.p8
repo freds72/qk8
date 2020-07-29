@@ -891,15 +891,6 @@ function with_health(thing)
   },{__index=thing})
 end
 
--- helper function
-function make_projectile(thing,z)
-  local angle,speed=thing.angle,2*thing.actor.speed
-  thing=with_physic(thing)
-  thing[3]=z
-  thing:apply_forces(speed*cos(angle),speed*sin(angle))
-  return thing
-end
-
 function attach_plyr(thing,actor)
   local speed,da,wp,wp_slot,wp_yoffset,wp_y,reload_ttl,wp_switching=actor.speed,0,thing.weapons,thing.active_slot,0,0,0
   local function wp_switch(slot)
@@ -929,8 +920,6 @@ function attach_plyr(thing,actor)
 
   return setmetatable({
     control=function(self)
-      -- fire delay
-      reload_ttl-=1
       wp_y=lerp(wp_y,wp_yoffset,0.3)
 
       local dx,dz=0,0
@@ -941,10 +930,10 @@ function attach_plyr(thing,actor)
       if btn(4) then
         if(btn(0)) dx=1
         if(btn(1)) dx=-1
-        if reload_ttl<0 then
-          if(btn(2)) try_switch(-1)
-          if(btn(3)) try_switch(1)
-        end
+
+        -- todo: check weapon ready state
+        if(btn(2)) try_switch(-1)
+        if(btn(3)) try_switch(1)
       else
         if(btn(0)) da-=1
         if(btn(1)) da+=1
@@ -961,20 +950,12 @@ function attach_plyr(thing,actor)
       local ca,sa=cos(self.angle),sin(self.angle)
       self:apply_forces(speed*(dz*ca-dx*sa),speed*(dz*sa+dx*ca))
 
-      if not wp_switching and btn(5) and reload_ttl<0 then
-        local active_wp=wp[wp_slot]
-        local weapondef=active_wp.actor
-        if weapondef.use(active_wp,self) then
-          reload_ttl=15
-          --add(_things,make_projectile(make_thing(weapondef.projectile,self[1],self[2],0,self.angle),self[3]+24))
-        end
-      end
-
       -- damping
+      -- todo: move to physic code?
       da*=0.8
 
       -- update weapon vm
-      wp[wp_slot]:run_vm()
+      wp[wp_slot]:run_vm(self)
     end,
     attach_weapon=function(self,weapon)
       local slot=weapon.actor.slot
@@ -985,8 +966,8 @@ function attach_plyr(thing,actor)
       wp[slot]=weapon
             
       -- jump to ready state
-      weapon:jump_to(7,true)
-      weapon:run_vm()
+      weapon:jump_to(7)
+      weapon:run_vm(self)
 
       -- auto switch
       wp_switch(slot)
@@ -1495,26 +1476,6 @@ function unpack_texture()
   return tex!=0 and tex
 end
 
-function a_fire()
-  local spread,dmg=5,3
-  return function(thing)
-  end
-end
-
-function a_wander()
-  return function(thing)
-    thing:apply_forces(rnd(),rnd())
-  end
-end
-
-function a_spawn()
-  local actor=unpack_actor_ref()
-  return function(thing)
-    -- todo: beef up make_thing to fully build a new thing from flags
-    make_thing(actor,unpack(thing))
-  end
-end
-
 function unpack_map()
   -- jump to data cart
   cart_id,mem=0,0
@@ -1576,7 +1537,7 @@ function unpack_map()
             i,ticks=state_labels[label],-2
           end,
           -- vm update
-          run_vm=function(self)
+          run_vm=function(self,owner)
             while ticks!=-1 do
               -- wait
               if(ticks>0) ticks-=1 return
@@ -1591,9 +1552,10 @@ function unpack_map()
 
               -- effective state
               self.state=state
-              if(state.fn) state.fn(self,self.owner)
               -- get ticks
               ticks=state[1]
+              -- trigger function (if any)
+              if(state.fn) state.fn(self,owner)
             end
           end
         },{__index=thing})
@@ -1609,73 +1571,8 @@ function unpack_map()
         return thing
       end
     }
-    -- 
-    unpack_array(function()
-      -- map label id to state command line number
-      state_labels[mpeek()]=mpeek()
-    end)
 
-    -- actors functions
-    local function_factory={
-      -- A_FireBullets
-      function()
-        local xspread,yspread,bullets,dmg=unpack_fixed(),unpack_fixed(),mpeek(),mpeek()
-        return function(thing,owner)
-          assert(false,xspread.."|"..yspread)
-        end
-      end,
-      -- A_PlaySound
-      function()
-        local s=mpeek()
-        return function()
-          sfx(s)
-        end
-      end,
-      -- A_FireProjectile
-      function()
-        local projectile=unpack_actor_ref()
-        assert(projectile)
-        return function(thing,owner)
-          -- todo: get height from properties
-          add(_things,make_projectile(make_thing(projectile,owner[1],owner[2],0,owner.angle),owner[3]+24))
-        end
-      end
-    }
-    -- states & sprites
-    unpack_array(function()
-      local flags=mpeek()
-      local ctrl=flags&0x3
-      -- stop
-      local cmd={jmp=-1}
-      if ctrl==2 then
-        -- loop or goto label id   
-        cmd={jmp=flr(flags>>4)}
-      elseif ctrl==0 then
-        -- normal command
-        -- todo: use a reference to sprite sides (too many duplicates for complex states)
-        -- or merge sides into array
-        -- layout:
-        -- 1 ticks
-        -- 2 flipx
-        -- 3 light level (bright/normal)
-        -- 4 number of sides
-        -- 5+ sides
-        cmd={unpack_fixed(),mpeek(),flags&0x4>0 and 0 or 2,0}
-        -- get all pose sides
-        unpack_array(function(i)
-          add(cmd,frames[unpack_variant()])
-          -- number of sides
-          cmd[4]=i
-        end)
-        -- function?
-        if flags&0x8>0 then
-          cmd.fn=function_factory[mpeek()]()
-        end
-      end
-      add(states,cmd)
-    end)
-
-    -- misc. actor properties
+    -- actor properties
     local properties,properties_factory=unpack_fixed(),{
       {0x0.0001,"health"},
       {0x0.0002,"armor"},
@@ -1683,7 +1580,7 @@ function unpack_map()
       {0x0.0008,"maxamount"},
       {0x0.0010,"icon",function() return chr(mpeek()) end},
       {0x0.0020,"slot",mpeek},
-      --{0x0.0040,"projectile",unpack_actor_ref},
+      {0x0.0040,"ammouse"},
       {0x0.0080,"speed"},
       {0x0.0100,"damage"},
       {0x0.0200,"ammotype",unpack_actor_ref},
@@ -1735,24 +1632,13 @@ function unpack_map()
       end
     elseif kind==2 then
       -- weapon
-      local ammouse,ammogive,ammotype=unpack_variant(),unpack_variant(),item.ammotype
+      local ammogive,ammotype=unpack_variant(),item.ammotype
       item.pickup=function(thing,target)
         pickup(target.inventory,ammotype,ammogive,ammotype.maxamount)
 
         target:attach_weapon(thing)
         -- remove from things
         do_async(function() del(_things,thing) end)
-      end
-      item.use=function(thing,target)
-        local inventory=target.inventory
-        local newqty=inventory[ammotype]-ammouse
-        if newqty>=0 then
-          inventory[ammotype]=newqty
-          -- fire state
-          thing:jump_to(9)
-          -- todo: return delay?
-          return true         
-        end
       end
     elseif kind==3 then
       -- health pickup
@@ -1765,6 +1651,91 @@ function unpack_map()
         pickup(target,"armor")
       end
     end
+
+    -- actor states
+    unpack_array(function()
+      -- map label id to state command line number
+      state_labels[mpeek()]=mpeek()
+    end)
+
+    -- actors functions
+    local function_factory={
+      -- A_FireBullets
+      function()
+        local xspread,yspread,bullets,dmg=unpack_fixed(),unpack_fixed(),mpeek(),mpeek()
+        return function(thing,owner)
+          assert(false,xspread.."|"..yspread)
+        end
+      end,
+      -- A_PlaySound
+      function()
+        local s=mpeek()
+        return function()
+          sfx(s)
+        end
+      end,
+      -- A_FireProjectile
+      function()
+        local projectile=unpack_actor_ref()
+        return function(weapon,owner)
+          local angle,speed=owner.angle,2*projectile.speed
+          local thing=with_physic(make_thing(projectile,owner[1],owner[2],0,angle))
+          -- todo: get height from properties
+          -- todo: improve z setting
+          thing[3]=owner[3]+24
+          thing:apply_forces(speed*cos(angle),speed*sin(angle))         
+          add(_things,thing)
+        end
+      end,
+      -- A_WeaponReady
+      function()
+        local ammouse,ammotype=item.ammouse,item.ammotype
+        return function(weapon,owner)
+          if btn(5) then
+            local inventory=owner.inventory
+            local newqty=inventory[ammotype]-ammouse
+            if newqty>=0 then
+              inventory[ammotype]=newqty
+              -- fire state
+              weapon:jump_to(9)
+            end
+          end
+        end
+      end
+    }
+    -- states & sprites
+    unpack_array(function()
+      local flags=mpeek()
+      local ctrl=flags&0x3
+      -- stop
+      local cmd={jmp=-1}
+      if ctrl==2 then
+        -- loop or goto label id   
+        cmd={jmp=flr(flags>>4)}
+      elseif ctrl==0 then
+        -- normal command
+        -- todo: use a reference to sprite sides (too many duplicates for complex states)
+        -- or merge sides into array
+        -- layout:
+        -- 1 ticks
+        -- 2 flipx
+        -- 3 light level (bright/normal)
+        -- 4 number of sides
+        -- 5+ sides
+        cmd={unpack_fixed(),mpeek(),flags&0x4>0 and 0 or 2,0}
+        -- get all pose sides
+        unpack_array(function(i)
+          add(cmd,frames[unpack_variant()])
+          -- number of sides
+          cmd[4]=i
+        end)
+        -- function?
+        if flags&0x8>0 then
+          cmd.fn=function_factory[mpeek()]()
+        end
+      end
+      add(states,cmd)
+    end)
 
     -- register
     actors[id]=item

@@ -486,7 +486,8 @@ def pack_actors(file, lumps, map, actors):
   all_functions = dotdict({
     'A_FireBullets': dotdict({'id':1, 'args':[pack_fixed,pack_fixed,pack_byte,pack_byte]}),
     'A_PlaySound': dotdict({'id':2, 'args':[pack_byte]}),
-    'A_FireProjectile': dotdict({'id':3, 'args': [pack_variant]})
+    'A_FireProjectile': dotdict({'id':3, 'args': [pack_variant]}),
+    'A_WeaponReady': dotdict({'id':4, 'args':[]})
   })
 
   s += pack_variant(len(concrete_actors))
@@ -500,6 +501,71 @@ def pack_actors(file, lumps, map, actors):
     # behavior flags
     flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2
     s += "{:02x}".format(flags)
+    
+    ################## properties
+    properties = 0
+#{0x0.0001,"health"},
+#{0x0.0002,"armor"},
+#{0x0.0004,"amount"},
+#{0x0.0008,maxamount"},
+#{0x0.000a,"icon",function() return chr(mpeek()) end},
+#{0x0.000c,"slot",mpeek},
+#{0x0.000f,"ammouse",unpack_actor_ref},
+#{0x0.0010,"speed"},
+#{0x0.0020,"damage"},
+#{0x0.0040,"ammotype"},
+    properties_data = ""
+    if actor.get('health'):
+      properties |= 0x1
+      properties_data += pack_variant(actor.health)
+    if actor.get('armor'):
+      properties |= 0x2
+      properties_data += pack_variant(actor.armor)
+    if actor.get('amount'):
+      properties |= 0x4
+      properties_data += pack_variant(actor.amount)
+    if actor.get('maxamount'):
+      properties |= 0x8
+      properties_data += pack_variant(actor.maxamount)
+    if actor.get('icon'):
+      properties |= 0x10
+      properties_data += "{:02x}".format(actor.get('icon',63))
+    if actor.get('slotnumber'):
+      properties |= 0x20
+      properties_data += "{:02x}".format(actor.slotnumber)
+    if actor.get('ammouse'):
+      properties |= 0x40
+      properties_data += pack_variant(actor.ammouse)
+    if actor.get('speed'):
+      properties |= 0x80
+      properties_data += pack_variant(actor.speed)
+    if actor.get('damage'):
+      properties |= 0x100
+      properties_data += pack_variant(actor.damage)
+    if actor.get('ammotype'):
+      properties |= 0x200
+      properties_data += pack_variant(actor.ammotype)
+    if actor.get('startitems'):
+      properties |= 0x400
+      startitems = actor.startitems
+      properties_data += pack_variant(len(startitems))
+      for si in startitems:
+        # other actor reference
+        properties_data += pack_variant(si[0])
+        # amount
+        properties_data += pack_variant(si[1])
+    s += pack_int32(properties)
+    s += properties_data
+  
+    # class properties
+    if actor.kind==ACTOR_KIND.WEAPON:
+      s += pack_variant(actor.ammogive)
+
+    if actor.kind==ACTOR_KIND.AMMO:
+      # ammo variants (normal, large) are tied to their parent type
+      s += pack_variant(actor.get('parent',actor.id))
+    
+    ############ states
     # export state jump table
     s += pack_variant(len(actor._labels))
     for state_label,state_address in actor._labels.items():
@@ -549,70 +615,6 @@ def pack_actors(file, lumps, map, actors):
       # print("{} -> 0x{:02x}".format(state, flags))
       s += "{:02x}".format(flags)
       s += state_s
-    
-    properties = 0
-#{0x0.0001,"health"},
-#{0x0.0002,"armor"},
-#{0x0.0004,"amount"},
-#{0x0.0008,maxamount"},
-#{0x0.000a,"icon",function() return chr(mpeek()) end},
-#{0x0.000c,"slot",mpeek},
-#{0x0.000f,"projectile",unpack_actor_ref},
-#{0x0.0010,"speed"},
-#{0x0.0020,"damage"},
-#{0x0.0040,"ammotype"},
-    properties_data = ""
-    if actor.get('health'):
-      properties |= 0x1
-      properties_data += pack_variant(actor.health)
-    if actor.get('armor'):
-      properties |= 0x2
-      properties_data += pack_variant(actor.armor)
-    if actor.get('amount'):
-      properties |= 0x4
-      properties_data += pack_variant(actor.amount)
-    if actor.get('maxamount'):
-      properties |= 0x8
-      properties_data += pack_variant(actor.maxamount)
-    if actor.get('icon'):
-      properties |= 0x10
-      properties_data += "{:02x}".format(actor.get('icon',63))
-    if actor.get('slotnumber'):
-      properties |= 0x20
-      properties_data += "{:02x}".format(actor.slotnumber)
-    if actor.get('projectile'):
-      properties |= 0x40
-      properties_data += pack_variant(actor.projectile)
-    if actor.get('speed'):
-      properties |= 0x80
-      properties_data += pack_variant(actor.speed)
-    if actor.get('damage'):
-      properties |= 0x100
-      properties_data += pack_variant(actor.damage)
-    if actor.get('ammotype'):
-      properties |= 0x200
-      properties_data += pack_variant(actor.ammotype)
-    if actor.get('startitems'):
-      properties |= 0x400
-      startitems = actor.startitems
-      properties_data += pack_variant(len(startitems))
-      for si in startitems:
-        # other actor reference
-        properties_data += pack_variant(si[0])
-        # amount
-        properties_data += pack_variant(si[1])
-    s += pack_int32(properties)
-    s += properties_data
-  
-    # class properties
-    if actor.kind==ACTOR_KIND.WEAPON:
-      s += pack_variant(actor.ammouse)
-      s += pack_variant(actor.ammogive)
-
-    if actor.kind==ACTOR_KIND.AMMO:
-      # ammo variants (normal, large) are tied to their parent type
-      s += pack_variant(actor.get('parent',actor.id))
-  
   # things
   s += pack_variant(len(map.things))
   for thing in map.things:
@@ -691,7 +693,6 @@ def load_WAD(filepath,mapname):
       # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_glnodes.cpp
       # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_setup.cpp
       lumps[lump_name] = entry
-      print("lump: {}".format(lump_name))
       if re.match("E[0-9]M[0-9]",lump_name):
         # read UDMF
         map_dir = MAPDirectory(file, lump_name, entry)
