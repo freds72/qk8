@@ -27,6 +27,7 @@ def tohex(val, nbits):
 
 # variable length packing (1 or 2 bytes)
 def pack_variant(x):
+    x=int(x)
     if x>0x7fff:
       raise Exception('Unable to convert: {} into a 1 or 2 bytes'.format(x))
     # 2 bytes

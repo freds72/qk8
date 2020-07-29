@@ -484,10 +484,11 @@ def pack_actors(file, lumps, map, actors):
   # known functions
   # max: 256
   all_functions = dotdict({
-    'A_FireBullets': dotdict({'id':1, 'args':[pack_fixed,pack_fixed,pack_byte,pack_byte]}),
+    'A_FireBullets': dotdict({'id':1, 'args':[pack_fixed, pack_fixed, pack_byte, pack_byte]}),
     'A_PlaySound': dotdict({'id':2, 'args':[pack_byte]}),
     'A_FireProjectile': dotdict({'id':3, 'args': [pack_variant]}),
-    'A_WeaponReady': dotdict({'id':4, 'args':[]})
+    'A_WeaponReady': dotdict({'id':4, 'args':[]}),
+    'A_Explode': dotdict({'id':5,'args': [pack_variant, pack_variant]})
   })
 
   s += pack_variant(len(concrete_actors))

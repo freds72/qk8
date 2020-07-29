@@ -680,7 +680,7 @@ function make_thing(actor,x,y,z,angle)
   })
   if actor.flags&0x2>0 then
     -- shootable
-    thing=with_health(thing)
+    thing=with_physic(with_health(thing))
   end
   return thing
 end
@@ -987,7 +987,7 @@ function attach_plyr(thing,actor)
       local ammotype=active_wp.actor.ammotype
       printb(ammotype.icon..self.inventory[ammotype],2,100,8)  
     end
-  },{__index=with_physic(thing)})
+  },{__index=thing})
 end
 
 -->8
@@ -1664,7 +1664,7 @@ function unpack_map()
       function()
         local xspread,yspread,bullets,dmg=unpack_fixed(),unpack_fixed(),mpeek(),mpeek()
         return function(thing,owner)
-          assert(false,xspread.."|"..yspread)
+        
         end
       end,
       -- A_PlaySound
@@ -1698,6 +1698,25 @@ function unpack_map()
               inventory[ammotype]=newqty
               -- fire state
               weapon:jump_to(9)
+            end
+          end
+        end
+      end,
+      -- A_Explode
+      function()
+        local dmg,dist=unpack_variant(),unpack_variant()
+        return function(thing)
+          for _,otherthing in pairs(_things) do
+            if otherthing!=thing then
+              local v=v2_make(thing,otherthing)
+              local d=v2_len(v)
+              -- in radius?
+              if d<dist then
+                local t=(dist-d)/dist
+                if(otherthing.hit) otherthing:hit(dmg*t)
+                -- push thing
+                if(otherthing.apply_forces) otherthing:apply_forces(50*t*v[1]/d,50*t*v[2]/d)
+              end
             end
           end
         end
