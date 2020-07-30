@@ -126,6 +126,12 @@ function v2_normal(v)
   return {v[1]/d,v[2]/d},d
 end
 
+function v2_add(a,b,scale)
+  scale=scale or 1
+  a[1]+=scale*b[1]
+  a[2]+=scale*b[2]
+end
+
 -- safe vector len
 function v2_len(a)
   local dx,dy=abs(a[1]),abs(a[2])
@@ -709,8 +715,7 @@ function with_physic(thing)
     end,
     update=function(self)
       -- integrate forces
-      velocity[1]+=forces[1]
-      velocity[2]+=forces[2]
+      v2_add(velocity,forces)
       velocity[3]-=1
 
       -- friction     
@@ -735,6 +740,7 @@ function with_physic(thing)
             local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
 
             if otherside==nil or 
+              -- impassable
               (not is_missile and ldef.flags&0x40>0) or
               h+actor.height>otherside.sector.ceil or 
               h+stair_h<otherside.sector.floor then
@@ -750,7 +756,7 @@ function with_physic(thing)
             -- thing hit?
             local otherthing=hit.thing
             local otheractor=otherthing.actor
-            if otherthing.pickup then
+            if self==_plyr and otherthing.pickup then
               -- avoid reentrancy
               otherthing.pickup=nil
               -- jump to pickup state
@@ -767,8 +773,7 @@ function with_physic(thing)
           if fix_move then
             if is_missile then
               -- fix position & velocity
-              self[1]+=(fix_move.t-radius)*move_dir[1]
-              self[2]+=(fix_move.t-radius)*move_dir[2]
+              v2_add(self,move_dir,fix_move.t-radius)
               velocity={0,0,0}
               -- death state
               self:jump_to(5)
@@ -782,8 +787,7 @@ function with_physic(thing)
               -- avoid being pulled toward prop/wall
               if fix<0 then
                 -- apply impulse (e.g. fix velocity)
-                velocity[1]+=fix*n[1]
-                velocity[2]+=fix*n[2]
+                v2_add(velocity,n,fix)
               end
             end
           end
@@ -809,8 +813,7 @@ function with_physic(thing)
           end
         end
         -- apply move
-        self[1]+=velocity[1]
-        self[2]+=velocity[2]
+        v2_add(self,velocity)
               
         -- refresh sector after fixed collision
         ss=find_sub_sector(_bsp,self)
@@ -859,6 +862,7 @@ function with_health(thing)
   -- base health (for gibs effect)
   return setmetatable({
     hit=function(self,dmg)
+      dmg\=1
       -- avoid reentrancy
       if(dead) return
       local hp=dmg
@@ -1487,7 +1491,7 @@ function unpack_map()
     -- width/height
     -- xoffset(center)/yoffset in tiles unit (16x16)
     local size,offset,tc=mpeek(),mpeek(),mpeek()
-		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/16,flr(offset>>4)/16,tc,{}})
+		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/32,flr(offset>>4)/16,tc,{}})
 		unpack_array(function()
 			-- tiles index
 			frame[6][mpeek()]=unpack_variant()
@@ -1662,9 +1666,53 @@ function unpack_map()
     local function_factory={
       -- A_FireBullets
       function()
-        local xspread,yspread,bullets,dmg=unpack_fixed(),unpack_fixed(),mpeek(),mpeek()
+        local xspread,yspread,bullets,dmg,puff=unpack_fixed(),unpack_fixed(),mpeek(),mpeek(),unpack_actor_ref()
         return function(thing,owner)
-        
+          for i=1,bullets do
+            local spread=(rnd(2*xspread)-xspread)/360
+            local hits,move_dir={},{cos(owner.angle+spread),sin(owner.angle+spread)}
+            intersect_sub_sector(owner.ssector,owner,move_dir,owner.actor.radius,1024,hits)    
+            -- todo: get from actor properties
+            local h=owner[3]+24
+            for _,hit in ipairs(hits) do
+              local fix_move
+              if hit.seg then
+                -- bsp hit?
+                local ldef=hit.seg.line
+                local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
+    
+                if otherside==nil or 
+                  h>otherside.sector.ceil or 
+                  h<otherside.sector.floor then
+                  fix_move=hit
+                end              
+              elseif hit.thing!=owner then
+                -- thing hit?
+                local otherthing=hit.thing
+                local otheractor=otherthing.actor
+                if otheractor.flags&0x1>0 then
+                  -- solid actor?
+                  fix_move=hit
+                end
+              end
+    
+              if fix_move then
+                -- actual hit position
+                local pos={owner[1],owner[2],h}
+                v2_add(pos,move_dir,fix_move.t)
+                local puffthing=make_thing(puff,pos[1],pos[2],0,angle)
+                -- todo: get height from properties
+                -- todo: improve z setting
+                puffthing[3]=owner[3]+24
+                add(_things,puffthing)
+      
+                -- hit thing
+                local otherthing=fix_move.thing
+                if(otherthing and otherthing.hit) otherthing:hit(dmg)
+                break
+              end
+            end
+          end
         end
       end,
       -- A_PlaySound

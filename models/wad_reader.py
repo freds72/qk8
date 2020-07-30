@@ -482,9 +482,9 @@ def pack_actors(file, lumps, map, actors):
   all_states = ['Spawn','Idle','See','Melee','Missile','Death','XDeath','Ready','Hold','Fire','Pickup']
 
   # known functions
-  # max: 256
+  # max: 256 (ahah!)
   all_functions = dotdict({
-    'A_FireBullets': dotdict({'id':1, 'args':[pack_fixed, pack_fixed, pack_byte, pack_byte]}),
+    'A_FireBullets': dotdict({'id':1, 'args':[pack_fixed, pack_fixed, pack_byte, pack_byte, pack_variant]}),
     'A_PlaySound': dotdict({'id':2, 'args':[pack_byte]}),
     'A_FireProjectile': dotdict({'id':3, 'args': [pack_variant]}),
     'A_WeaponReady': dotdict({'id':4, 'args':[]}),
