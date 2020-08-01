@@ -101,8 +101,8 @@ class DecorateWalker(DECORATEListener):
         'name': name,
         'id': id,
         'kind': ACTOR_KIND.DEFAULT,
-        'radius': 20,
-        'height': 16
+        'radius': 1,
+        'height': 1
       })
       if ctx.parent():
         parent = ctx.parent().KEYWORD().getText().lower()

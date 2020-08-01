@@ -157,12 +157,12 @@ function vspr(frame,sx,sy,scale,flipx)
   poke(0x5f00,0)
   local w,h,xoffset,yoffset,tc,tiles=unpack(frame)
   palt(tc,true)
-	local sw,xscale=w*scale>>1,flipx and -scale or scale
-	sx-=sw
+  local sw,xscale=(w-xoffset)*scale>>1,flipx and -scale or scale
+  sx-=sw
 	if(flipx) sx+=sw  
 	sy+=(yoffset-h)*scale
 	for i,tile in pairs(tiles) do
-    local dx,dy,ssx,ssy=sx+(i%w+xoffset)*xscale,sy+(i\w)*scale,_sprite_cache:use(tile)
+    local dx,dy,ssx,ssy=sx+(i%w)*xscale,sy+(i\w)*scale,_sprite_cache:use(tile)
     -- scale sub-pixel fix 
     sspr(ssx,ssy,16,16,dx,dy,scale+dx%1,scale+dy%1,flipx)
     -- print(tile,(i%w)*16,(i\w)*16,7)
@@ -392,14 +392,13 @@ function draw_sub_sector(segs,v_cache)
       local ldef=seg.line
       if ldef then
         -- dual?
-        local facingside,otherside=ldef[seg.side],ldef[not seg.side]
+        local facingside,otherside,otop,obottom=ldef[seg.side],ldef[not seg.side]
         -- peg bottom?
         local offsety,toptex,midtex,bottomtex=(bottom-top)>>4,facingside.toptex,facingside.midtex,facingside.bottomtex
         -- fix animated side walls (elevators)
         if ldef.flags&0x4!=0 then
           offsety=0
         end
-        local otop,obottom
         if otherside then
           -- visible other side walls?
           otop=otherside.sector.ceil
@@ -525,6 +524,8 @@ function draw_flats(v_cache,segs,things)
             local angle=((atan2(-thing[1]+_plyr[1],thing[2]-_plyr[2])-thing.angle+0.0625)%1+1)%1
             side=(sides*angle)\1
             flipx=flipx&(1<<side)!=0
+          else
+            flipx=nil
           end
           vspr(frame[side+5],x0,y0,w0<<5,flipx)
           -- thing:draw_vm(x0,y0)
@@ -573,48 +574,50 @@ function find_ssector_thick(root,pos,radius,res)
 end
 
 -- http://geomalgorithms.com/a13-_intersect-4.html
-function intersect_sub_sector(segs,p,d,tmin,tmax,res)
+function intersect_sub_sector(segs,p,d,tmin,tmax,res,skipthings)
   local _tmax=tmax
   local px,pz,dx,dz,tmax_seg=p[1],p[2],d[1],d[2]
 
-  -- hitting things?
-  local things_hits={t=-32000}
-  for _,thing in pairs(_things) do
-    local actor=thing.actor
-    -- not a missile
-    if actor.flags&0x4==0 and thing.subs[segs] then
-      -- overflow 'safe' coordinates
-      local m,r={(px-thing[1])>>8,(pz-thing[2])>>8},actor.radius>>8
-      local b,c=v2_dot(m,d),v2_dot(m,m)-r*r
+  if not skipthings then
+    -- hitting things?
+    local things_hits={t=-32000}
+    for _,thing in pairs(_things) do
+      local actor=thing.actor
+      -- not a missile
+      if actor.flags&0x4==0 and thing.subs[segs] then
+        -- overflow 'safe' coordinates
+        local m,r={(px-thing[1])>>8,(pz-thing[2])>>8},actor.radius>>8
+        local b,c=v2_dot(m,d),v2_dot(m,m)-r*r
 
-      -- check distance and ray direction vs. circle
-      if c<=0 or b<=0 then
-        local discr=b*b-c
-        if discr>=0 then
-          -- convert back to world units
-          local t=(-b-sqrt(discr))<<8
-          -- if t is negative, ray started inside sphere so clamp t to zero 
-          -- if(t<tmin) t=tmin
-          -- record hit
-          if t>=tmin and t<tmax then
-            -- empty list case
-            local head,prev=things_hits,things_hits
-            while head and head.t<t do
-              -- swap/advance
-              prev,head=head,head.next
+        -- check distance and ray direction vs. circle
+        if c<=0 or b<=0 then
+          local discr=b*b-c
+          if discr>=0 then
+            -- convert back to world units
+            local t=(-b-sqrt(discr))<<8
+            -- if t is negative, ray started inside sphere so clamp t to zero 
+            -- if(t<tmin) t=tmin
+            -- record hit
+            if t>=tmin and t<tmax then
+              -- empty list case
+              local head,prev=things_hits,things_hits
+              while head and head.t<t do
+                -- swap/advance
+                prev,head=head,head.next
+              end
+              -- insert new thing
+              prev.next={t=t,thing=thing,next=prev.next}
             end
-            -- insert new thing
-            prev.next={t=t,thing=thing,next=prev.next}
           end
         end
       end
     end
-  end
-  -- add sorted things intersections
-  local head=things_hits.next
-  while head do
-    add(res,head)
-    head=head.next
+    -- add sorted things intersections
+    local head=things_hits.next
+    while head do
+      add(res,head)
+      head=head.next
+    end
   end
 
   for i=1,#segs do
@@ -648,7 +651,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res)
     -- don't record node compiler lines
     if(tmax_seg.line) add(res,{t=tmax,seg=tmax_seg,n=tmax_seg[5]})
     -- any remaining segment to check?
-    if(tmax<_tmax and tmax_seg.partner) intersect_sub_sector(tmax_seg.partner,p,d,tmax,_tmax,res)
+    if(tmax<_tmax and tmax_seg.partner) intersect_sub_sector(tmax_seg.partner,p,d,tmax,_tmax,res,skipthings)
   end
 end
 
@@ -703,15 +706,16 @@ local _sector_dmg={
 function with_physic(thing)
   local actor=thing.actor
   -- actor properties
-  local height,speed,radius,is_missile=actor.height,actor.speed,actor.radius,actor.flags&0x4>0 and true
+  local height,speed,radius,mass,is_missile=actor.height,actor.speed,actor.radius,2*actor.mass,actor.flags&0x4==4
+  local friction=is_missile and 0.9967 or 0.9062
   local ss=thing.ssector
   -- init inventory
   local forces,velocity={0,0},{0,0,0}
   return setmetatable({
     apply_forces=function(self,x,y)
       -- todo: revisit force vs. impulse
-      forces[1]+=x/2
-      forces[2]+=y/2
+      forces[1]+=30*x/mass
+      forces[2]+=30*y/mass
     end,
     update=function(self)
       -- integrate forces
@@ -719,7 +723,6 @@ function with_physic(thing)
       velocity[3]-=1
 
       -- friction     
-      local friction=is_missile and 0.9967 or 0.9062
       velocity[1]*=friction
       velocity[2]*=friction
       
@@ -737,7 +740,7 @@ function with_physic(thing)
           if hit.seg then
             -- bsp hit?
             local ldef=hit.seg.line
-            local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
+            local otherside=ldef[not hit.seg.side]
 
             if otherside==nil or 
               -- impassable
@@ -769,7 +772,6 @@ function with_physic(thing)
             end
           end
 
-          --if(fix_move) break
           if fix_move then
             if is_missile then
               -- fix position & velocity
@@ -779,7 +781,8 @@ function with_physic(thing)
               self:jump_to(5)
               -- hit thing
               local otherthing=fix_move.thing
-              if(otherthing and otherthing.hit) otherthing:hit(actor.damage)
+              if(otherthing and otherthing.hit) otherthing:hit(actor.damage,move_dir)
+              -- stop at first wall/thing
               break
             else
               local n=fix_move.n
@@ -861,19 +864,23 @@ function with_health(thing)
   end
   -- base health (for gibs effect)
   return setmetatable({
-    hit=function(self,dmg)
-      dmg\=1
+    hit=function(self,dmg,dir)
       -- avoid reentrancy
       if(dead) return
       local hp=dmg
       -- damage reduction?
-      if self.armor then
-        hp=max(dmg-self.armor)
-        self.armor=max(self.armor-dmg)
+      local armor=self.armor or 0
+      if armor>0 then
+        hp=2*dmg/3
+        self.armor=max(armor-dmg/3)\1
       end
-      self.health=max(self.health-hp)
+      self.health=max(self.health-hp)\1
       if self.health==0 then
         die(self)
+      end
+      -- kickback
+      if dir then
+        self:apply_forces(hp*dir[1],hp*dir[2])
       end
     end,
     hit_sector=function(self,dmg)
@@ -1193,6 +1200,7 @@ function _draw()
 
     -- 
     local sorted_things=setmetatable({},depthsorted_cls)
+    local m1,m2,m3,m4,m5,m6,m7=unpack(_cam.m)
     for _,thing in pairs(_things) do
       -- visible?
       local viz
@@ -1201,11 +1209,11 @@ function _draw()
         if(band(pvs[id\32],0x0.0001<<(id&31))!=0) viz=true break
       end
       if viz then
-        local v=_cam:project(thing)
-        local ax,az=v[1],v[3]
+        local x,y=thing[1],thing[2]
+        local ax,az=m1*x+m2*y+m3,m5*x+m6*y+m7
         if az>_znear and 2*ax<az and -2*ax<az then
           -- h: thing offset+cam offset
-          local w,h=128/az,thing[3]+v[2]
+          local w,h=128/az,thing[3]+m4
           local x,y=63.5+ax*w,63.5-h*w
           -- insertion sort into each sub
           for sub,_ in pairs(thing.subs) do
@@ -1489,9 +1497,9 @@ function unpack_map()
 	local frames,tiles={},{}
 	unpack_array(function()
     -- width/height
-    -- xoffset(center)/yoffset in tiles unit (16x16)
+    -- xoffset(center)/yoffset in tiles unit (16x16)/transparent color
     local size,offset,tc=mpeek(),mpeek(),mpeek()
-		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/32,flr(offset>>4)/16,tc,{}})
+		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/16,flr(offset>>4)/16,tc,{}})
 		unpack_array(function()
 			-- tiles index
 			frame[6][mpeek()]=unpack_variant()
@@ -1518,6 +1526,7 @@ function unpack_map()
       kind=kind,
       radius=unpack_fixed(),
       height=unpack_fixed(),
+      mass=100,
       -- flags layout:
       -- 0x1: solid
       -- 0x2: shootable
@@ -1588,6 +1597,7 @@ function unpack_map()
       {0x0.0080,"speed"},
       {0x0.0100,"damage"},
       {0x0.0200,"ammotype",unpack_actor_ref},
+      {0x0.0800,"mass"},
       {0x0.0400,"",function()
         -- 
         unpack_array(function()
@@ -1679,7 +1689,7 @@ function unpack_map()
               if hit.seg then
                 -- bsp hit?
                 local ldef=hit.seg.line
-                local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
+                local otherside=ldef[not hit.seg.side]
     
                 if otherside==nil or 
                   h>otherside.sector.ceil or 
@@ -1708,7 +1718,7 @@ function unpack_map()
       
                 -- hit thing
                 local otherthing=fix_move.thing
-                if(otherthing and otherthing.hit) otherthing:hit(dmg)
+                if(otherthing and otherthing.hit) otherthing:hit(dmg,move_dir)
                 break
               end
             end
@@ -1752,18 +1762,33 @@ function unpack_map()
       end,
       -- A_Explode
       function()
-        local dmg,dist=unpack_variant(),unpack_variant()
+        local dmg,maxdist,dh=unpack_variant(),unpack_variant(),item.height/2
         return function(thing)
+          -- hitscan from middle of exploding thing
+          local h=thing[3]+dh
+          -- todo: optimize lookup!!!
           for _,otherthing in pairs(_things) do
-            if otherthing!=thing then
-              local v=v2_make(thing,otherthing)
-              local d=v2_len(v)
+            if otherthing!=thing and otherthing.hit then
+              local n,d=v2_normal(v2_make(thing,otherthing))
               -- in radius?
-              if d<dist then
-                local t=(dist-d)/dist
-                if(otherthing.hit) otherthing:hit(dmg*t)
-                -- push thing
-                if(otherthing.apply_forces) otherthing:apply_forces(50*t*v[1]/d,50*t*v[2]/d)
+              d=max(d-thing.actor.radius)
+              if d<maxdist then
+                -- line of sight?
+                local hits,blocking={}
+                intersect_sub_sector(thing.ssector,thing,n,0,d,hits,true)
+                for _,hit in pairs(hits) do
+                  -- bsp hit?
+                  local ldef=hit.seg.line
+                  local otherside=ldef[not hit.seg.side]
+                  if otherside==nil or 
+                    h>otherside.sector.ceil or 
+                    h<otherside.sector.floor then
+                    -- blocking wall
+                    blocking=true
+                    break
+                  end 
+                end
+                if(not blocking) otherthing:hit(dmg*(1-d/maxdist),n)
               end
             end
           end

@@ -555,6 +555,9 @@ def pack_actors(file, lumps, map, actors):
         properties_data += pack_variant(si[0])
         # amount
         properties_data += pack_variant(si[1])
+    if actor.get('mass'):
+      properties |= 0x800
+      properties_data += pack_variant(actor.mass)      
     s += pack_int32(properties)
     s += properties_data
   
