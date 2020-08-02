@@ -104,6 +104,9 @@ class WADImageReader():
           frame_tiles[j*tw+i] = tiles
           tiles += 1
 
+    if abs(xoffset)>127 or abs(yoffset)>127:
+      raise Exception("Unsupported image offset: {}/{} - must be in [-127,127]".format(xoffset,yoffset))
+    
     return dotdict({
       'name': name,
       'tiles': frame_tiles,

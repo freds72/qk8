@@ -25,6 +25,13 @@ from image_reader import WADImageReader
 import sys, pygame
 
 # helper funcs
+def get_or_default(owner, name, default):
+  return name in owner and owner[name] or default
+
+def get_at_or_default(list, index, defaults):
+  return list[index] if index < len(list) else defaults[index]
+
+# helper math functions
 def dot(v0,v1):
   return v0[0]*v1[0]+v0[1]*v1[1]
 
@@ -240,9 +247,6 @@ def find_other_sectors(id, lines, sides, sectors):
     raise Exception("Sector: {} missing reference sector".format(id))
   return other_sectors
 
-def get_or_default(owner, name, default):
-  return name in owner and owner[name] or default
-
 def pack_special(line, lines, sides, sectors):
   special = line.special
   s = "{:02x}".format(special)
@@ -435,6 +439,11 @@ def pack_zmap(map, textures):
     s+= pack_texture(texture_pairs.get(name, texture))
   return s
 
+def pack_ratio(x):
+  if x<0 or x>255:
+    raise Exception("Invalid ratio: {}, must be in range [0;1]".format(x))
+  return pack_byte(int(255*x))
+
 def pack_actors(file, lumps, map, actors):
   s = ""
   # actors/inventory (e.g. items with assigned unique id)
@@ -491,7 +500,10 @@ def pack_actors(file, lumps, map, actors):
     'A_PlaySound': dotdict({'id':2, 'args':[pack_byte]}),
     'A_FireProjectile': dotdict({'id':3, 'args': [pack_variant]}),
     'A_WeaponReady': dotdict({'id':4, 'args':[]}),
-    'A_Explode': dotdict({'id':5,'args': [pack_variant, pack_variant]})
+    'A_Explode': dotdict({'id':5, 'args': [pack_variant, pack_variant]}),
+    'A_FaceTarget': dotdict({'id':6, 'args': [pack_ratio], 'defaults': [1]}),
+    'A_Look': dotdict({'id':7, 'args': []}),
+    'A_Chase': dotdict({'id':8, 'args': []}),
   })
 
   s += pack_variant(len(concrete_actors))
@@ -618,7 +630,7 @@ def pack_actors(file, lumps, map, actors):
           fn = all_functions[state.function]
           state_s += "{:02x}".format(fn.id)
           for i,arg_pack in enumerate(fn.args):
-            state_s += arg_pack(state.args[i]) 
+            state_s += arg_pack(get_at_or_default(state.args,i,fn.get('defaults'))) 
       # print("{} -> 0x{:02x}".format(state, flags))
       s += "{:02x}".format(flags)
       s += state_s

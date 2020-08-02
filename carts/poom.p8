@@ -655,6 +655,30 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res,skipthings)
   end
 end
 
+function line_of_sight(thing,otherthing,maxdist)
+  local n,d=v2_normal(v2_make(thing,otherthing))
+  -- in radius?
+  d=max(d-thing.actor.radius)
+  if d<maxdist then
+    -- line of sight?
+    local h,hits,blocking=thing[3]+24,{}
+    intersect_sub_sector(thing.ssector,thing,n,0,d,hits,true)
+    for _,hit in pairs(hits) do
+      -- bsp hit?
+      local ldef=hit.seg.line
+      local otherside=ldef[not hit.seg.side]
+      if otherside==nil or 
+        h>otherside.sector.ceil or 
+        h<otherside.sector.floor then
+        -- blocking wall
+        return
+      end 
+    end
+    -- normal and distance to hit
+    return n,d
+  end
+end
+
 local depth_cls={
   __index=function(t,k)
     -- head of stack
@@ -782,7 +806,7 @@ function with_physic(thing)
               self:jump_to(5)
               -- hit thing
               local otherthing=fix_move.thing
-              if(otherthing and otherthing.hit) otherthing:hit(actor.damage,move_dir)
+              if(otherthing and otherthing.hit) otherthing:hit(actor.damage,move_dir,self.owner)
               -- stop at first wall/thing
               break
             else
@@ -857,7 +881,7 @@ end
 function with_health(thing)
   local dmg_ttl,dead=0
   local function die(self)
-    self.dead=true
+    self.dead,self.target=true
     -- lock state
     dead=true
     -- death state
@@ -865,9 +889,13 @@ function with_health(thing)
   end
   -- base health (for gibs effect)
   return setmetatable({
-    hit=function(self,dmg,dir)
+    hit=function(self,dmg,dir,instigator)
       -- avoid reentrancy
       if(dead) return
+      
+      --  
+      self.target=instigator
+
       local hp=dmg
       -- damage reduction?
       local armor=self.armor or 0
@@ -1715,12 +1743,12 @@ function unpack_map()
                 local puffthing=make_thing(puff,pos[1],pos[2],0,angle)
                 -- todo: get height from properties
                 -- todo: improve z setting
-                puffthing[3]=owner[3]+24
+                puffthing[3]=owner[3]+32
                 add(_things,puffthing)
       
                 -- hit thing
                 local otherthing=fix_move.thing
-                if(otherthing and otherthing.hit) otherthing:hit(dmg,move_dir)
+                if(otherthing and otherthing.hit) otherthing:hit(dmg,move_dir,owner)
                 break
               end
             end
@@ -1737,10 +1765,11 @@ function unpack_map()
       -- A_FireProjectile
       function()
         local projectile=unpack_actor_ref()
-        return function(weapon,owner)
-          local angle,speed,radius=owner.angle,projectile.speed,owner.actor.radius
+        return function(owner)
+          local angle,speed,radius=-owner.angle,projectile.speed,owner.actor.radius
           local ca,sa=cos(angle),sin(angle)
           local thing=with_physic(make_thing(projectile,owner[1]+radius*ca,owner[2]+radius*sa,0,angle))
+          thing.owner=owner
           -- todo: get height from properties
           -- todo: improve z setting
           thing[3]=owner[3]+32
@@ -1765,35 +1794,69 @@ function unpack_map()
       end,
       -- A_Explode
       function()
-        local dmg,maxdist,dh=unpack_variant(),unpack_variant(),item.height/2
+        local dmg,maxdist=unpack_variant(),unpack_variant()
         return function(thing)
-          -- hitscan from middle of exploding thing
-          local h=thing[3]+dh
           -- todo: optimize lookup!!!
           for _,otherthing in pairs(_things) do
             if otherthing!=thing and otherthing.hit then
-              local n,d=v2_normal(v2_make(thing,otherthing))
-              -- in radius?
-              d=max(d-thing.actor.radius)
-              if d<maxdist then
-                -- line of sight?
-                local hits,blocking={}
-                intersect_sub_sector(thing.ssector,thing,n,0,d,hits,true)
-                for _,hit in pairs(hits) do
-                  -- bsp hit?
-                  local ldef=hit.seg.line
-                  local otherside=ldef[not hit.seg.side]
-                  if otherside==nil or 
-                    h>otherside.sector.ceil or 
-                    h<otherside.sector.floor then
-                    -- blocking wall
-                    blocking=true
-                    break
-                  end 
-                end
-                if(not blocking) otherthing:hit(dmg*(1-d/maxdist),n)
-              end
+              local n,d=line_of_sight(thing,otherthing,maxdist)
+              if(n) otherthing:hit(dmg*(1-d/maxdist),n)
             end
+          end
+        end
+      end,
+      -- A_FaceTarget
+      function()
+        local speed=mpeek()/255
+        return function(thing)
+          -- nothing to face to
+          local otherthing=thing.target
+          if(not otherthing) return
+          local target_angle=atan2(-thing[1]+otherthing[1],thing[2]-otherthing[2])
+          thing.angle=lerp(shortest_angle(target_angle,thing.angle),target_angle,speed)
+        end
+      end,
+      -- A_Look
+      function()
+        return function(self)
+          local targets,otherthing={self.target,_plyr}
+          for i=1,#targets do
+            local ptgt=targets[i]
+            if(ptgt and not ptgt.dead) otherthing=ptgt break
+          end
+          -- nothing to do?
+          if(not otherthing) self.target=nil return
+          -- in range/visible?
+          local n,d=line_of_sight(self,otherthing,1024)
+          if n then
+            self.target=otherthing
+            -- see
+            self:jump_to(2)
+          end 
+        end
+      end,
+      -- A_Chase
+      function()
+        local side=1
+        return function(self)
+          -- no more target
+          local otherthing=self.target
+          -- spawn
+          if(not otherthing or otherthing.dead) self:jump_to(0)
+          --
+          -- in range/visible?
+          local n,d=line_of_sight(self,otherthing,1024)
+          if n then
+            -- in range?
+            if d<512 then
+              -- missile
+              self:jump_to(4)
+            end
+          else
+            -- lost?
+            self.target=nil
+            -- spawn
+            self:jump_to(0)
           end
         end
       end
