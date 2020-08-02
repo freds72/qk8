@@ -35,9 +35,12 @@ class WADImageReader():
 
     file.seek(entry.lump_ofs)
     image_data = file.read(entry.lump_size)
-    # get offsets (if any)
 
-    src = Image.open(io.BytesIO(image_data))
+    # read image bytes
+    src_io = io.BytesIO(image_data)
+    src_bytes = bytes(src_io.getbuffer())
+
+    src = Image.open(src_io)
     src_width, src_height = src.size
 
     # resize to multiple of 16x16
@@ -46,6 +49,14 @@ class WADImageReader():
     height = 16*(math.ceil(src_height/16))
     if width>64 or height>64:
       raise Exception("Image: {} too large: {}x{} - must be 64x64 max.".format(name,width,height))
+
+    # get offsets (if any)
+    xoffset = src_width/2
+    yoffset = src_height
+    pattern_index = src_bytes.find(b"grAb")
+    if pattern_index!=-1:
+      xoffset,yoffset = struct.unpack_from(">ii",src_bytes,pattern_index+4)
+      print("Custom offset: {}/{}".format(xoffset,yoffset))
 
     img = Image.new('RGBA', (width, height), (0,0,0,0))
     img.paste(src, (0,0,src_width,src_height))
@@ -63,7 +74,7 @@ class WADImageReader():
 
     tw = math.floor(width/16)
     th = math.floor(height/16)
-    print("Processing: {} - {}x{} pix -> {}x{}".format(name,src_width,src_height,width,height))
+    # print("Processing: {} - {}x{} pix -> {}x{}".format(name,src_width,src_height,width,height))
 
     data = bytes([])
     frame_tiles = {}
@@ -98,7 +109,7 @@ class WADImageReader():
       'tiles': frame_tiles,
       'width':  tw,
       'height': th,
-      'xoffset': width-src_width,
-      'yoffset': height-src_height,
+      'xoffset': int(xoffset),
+      'yoffset': int(yoffset),
       'background': pico8_transparency,
       'data': data})

@@ -155,12 +155,12 @@ end
 function vspr(frame,sx,sy,scale,flipx)
   -- faster equivalent to: palt(0,false)
   poke(0x5f00,0)
-  local w,h,xoffset,yoffset,tc,tiles=unpack(frame)
+  local w,xoffset,yoffset,tc,tiles=unpack(frame)
   palt(tc,true)
-  local sw,xscale=(w-xoffset)*scale>>1,flipx and -scale or scale
+  local sw,xscale=xoffset*scale,flipx and -scale or scale
   sx-=sw
 	if(flipx) sx+=sw  
-	sy+=(yoffset-h)*scale
+	sy-=yoffset*scale
 	for i,tile in pairs(tiles) do
     local dx,dy,ssx,ssy=sx+(i%w)*xscale,sy+(i\w)*scale,_sprite_cache:use(tile)
     -- scale sub-pixel fix 
@@ -714,8 +714,8 @@ function with_physic(thing)
   return setmetatable({
     apply_forces=function(self,x,y)
       -- todo: revisit force vs. impulse
-      forces[1]+=30*x/mass
-      forces[2]+=30*y/mass
+      forces[1]+=96*x/mass
+      forces[2]+=96*y/mass
     end,
     update=function(self)
       -- integrate forces
@@ -729,6 +729,7 @@ function with_physic(thing)
       -- check collision with world
       local move_dir,move_len=v2_normal(velocity)
       
+      -- todo: epsilon?
       if move_len>0 then
         local hits,h={},self[3]
         -- todo: always check intersection w/ additional contact radius (front only?)
@@ -1495,14 +1496,15 @@ function unpack_map()
   
   -- sprite index
 	local frames,tiles={},{}
-	unpack_array(function()
-    -- width/height
-    -- xoffset(center)/yoffset in tiles unit (16x16)/transparent color
-    local size,offset,tc=mpeek(),mpeek(),mpeek()
-		local frame=add(frames,{size&0xf,flr(size>>4),(offset&0xf)/16,flr(offset>>4)/16,tc,{}})
+  unpack_array(function()
+    -- packed:
+    -- width/transparent color
+    -- xoffset/yoffset in tiles unit (16x16)
+    local wtc=mpeek()
+		local frame=add(frames,{wtc&0xf,(mpeek()-128)/16,(mpeek()-128)/16,flr(wtc>>4),{}})
 		unpack_array(function()
 			-- tiles index
-			frame[6][mpeek()]=unpack_variant()
+			frame[5][mpeek()]=unpack_variant()
     end)
   end)
   -- sprite tiles
@@ -1736,12 +1738,13 @@ function unpack_map()
       function()
         local projectile=unpack_actor_ref()
         return function(weapon,owner)
-          local angle,speed=owner.angle,2*projectile.speed
-          local thing=with_physic(make_thing(projectile,owner[1],owner[2],0,angle))
+          local angle,speed,radius=owner.angle,projectile.speed,owner.actor.radius
+          local ca,sa=cos(angle),sin(angle)
+          local thing=with_physic(make_thing(projectile,owner[1]+radius*ca,owner[2]+radius*sa,0,angle))
           -- todo: get height from properties
           -- todo: improve z setting
-          thing[3]=owner[3]+24
-          thing:apply_forces(speed*cos(angle),speed*sin(angle))         
+          thing[3]=owner[3]+32
+          thing:apply_forces(speed*ca,speed*sa)         
           add(_things,thing)
         end
       end,

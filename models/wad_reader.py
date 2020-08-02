@@ -15,6 +15,7 @@ from python2pico import pack_fixed
 from python2pico import pack_byte
 from python2pico import to_multicart
 from python2pico import pack_int32
+from python2pico import pack_short
 from bsp_compiler import Polygon
 from bsp_compiler import POLYGON_CLASSIFICATION
 from bsp_compiler import normal,ortho
@@ -459,7 +460,9 @@ def pack_actors(file, lumps, map, actors):
   for i,image_data in enumerate(images):
     print("Packing sprite: {}".format(image_data.name))
     sprites[image_data.name] = i
-    s += "{:02x}{:02x}{:02x}".format(image_data.width|image_data.height<<4,image_data.xoffset|image_data.yoffset<<4,image_data.background)
+    s += "{:02x}".format(image_data.width|image_data.background<<4)
+    s += pack_short(image_data.xoffset)
+    s += pack_short(image_data.yoffset)
     tiles = image_data.tiles
     s += pack_variant(len(tiles))
     for i,tile in tiles.items():
