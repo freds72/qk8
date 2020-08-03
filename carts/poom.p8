@@ -881,7 +881,7 @@ end
 function with_health(thing)
   local dmg_ttl,dead=0
   local function die(self)
-    self.dead,self.target=true
+    self.dead=true
     -- lock state
     dead=true
     -- death state
@@ -1041,7 +1041,7 @@ function play_state()
     -- update
     function()
       if _plyr.dead then
-        next_state(gameover_state,_plyr,_plyr.angle,45)
+        next_state(gameover_state,_plyr,_plyr.angle,_plyr.target,45)
       end
 
       _cam:track(_plyr,_plyr.angle,_plyr[3]+45)
@@ -1052,11 +1052,17 @@ function play_state()
     end
 end
 
-function gameover_state(pos,angle,h)
+function gameover_state(pos,angle,target,h)
+  local target_angle=angle
   return
     function()
       -- fall to ground
       h=lerp(h,10,0.2)
+      -- track 'death' instigator
+      if target then
+        target_angle=atan2(target[1]-pos[1],target[2]-pos[2])
+        angle=lerp(shortest_angle(target_angle,angle),target_angle,0.08)
+      end
       _cam:track(pos,angle,pos[3]+h)
     end,
     function()
@@ -1707,10 +1713,10 @@ function unpack_map()
       -- A_FireBullets
       function()
         local xspread,yspread,bullets,dmg,puff=unpack_fixed(),unpack_fixed(),mpeek(),mpeek(),unpack_actor_ref()
-        return function(thing,owner)
+        return function(owner)
           for i=1,bullets do
-            local spread=(rnd(2*xspread)-xspread)/360
-            local hits,move_dir={},{cos(owner.angle+spread),sin(owner.angle+spread)}
+            local angle=-owner.angle+(rnd(2*xspread)-xspread)/360
+            local hits,move_dir={},{cos(angle),sin(angle)}
             intersect_sub_sector(owner.ssector,owner,move_dir,owner.actor.radius,1024,hits)    
             -- todo: get from actor properties
             local h=owner[3]+24
@@ -1839,25 +1845,24 @@ function unpack_map()
       function()
         local side=1
         return function(self)
-          -- no more target
+          -- still active target?
           local otherthing=self.target
-          -- spawn
-          if(not otherthing or otherthing.dead) self:jump_to(0)
-          --
-          -- in range/visible?
-          local n,d=line_of_sight(self,otherthing,1024)
-          if n then
-            -- in range?
-            if d<512 then
-              -- missile
-              self:jump_to(4)
+          if otherthing and not otherthing.dead then
+            -- in range/visible?
+            local n,d=line_of_sight(self,otherthing,1024)
+            if n then
+              -- in range?
+              if d<512 then
+                -- missile
+                self:jump_to(4)
+              end
             end
-          else
-            -- lost?
-            self.target=nil
-            -- spawn
-            self:jump_to(0)
+            return
           end
+          -- lost/dead?
+          self.target=nil
+          -- spawn
+          self:jump_to(0)
         end
       end
     }
@@ -1918,7 +1923,7 @@ function unpack_map()
   -----------------------------------
   -- unpack level geometry
   -- sectors
-  local sectors={}
+  local sectors,sides,verts,lines,sub_sectors,all_segs,nodes={},{},{},{},{},{},{}
   unpack_array(function(i)
     add(sectors,{
       id=i,
@@ -1933,7 +1938,8 @@ function unpack_map()
       floorlight=mpeek()
     })
   end)
-  local sides={}
+
+  -- sidedefs
   unpack_array(function()
     add(sides,{
       sector=sectors[unpack_variant()],
@@ -1943,12 +1949,12 @@ function unpack_map()
     })
   end)
 
-  local verts={}
+  -- vertices
   unpack_array(function()
     add(verts,{unpack_fixed(),unpack_fixed()})
   end)
 
-  local lines={}
+  -- linedefs
   unpack_array(function()
     local line={
       -- sides
@@ -1962,12 +1968,13 @@ function unpack_map()
     add(lines,line)
   end)
 
-  local sub_sectors,all_segs={},{}
+  -- convex sub-sectors
   unpack_array(function(i)
     -- register current sub-sector in pvs
     local segs={id=i,pvs={}}
     unpack_array(function()
       local s=add(segs,{
+        -- 1: vertex
         verts[unpack_variant()],
       })
       local flags=mpeek()
@@ -1996,15 +2003,19 @@ function unpack_map()
     for i,s1 in ipairs(segs) do
       local v1=s1[1]
       local n,len=v2_normal(v2_make(v0,v1))
-      -- segment dir and len
+      -- 2: segment dir
       add(s0,n)
+      -- 3: dist to origin
       add(s0,v2_dot(n,v0))
+      -- 4: len
       add(s0,len)
       -- normal
       n={-n[2],n[1]}
+      -- 5: normal
       add(s0,n)
+      -- 6: distance to origin
       add(s0,v2_dot(n,v0))
-      -- use normal direction to select uv direction
+      -- 7: use normal direction to select uv direction
       add(s0,abs(n[1])>abs(n[2]) and "v" or "u")
 
       v0,s0=v1,s1
@@ -2015,7 +2026,7 @@ function unpack_map()
   for _,seg in pairs(all_segs) do
     seg.partner=sub_sectors[seg.partner]
   end
-  local nodes={}
+  -- bsp nodes
   unpack_array(function()
     local node=add(nodes,{
       -- normal packed in struct to save memory
