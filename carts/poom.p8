@@ -33,7 +33,7 @@ function make_camera()
     u=1,
     v=0,
     track=function(self,pos,angle,height)
-      local ca,sa=cos(angle+0.25),-sin(angle+0.25)
+      local ca,sa=-sin(angle),cos(angle)
       self.u=ca
       self.v=sa
       -- world to cam matrix
@@ -529,7 +529,7 @@ function draw_flats(v_cache,segs,things)
           end
           vspr(frame[side+5],x0,y0,w0<<5,flipx)
           -- thing:draw_vm(x0,y0)
-          -- pset(x0,y0,8)
+          -- print(thing.angle,x0,y0,8)
         end
         head=head.next
       end
@@ -699,7 +699,7 @@ function make_thing(actor,x,y,z,angle)
    -- all sub-sectors that thing touches
   -- used for rendering and collision detection
   local subs,pos={},{x,y}
-  find_ssector_thick(_bsp,{x,y},actor.radius,subs)
+  find_ssector_thick(_bsp,pos,actor.radius,subs)
   -- default height & sector specs
   local ss=find_sub_sector(_bsp,pos)
   -- attach instance properties to new thing
@@ -730,9 +730,8 @@ local _sector_dmg={
 function with_physic(thing)
   local actor=thing.actor
   -- actor properties
-  local height,speed,radius,mass,is_missile=actor.height,actor.speed,actor.radius,2*actor.mass,actor.flags&0x4==4
-  local friction=is_missile and 0.9967 or 0.9062
-  local ss=thing.ssector
+  local height,radius,mass,is_missile=actor.height,actor.radius,2*actor.mass,actor.flags&0x4==4
+  local ss,friction=thing.ssector,is_missile and 0.9967 or 0.9062
   -- init inventory
   local forces,velocity={0,0},{0,0,0}
   return setmetatable({
@@ -770,7 +769,7 @@ function with_physic(thing)
             if otherside==nil or 
               -- impassable
               (not is_missile and ldef.flags&0x40>0) or
-              h+actor.height>otherside.sector.ceil or 
+              h+height>otherside.sector.ceil or 
               h+stair_h<otherside.sector.floor then
               fix_move=hit
             end
@@ -986,8 +985,8 @@ function attach_plyr(thing,actor)
       if(btn(2,1)) dz=1
       if(btn(3,1)) dz=-1
 
-      self.angle+=da/256
-      local ca,sa=cos(self.angle),sin(self.angle)
+      self.angle-=da/256
+      local ca,sa=cos(self.angle),-sin(self.angle)
       self:apply_forces(speed*(dz*ca-dx*sa),speed*(dz*sa+dx*ca))
 
       -- damping
@@ -995,7 +994,8 @@ function attach_plyr(thing,actor)
       da*=0.8
 
       -- update weapon vm
-      wp[wp_slot]:run_vm(self)
+      wp[wp_slot].owner=self
+      wp[wp_slot]:tick()
     end,
     attach_weapon=function(self,weapon)
       local slot=weapon.actor.slot
@@ -1004,10 +1004,11 @@ function attach_plyr(thing,actor)
 
       -- attach weapon
       wp[slot]=weapon
-            
+      weapon.owner=self
+
       -- jump to ready state
       weapon:jump_to(7)
-      weapon:run_vm(self)
+      weapon:tick()
 
       -- auto switch
       wp_switch(slot)
@@ -1018,7 +1019,8 @@ function attach_plyr(thing,actor)
       
       local active_wp=wp[wp_slot]
       local frame=active_wp.state
-      local _,flipx,light,sides=unpack(frame)
+      
+      print(active_wp.owner[1].."/"..active_wp.owner[2],64,64,8)
 
       -- active_wp:draw_vm(64,64)
       -- draw current frame
@@ -1055,17 +1057,20 @@ end
 function gameover_state(pos,angle,target,h)
   local target_angle=angle
   return
+    -- update
     function()
       -- fall to ground
       h=lerp(h,10,0.2)
       -- track 'death' instigator
       if target then
-        target_angle=atan2(target[1]-pos[1],target[2]-pos[2])
+        target_angle=atan2(-target[1]+pos[1],target[2]-pos[2])+0.5
         angle=lerp(shortest_angle(target_angle,angle),target_angle,0.08)
       end
       _cam:track(pos,angle,pos[3]+h)
     end,
+    -- draw
     function()
+      -- todo: gameover message
     end
 end
 
@@ -1107,7 +1112,7 @@ function _update()
   -- keep world running
   for _,thing in pairs(_things) do
     if(thing.control) thing:control()
-    thing:run_vm()
+    thing:tick()
     if(thing.update) thing:update()
   end
 
@@ -1184,7 +1189,7 @@ function _draw()
       end
     end)
     
-    local ca,sa=cos(_plyr.angle),sin(_plyr.angle)
+    local ca,sa=cos(_plyr.angle),-sin(_plyr.angle)
     local x0,y0=cam_to_screen2d(_cam:project({_plyr[1]+128*ca,_plyr[2]+128*sa}))
     --line(64,64,x0,y0,8)
 
@@ -1291,7 +1296,7 @@ function _draw()
     if(_msg) print(_msg,64-#_msg*2,120,15)
 
     -- debug messages
-    local cpu=stat(1).."|"..stat(0).."\n"
+    local cpu=stat(1).."|"..stat(0).."\n".._plyr.angle
     print(cpu,2,3,3)
     print(cpu,2,2,8)
     
@@ -1572,6 +1577,8 @@ function unpack_map()
       attach=function(self,thing)
         -- vm state (starts at spawn)
         local i,ticks=state_labels[0],-2
+
+        -- extend properties
         thing=setmetatable({
           actor=self,
           health=self.health,
@@ -1581,12 +1588,12 @@ function unpack_map()
           active_slot=active_slot,
           -- pickable things
           pickup=self.pickup,          
-          -- jump to a vm label
+          -- goto vm label
           jump_to=function(self,label)
             i,ticks=state_labels[label],-2
           end,
           -- vm update
-          run_vm=function(self,owner)
+          tick=function(self)
             while ticks!=-1 do
               -- wait
               if(ticks>0) ticks-=1 return
@@ -1604,7 +1611,7 @@ function unpack_map()
               -- get ticks
               ticks=state[1]
               -- trigger function (if any)
-              if(state.fn) state.fn(self,owner)
+              if(state.fn) state.fn(self)
             end
           end
         },{__index=thing})
@@ -1714,9 +1721,11 @@ function unpack_map()
       function()
         local xspread,yspread,bullets,dmg,puff=unpack_fixed(),unpack_fixed(),mpeek(),mpeek(),unpack_actor_ref()
         return function(owner)
+          -- find 'real' owner
+          owner=owner.owner or owner
           for i=1,bullets do
-            local angle=-owner.angle+(rnd(2*xspread)-xspread)/360
-            local hits,move_dir={},{cos(angle),sin(angle)}
+            local angle=owner.angle+(rnd(2*xspread)-xspread)/360
+            local hits,move_dir={},{cos(angle),-sin(angle)}
             intersect_sub_sector(owner.ssector,owner,move_dir,owner.actor.radius,1024,hits)    
             -- todo: get from actor properties
             local h=owner[3]+24
@@ -1772,8 +1781,11 @@ function unpack_map()
       function()
         local projectile=unpack_actor_ref()
         return function(owner)
-          local angle,speed,radius=-owner.angle,projectile.speed,owner.actor.radius
-          local ca,sa=cos(angle),sin(angle)
+          -- find 'real' owner
+          owner=owner.owner or owner
+          local angle,speed,radius=owner.angle,projectile.speed,owner.actor.radius
+          local ca,sa=cos(angle),-sin(angle)
+          -- fire at edge of owner radius
           local thing=with_physic(make_thing(projectile,owner[1]+radius*ca,owner[2]+radius*sa,0,angle))
           thing.owner=owner
           -- todo: get height from properties
@@ -1786,8 +1798,9 @@ function unpack_map()
       -- A_WeaponReady
       function()
         local ammouse,ammotype=item.ammouse,item.ammotype
-        return function(weapon,owner)
+        return function(weapon)
           if btn(5) then
+            local owner=weapon.owner
             local inventory=owner.inventory
             local newqty=inventory[ammotype]-ammouse
             if newqty>=0 then
@@ -1850,12 +1863,11 @@ function unpack_map()
           if otherthing and not otherthing.dead then
             -- in range/visible?
             local n,d=line_of_sight(self,otherthing,1024)
-            if n then
-              -- in range?
-              if d<512 then
-                -- missile
-                self:jump_to(4)
-              end
+            if n and d<512 then
+              local speed=self.actor.speed
+              self:apply_forces(speed*n[1],speed*n[2])
+              -- missile attack
+              self:jump_to(4)
             end
             return
           end

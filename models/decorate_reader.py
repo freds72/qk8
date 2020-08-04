@@ -200,7 +200,7 @@ class DecorateWalker(DECORATEListener):
                 raise Exception("State references unknown actor: {} ({})".format(value,",".join(self.result.keys())))
               value = self.result[value].id
             args.append(value)
-          print("{}({})".format(fn, ",".join(map(str, args))))
+          # print("{}({})".format(fn, ",".join(map(str, args))))
 
         self.states.append(dotdict({
           'image': state.image().getText(),
