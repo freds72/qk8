@@ -5,7 +5,7 @@ import io
 import math
 from collections import namedtuple
 from udmf_reader import UDMF
-from textures_reader import TEXTURES
+from textures_reader import WADTextureReader
 from decorate_reader import ACTORS
 from decorate_reader import ACTOR_KIND
 from dotdict import dotdict
@@ -16,6 +16,7 @@ from python2pico import pack_byte
 from python2pico import to_multicart
 from python2pico import pack_int32
 from python2pico import pack_short
+from python2pico import map_tiles_to_cart
 from bsp_compiler import Polygon
 from bsp_compiler import POLYGON_CLASSIFICATION
 from bsp_compiler import normal,ortho
@@ -725,11 +726,12 @@ def load_WAD(filepath,mapname):
       i += 1
 
     # decode textures
-    textures = TEXTURES()
+    textures = None
     if textures_entry is not None:
       file.seek(textures_entry.lump_ofs)
       textmap_data = file.read(textures_entry.lump_size).decode('ascii')
-      textures.read(textmap_data)
+      reader = WADTextureReader()
+      textures = reader.read(textmap_data, file, lumps)
 
     # decode actors
     actors = {}
@@ -744,6 +746,8 @@ def load_WAD(filepath,mapname):
     data = pack_actors(file, lumps, zmap, actors) + pack_zmap(zmap, textures)
 
     to_multicart(data, "poom")
+
+    map_tiles_to_cart("poom",textures.width,textures.map,textures.gfx)
 
 def to_float(n):
   return float((n-0x100000000)/65535.0) if n>0x7fffffff else float(n/65535.0)
