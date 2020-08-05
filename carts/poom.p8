@@ -89,16 +89,6 @@ function shortest_angle(target_angle,angle)
 	return angle
 end
 
--- 3d vector functions
-function v_lerp(a,b,t)
-  local t_1=1-t
-  return {
-    a[1]*t_1+t*b[1],
-    a[2]*t_1+t*b[2],
-    a[3]*t_1+t*b[3]
-  }
-end
-
 -- coroutine helpers
 local _futures,_co_id={},0
 -- registers a new coroutine
@@ -119,6 +109,14 @@ end
 -- 2d vector functions
 function v2_dot(a,b)
   return a[1]*b[1]+a[2]*b[2]
+end
+
+function v2_lerp(a,b,t)
+  local t_1=1-t
+  return {
+    a[1]*t_1+t*b[1],
+    a[2]*t_1+t*b[2]
+  }
 end
 
 function v2_normal(v)
@@ -305,44 +303,34 @@ function polyfill(v,offset,tex,light)
 end
 
 function draw_segs2d(segs,pos,txt)
-  local verts,outcode,clipcode={},0xffff,0
+  local verts={}
   local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
   
   -- to cam space + clipping flags
   for i,seg in ipairs(segs) do
     local v0=seg[1]
     local x,z=v0[1],v0[2]
-    local ax,az=
-      m1*x+m3*z+m4,
-      m9*x+m11*z+m12
-    local code=2
-    if(az>16) code=0
-    if(-2*ax>az) code|=8
-    if(2*ax>az) code|=4
-    
+    local ax,az=m1*x+m3*z+m4,m9*x+m11*z+m12
     local w=128/az
-    local v={ax,m8,az,seg=seg,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
-    verts[i]=v
-    outcode&=code 
-    clipcode+=(code&2)
+    verts[i]={ax,m8,az,seg=seg,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
   end
 
-  if outcode==0 then
-    if(clipcode!=0) verts=z_poly_clip(16,verts)
-    if #verts>2 then
-      local v0=verts[#verts]
-      local x0,y0,w0=cam_to_screen2d(v0)
-      for i=1,#verts do
-        local v1=verts[i]
-        local x1,y1,w1=cam_to_screen2d(v1)
-        
-        line(x0,y0,x1,y1,11)
-        x0,y0=x1,y1
-        v0=v1
-      end
-    end
+  local xc,yc=0,0
+  local v0=verts[#verts]
+  local x0,y0=cam_to_screen2d(v0)
+  for i=1,#verts do
+    local v1=verts[i]
+    local x1,y1=cam_to_screen2d(v1)
+    xc+=x1
+    yc+=y1
+    line(x0,y0,x1,y1,11)
+    if(v1.seg.txt) print(v1.seg.txt,x1,y1,9)
+
+    x0,y0=x1,y1
+    v0=v1
   end
-  
+  print(segs.id,xc/#verts,yc/#verts,10)
+
   --[[
   local v0=verts[#verts]
   local x0,y0,w0=cam_to_screen2d(v0)
@@ -570,6 +558,83 @@ function find_ssector_thick(root,pos,radius,res)
     else
       find_ssector_thick(root[otherside],pos,radius,res)
     end
+  end
+end
+
+-- http://web.archive.org/web/20111112060250/http://www.devmaster.net/articles/quake3collision/
+local _epsilon=0.001
+function checkleaf(segs,tmin,tmax,a,b,offset,res)
+  local a_out,b_out
+  for _,s0 in ipairs(segs) do
+    -- segment normal & distance
+    local n,d=s0[5],s0[6]+offset
+    local a_dist,b_dist=v2_dot(n,a)-d,v2_dot(n,b)-d
+    if(a_dist>0) a_out=true
+    if(b_dist>0) b_out=true
+
+    s0.txt=(a_dist>0 and "out" or "in").."|"..(b_dist>0 and "out" or "in")
+
+    if a_dist>0 and b_dist>0 then
+      -- completely out
+      return
+    elseif a_dist<=0 and b_dist<=0 then
+      -- continue
+    elseif a_dist>b_dist then
+      -- entering convex region
+      local t=(a_dist-_epsilon)/(a_dist-b_dist)
+      if(t>tmin) tmin=t
+    else
+      -- leaving convex region
+      local t=(a_dist+_epsilon)/(a_dist-b_dist)
+      if(t<tmax) tmax=t
+    end
+  end
+  if(not a_out) return
+  if tmin<tmax then
+    if tmin>-1 and tmin<res.t then
+      if(tmin<0) tmin=0
+      res.t=tmin
+      res.id=segs.id
+    end
+  end
+end
+function checknode(root,tmin,tmax,a,b,offset,res)
+  -- leaf?
+  if root.pvs then
+    add(res,{id=root.id,tmin=tmin,tmax=tmax})
+    checkleaf(root,tmin,tmax,a,b,offset,res)
+    return
+  end
+
+  local d=root[3]
+  local a_dist,b_dist,side=v2_dot(root,a)-d,v2_dot(root,b)-d
+  -- front of plane
+  if a_dist>=offset and b_dist>=offset then
+    checknode(root[false],tmin,tmax,a,b,offset,res)
+  elseif a_dist<-offset and b_dist<-offset then
+    checknode(root[true],tmin,tmax,a,b,offset,res)
+  else
+    -- stradling
+    local side,t1,t2=true,1,0
+    if a_dist<b_dist then
+      side=false
+      local inv_dist=1/(a_dist-b_dist)
+      t1=(a_dist-offset+_epsilon)*inv_dist
+      t2=(a_dist+offset+_epsilon)*inv_dist
+    elseif b_dist<a_dist then
+      local inv_dist=1/(a_dist-b_dist)
+      t1=(a_dist+offset+_epsilon)*inv_dist
+      t2=(a_dist-offset-_epsilon)*inv_dist
+    end
+
+    t1=mid(t1,0,1)
+    t2=mid(t2,0,1)
+    local tmid,c=lerp(tmin,tmax,t1),v2_lerp(a,b,t1)
+    --add(res,tmid)
+    checknode(root[not side],tmin,tmid,a,c,offset,res)
+    tmid,c=lerp(tmin,tmax,t2),v2_lerp(a,b,t2)
+    --add(res,tmid)
+    checknode(root[side],tmid,tmax,c,b,offset,res)
   end
 end
 
@@ -1136,7 +1201,7 @@ function _draw()
  	end
   ]]
 
-  if btn(4) and btn(5) then
+  if false then --btn(4) and btn(5) then
     pal()
     pal(_screen_pal,1)
     -- spr(0,0,0,16,16)
@@ -1144,7 +1209,7 @@ function _draw()
   elseif false then --btn(5) then
     pal(_screen_pal,1)
     map()
-  elseif false then-- btn(4) then
+  elseif btn(5) then
     -- restore palette
     pal(_screen_pal,1)
 
@@ -1159,82 +1224,48 @@ function _draw()
         local subs=node[side]
         draw_segs2d(subs,pos,8)
       else
-        -- bounding box
-        --[[
-        local bbox=node.bbox[side]
-        local x0,y0=cam_to_screen2d(_cam:project({bbox[7],bbox[8]}))
-        for i=1,8,2 do
-          local x1,y1=cam_to_screen2d(_cam:project({bbox[i],bbox[i+1]}))
-          line(x0,y0,x1,y1,5)
-          x0,y0=x1,y1
-        end
-        ]]
-  
-        if _cam:is_visible(node.bbox[side]) then
+        --if _cam:is_visible(node.bbox[side]) then
           visit_bsp(node[side],pos,visitor)
-        end
+        --end
 
-        --[[
-        -- draw hyperplane	
-        local v0={node.d*node.n[1],node.d*node.n[2]}	
-        local v1=_cam:project({v0[1]-1280*node.n[2],v0[2]+1280*node.n[1]})	
-        local v2=_cam:project({v0[1]+1280*node.n[2],v0[2]-1280*node.n[1]})	
+        -- draw hyperplane
+        local d=node[3]	
+        local v0={d*node[1],d*node[2]}	
+        local v1=_cam:project({v0[1]-1280*node[2],v0[2]+1280*node[1]})	
+        local v2=_cam:project({v0[1]+1280*node[2],v0[2]-1280*node[1]})	
         local x0,y0=cam_to_screen2d(v1)	
         local x1,y1=cam_to_screen2d(v2)	
         if not side then	
-          line(x0,y0,x1,y1,8)	
+          line(x0,y0,x1,y1,1)	
           -- print(angle,(x0+x1)/2,(y0+y1)/2,7)	
         end	
-        ]]
       end
     end)
     
+
     local ca,sa=cos(_plyr.angle),-sin(_plyr.angle)
-    local x0,y0=cam_to_screen2d(_cam:project({_plyr[1]+128*ca,_plyr[2]+128*sa}))
-    --line(64,64,x0,y0,8)
+    local tgt={_plyr[1]+256*ca,_plyr[2]+256*sa}
+    local x0,y0=cam_to_screen2d(_cam:project(tgt))
+    line(64,64,x0,y0,8)
 
-    local hits={}
+    local hits={t=1}
     -- intersect(_bsp,_plyr,{ca,sa},0,128,hits)
-
-    local ss=find_sub_sector(_bsp,_plyr)
-    if ss then
-      intersect_sub_sector(ss,_plyr,{ca,sa},0,1024,hits)
-    end
+    checknode(_bsp,0,1,_plyr,tgt,20,hits)
     
-    local px,py,lines=_plyr[1],_plyr[2],{}
-    for i,hit in pairs(hits) do
-      local pt={
-        px+hit.t*ca,
-        py+hit.t*sa
-      }
-      local x0,y0=cam_to_screen2d(_cam:project(pt))
-      pset(x0,y0,hit.seg and 12 or 8)
-      if hit.seg then
-        local ldef=hit.seg.line
-        if not lines[ldef] then
-          local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
-          if facingside then
-            print(i..":"..facingside.sector.id,x0+3,y0-2,15)
-          end
-          if otherside then
-            print(i..":"..otherside.sector.id,x0-20,y0-2,15)
-          end
-          lines[ldef]=true
-        end
-      else
-        print(i..":"..hit.thing.actor.id,x0+2,y0-3,8)
-      end
+    x0,y0=cam_to_screen2d(_cam:project(v2_lerp(_plyr,tgt,hits.t)))
+    line(x0-2,y0,x0+2,y0,8)
+    print(hits.id,x0+2,y0,8)
+    
+    for i,hit in ipairs(hits) do
+      local x0,y0=cam_to_screen2d(_cam:project(v2_lerp(_plyr,tgt,hit.tmin)))
+      local x1,y1=cam_to_screen2d(_cam:project(v2_lerp(_plyr,tgt,hit.tmax)))
+      i-=1
+      line(x0+6*i,y0,x1+6*i,y1,12)
+      print(hit.id,x0+6*i+1,y0,8)
     end
-    pset(64,64,15)
-
-    local res={}
-    find_ssector_thick(_bsp,_plyr,32,res)
-    sectors=""
-    for sub,_ in pairs(res) do
-      sectors=sectors.."|"..sub.id
-    end
-    print("sectors: "..sectors,2,8,8)
-
+  
+    
+    --pset(64,64,15)
   else
     local pvs,v_cache=_plyr.ssector.pvs,{}
 
