@@ -45,14 +45,10 @@ class TEXTURES(TEXTURESListener):
     self.flats[name] = texture
   
 class WADTextureReader(TEXTURESListener):
-  def __init__(self):
-    # read game palette  
-    local_dir = os.path.dirname(os.path.realpath(__file__))
-    img = Image.open("{}\\{}".format(local_dir,'palette_line.png'))
+  def __init__(self, palette):
     self.rgba_to_pico = {}
-    for x in range(17):
-      rgba = img.getpixel((x,0))
-      self.rgba_to_pico[rgba] = x-1
+    for i,rgba in enumerate(palette):
+      self.rgba_to_pico[rgba] = i
     # forced transparency color
     self.rgba_to_pico[(00,00,00,00)] = -1
     
@@ -83,7 +79,7 @@ class WADTextureReader(TEXTURESListener):
     src = Image.open(io.BytesIO(image_data))
     width, height = src.size
     if width>1024 or height>256:
-      raise Exception("Texture: {} invalid size: {}x{} - Texture file size must be less than 1020x256px".format(width,height))
+      raise Exception("Texture: {} invalid size: {}x{} - Texture file size must be less than 1024x256px".format(width,height))
     img = Image.new('RGBA', (width, height), (0,0,0,0))
     img.paste(src, (0,0,width,height))
 

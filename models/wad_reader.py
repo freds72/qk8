@@ -16,7 +16,6 @@ from python2pico import pack_byte
 from python2pico import to_multicart
 from python2pico import pack_int32
 from python2pico import pack_short
-from python2pico import map_tiles_to_cart
 from bsp_compiler import Polygon
 from bsp_compiler import POLYGON_CLASSIFICATION
 from bsp_compiler import normal,ortho
@@ -445,14 +444,14 @@ def pack_ratio(x):
     raise Exception("Invalid ratio: {}, must be in range [0;1]".format(x))
   return pack_byte(int(255*x))
 
-def pack_actors(file, lumps, map, actors):
+def pack_actors(file, lumps, map, actors, palette):
   s = ""
   # actors/inventory (e.g. items with assigned unique id)
   concrete_actors = [actor for actor in actors.values() if actor.id!=-1]
   
   # collect active images
   images = []
-  image_reader = WADImageReader()
+  image_reader = WADImageReader(palette)
   frames_by_name = {}
   for actor in concrete_actors:
     for state in [state for state in actor._states if 'image' in state]:
@@ -642,6 +641,144 @@ def pack_actors(file, lumps, map, actors):
 
   return s
 
+def read_palette(file, lumps):
+  entry = lumps.get("PLAYPAL",None)
+  if not entry:
+    raise Exception("Missing 'PLAYPAL' palette in WAD")
+  
+  file.seek(entry.lump_ofs)
+  palette_data = file.read(entry.lump_size)
+  if len(palette_data)!=16*16*3:
+    raise Exception("Invalid 'PLAYPAL' palette size: {} - must be 16*16*3".format(len(palette_data)))
+  palette = []
+  for i in range(0,16*16*3,3*16):
+    i += 3*8
+    r,g,b = palette_data[i],palette_data[i+1],palette_data[i+2]
+    palette.append((r,g,b,255))
+  return palette
+
+# RGB to pico8 color index
+rgb_to_pico8={
+  "0x000000":0,
+  "0x1d2b53":1,
+  "0x7e2553":2,
+  "0x008751":3,
+  "0xab5236":4,
+  "0x5f574f":5,
+  "0xc2c3c7":6,
+  "0xfff1e8":7,
+  "0xff004d":8,
+  "0xffa300":9,
+  "0xffec27":10,
+  "0x00e436":11,
+  "0x29adff":12,
+  "0x83769c":13,
+  "0xff77a8":14,
+  "0xffccaa":15,
+  "0x291814":128,
+  "0x111d35":129,
+  "0x422136":130,
+  "0x125359":131,
+  "0x742f29":132,
+  "0x49333b":133,
+  "0xa28879":134,
+  "0xf3ef7d":135,
+  "0xbe1250":136,
+  "0xff6c24":137,
+  "0xa8e72e":138,
+  "0x00b543":139,
+  "0x065ab5":140,
+  "0x754665":141,
+  "0xff6e59":142,
+  "0xff9d81":143}
+
+# returns a pico8 compatible array of gradients from a WAD palette entry
+def read_gradient(name, file, lumps, palette = None):
+  entry = lumps.get(name,None)
+  if entry is None:
+    raise Exception("Unable to find: {} palette in WAD.".format(name))
+  file.seek(entry.lump_ofs)
+  palette_data = file.read(entry.lump_size)
+
+  # align color formats
+  if palette is not None:
+    palette = ["0x{:02x}{:02x}{:02x}".format(pal[0],pal[1],pal[2]) for pal in palette]
+
+  # transpose
+  columns = [[] for i in range(16)]
+  for i,rgb in enumerate(["0x{:02x}{:02x}{:02x}".format(palette_data[i],palette_data[i+1],palette_data[i+2]) for i in range(0,3*16*16,3)]):
+    if palette is None:
+      # get hardware color (inc. extended color ids)
+      p8 = rgb_to_pico8.get(rgb, None)
+      if p8 is None:
+        raise Exception("Unknown PICO8 color: {} in palette: {}".format(rgb, name))
+    else:
+      # remap hardware color identifiers (0-15/129-145) to palette index (0-15) (for shading gradients)
+      if rgb not in palette:
+        raise Exception("Unable to reference: {}  in remap palette: {}".format(rgb,palette))
+      p8 = palette.index(rgb)
+    c = i%16
+    columns[c].append(p8)
+  # flatten list
+  return [item for sublist in columns for item in sublist]
+
+# generate main game cart
+def pack_sprite(arr):
+    return ["".join(map("{:02x}".format,arr[i*4:i*4+4])) for i in range(8)]
+
+def to_gamecart(name,width,map_data,gfx_data,palette):
+    cart="""\
+pico-8 cartridge // http://www.pico-8.com
+version 29
+__lua__
+-- poom
+-- @freds72
+#include main.lua
+"""
+    # transpose gfx
+    gfx_data=[pack_sprite(data) for data in gfx_data]
+    print("Packing {} texture tiles".format(len(gfx_data)))
+
+    s = ""
+    rows = [""]*8
+    for i,img in enumerate(gfx_data):
+        # full row?
+        if i%16==0:
+            # collect
+            s += "".join(rows)
+            rows = [""]*8           
+        for j in range(8):
+            rows[j] += img[j]
+
+    # remaining tiles (+ padding)
+    s += "".join([row + "0" * (128-len(row)) for row in rows])
+    # fill until spritesheet 2
+    s += "0"*(128*64-len(s))
+
+    # palette (e.g. gradients or screen palettes)
+    #print("\n".join([" ".join(map("{:02x}".format,palette[i:i+16])) for i in range(0,len(palette),16)]))
+    tmp = "".join(map("{:02x}".format,palette))
+    # preserve byte orders
+    for i in range(0,len(tmp),2):
+      s += tmp[i+1:i+2] + tmp[i:i+1]
+
+    # convert to string
+    cart += "__gfx__\n"
+    cart += re.sub("(.{128})", "\\1\n", s, 0, re.DOTALL)
+    cart += "\n"
+
+    # pad map
+    map_data = ["".join(map("{:02x}".format,map_data[i:i+width] + [0]*(128-width))) for i in range(0,len(map_data),width)]
+    map_data = "".join(map_data)
+    cart += "__map__\n"
+    cart += re.sub("(.{256})", "\\1\n", map_data, 0, re.DOTALL)
+
+    cart_path = os.path.join(local_dir, "..", "carts", "{}.p8".format(name))
+    f = open(cart_path, "w")
+    f.write(cart)
+    f.close()
+
+# ################## compression #########################
 def requiredBits(value):
     bits = 1
     while(value > 0):
@@ -725,17 +862,21 @@ def load_WAD(filepath,mapname):
         decorate_entry = entry
       i += 1
 
+    # extract palette
+    palette = read_palette(file, lumps)
+    gradients = read_gradient("PLAYPAL", file, lumps, palette) + read_gradient("PAINPAL", file, lumps)
+
     # decode textures
     textures = None
     if textures_entry is not None:
       file.seek(textures_entry.lump_ofs)
       textmap_data = file.read(textures_entry.lump_size).decode('ascii')
-      reader = WADTextureReader()
+      reader = WADTextureReader(palette)
       textures = reader.read(textmap_data, file, lumps)
 
     # decode actors
     actors = {}
-    image_reader = WADImageReader()
+    image_reader = WADImageReader(palette)
     if decorate_entry is not None:
       file.seek(decorate_entry.lump_ofs)
       textmap_data = file.read(decorate_entry.lump_size).decode('ascii')
@@ -743,11 +884,11 @@ def load_WAD(filepath,mapname):
     
     # pick map
     zmap = maps[mapname].read(file)
-    data = pack_actors(file, lumps, zmap, actors) + pack_zmap(zmap, textures)
+    data = pack_actors(file, lumps, zmap, actors, palette) + pack_zmap(zmap, textures)
 
     to_multicart(data, "poom")
 
-    map_tiles_to_cart("poom",textures.width,textures.map,textures.gfx)
+    to_gamecart("poom",textures.width,textures.map,textures.gfx,gradients)
 
 def to_float(n):
   return float((n-0x100000000)/65535.0) if n>0x7fffffff else float(n/65535.0)

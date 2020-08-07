@@ -11,21 +11,11 @@ local _msg
 --local k_far,k_near=0,2
 --local k_right,k_left=4,8
 
--- copy color ramps to memory
-local mem=0x4300
-for i=0,15 do 
-  for c=0,15 do
-   poke(mem,sget(i\2,64+c))
-   mem+=1
-  end
-end
-
-function cam_to_screen2d(v)
-  local x,y=v[1]/8,v[3]/8
-  return 64+x,64-y
-end
+-- copy color gradients (16*16 colors x 2) to memory
+memcpy(0x4300,0x1000,512)
 
 function make_camera()
+  local shkx,shky=0,0  
   return {
     m={
       1,0,0,
@@ -43,14 +33,16 @@ function make_camera()
         sa,ca,-sa*pos[1]-ca*pos[2]
       }
     end,
-    -- debug/map
-    project=function(self,v)
-      local m,x,z=self.m,v[1],v[2]
-      return {
-        m[1]*x+m[2]*z+m[3],
-        m[4],
-        m[5]*x+m[6]*z+m[7]
-      }
+    shake=function()
+      shkx,shky=min(1,shkx+rnd()),min(1,shky+rnd())
+    end,
+    update=function()
+      shkx*=-0.7-rnd(0.2)
+      shky*=-0.7-rnd(0.2)
+      if abs(shkx)<0.5 and abs(shky)<0.5 then
+        shkx,shky=0,0
+      end
+      camera(shkx,shky)  
     end,
     is_visible=function(self,bbox)    
       local outcode,m1,m3,m4,_,m9,m11,m12=0xffff,unpack(self.m)
@@ -281,8 +273,8 @@ function polyfill(v,offset,tex,light)
           if(a>b) a=span b=x0
           -- collect boundaries
           -- color shifing
-          local pal1=light\w0
-          if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
+          local pal1=light\w0+6
+          if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1
           
           -- mode7 texturing
           local rz=cy/(y-63.5)
@@ -302,68 +294,6 @@ function polyfill(v,offset,tex,light)
     y0=_y1
     w0=_w1
   end
-end
-
-function draw_segs2d(segs,pos,txt)
-  local verts,outcode,clipcode={},0xffff,0
-  local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
-  
-  -- to cam space + clipping flags
-  for i,seg in ipairs(segs) do
-    local v0=seg[1]
-    local x,z=v0[1],v0[2]
-    local ax,az=
-      m1*x+m3*z+m4,
-      m9*x+m11*z+m12
-    local code=2
-    if(az>16) code=0
-    if(-2*ax>az) code|=8
-    if(2*ax>az) code|=4
-    
-    local w=128/az
-    local v={ax,m8,az,seg=seg,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
-    verts[i]=v
-    outcode&=code 
-    clipcode+=(code&2)
-  end
-
-  if outcode==0 then
-    if(clipcode!=0) verts=z_poly_clip(16,verts)
-    if #verts>2 then
-      local v0=verts[#verts]
-      local x0,y0,w0=cam_to_screen2d(v0)
-      for i=1,#verts do
-        local v1=verts[i]
-        local x1,y1,w1=cam_to_screen2d(v1)
-        
-        line(x0,y0,x1,y1,11)
-        x0,y0=x1,y1
-        v0=v1
-      end
-    end
-  end
-  
-  --[[
-  local v0=verts[#verts]
-  local x0,y0,w0=cam_to_screen2d(v0)
-  local xc,yc=0,0
-  for i=1,#verts do
-    local v1=verts[i]
-    local x1,y1,w1=cam_to_screen2d(v1)
-    xc+=x1
-    yc+=y1
-    line(x0,y0,x1,y1,5)
-    --if(v0.seg.c) line(x0,y0,x1,y1,rnd(15))
-    -- if(v0.seg.msg) print(v0.seg.sector.id,(x0+x1)/2,(y0+y1)/2,7)
-    x0,y0=x1,y1
-    v0=v1
-  end
-  if(txt) print(segs.sector.id,xc/#verts,yc/#verts,10)
-  ]]
-  --[[
-  local x0,y0=cam_to_screen2d(_cam:project(pfix))
-  pset(x0,y0,15)
-  ]]
 end
 
 function draw_sub_sector(segs,v_cache)
@@ -418,8 +348,8 @@ function draw_sub_sector(segs,v_cache)
         for x=cx0,x1\1 do
           if w0>0.15 then
             -- color shifing
-            local pal1=2\w0
-            if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
+            local pal1=2\w0+6
+            if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1
             local t,b,w=y0-top*w0,y0-bottom*w0,w0<<4
             -- wall
             -- top wall side between current sector and back sector
@@ -517,8 +447,8 @@ function draw_flats(v_cache,segs,things)
           local frame=thing.state
           local side,_,flipx,light,sides=0,unpack(frame)
           -- use frame brightness level
-          local pal1=light\w0
-          if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1            
+          local pal1=light\w0+6
+          if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1            
           -- pick side (if any)
           if sides>1 then
             local angle=((atan2(-thing[1]+_plyr[1],thing[2]-_plyr[2])-thing.angle+0.0625)%1+1)%1
@@ -910,6 +840,7 @@ function with_health(thing)
       if dir then
         self:apply_forces(hp*dir[1],hp*dir[2])
       end
+      return hp
     end,
     hit_sector=function(self,dmg)
       if(dead) return
@@ -931,15 +862,16 @@ function with_health(thing)
 end
 
 function attach_plyr(thing,actor)
-  local speed,da,wp,wp_slot,wp_yoffset,wp_y,reload_ttl,wp_switching=actor.speed,0,thing.weapons,thing.active_slot,0,0,0
+  local speed,da,wp,wp_slot,wp_yoffset,wp_y,wp_switching=actor.speed,0,thing.weapons,thing.active_slot,0,0
+  local hit_ttl=0
+
   local function wp_switch(slot)
     if(wp_switching) return
     wp_switching=true
     do_async(function()
       wp_yoffset=-32
       wait_async(15)
-      wp_slot=slot
-      wp_yoffset=0
+      wp_slot,wp_yoffset=slot,0
       wait_async(15)
       wp_switching=nil
     end)
@@ -958,6 +890,10 @@ function attach_plyr(thing,actor)
   end
 
   return setmetatable({
+    update=function(self,...)
+      thing:update(...)
+      hit_ttl-=1
+    end,
     control=function(self)
       wp_y=lerp(wp_y,wp_yoffset,0.3)
 
@@ -1025,7 +961,18 @@ function attach_plyr(thing,actor)
       vspr(frame[5],64,128-wp_y,16)
 
       local ammotype=active_wp.actor.ammotype
-      printb(ammotype.icon..self.inventory[ammotype],2,100,8)  
+      printb(ammotype.icon..self.inventory[ammotype],2,100,8)
+
+      -- set "pain" palette (defaults to screen palette if normal)
+      memcpy(0x5f10,0x4400|max(hit_ttl)<<4,16)
+    end,
+    hit=function(self,...)
+      -- call parent function
+      local hp=thing.hit(self,...)
+      if hp>5 then
+        hit_ttl=min(hp\2,8)
+        _cam:shake()
+      end
     end
   },{__index=thing})
 end
@@ -1068,6 +1015,10 @@ function gameover_state(pos,angle,target,h)
     end,
     -- draw
     function()
+      -- set screen palette
+      -- pal({140,1,139,3,4,132,133,7,6,134,5,8,2,9,10},1)
+      memcpy(0x5f10,0x4400,16)
+
       -- todo: gameover message
     end
 end
@@ -1075,6 +1026,8 @@ end
 -->8
 -- game loop
 function _init()
+  cls()
+
   local root,thingdefs,tiles=unpack_map()
   _bsp,_things,_sprite_cache=root,{},make_sprite_cache(tiles,32)
 
@@ -1114,6 +1067,7 @@ function _update()
     if(thing.update) thing:update()
   end
 
+  _cam:update()
   _update_state()
 
   -- 
@@ -1121,192 +1075,70 @@ function _update()
 
 end
 
--- todo: read from spritesheet
-_screen_pal={140,1,139,3,4,132,133,7,6,134,5,8,2,9,10}
 function _draw()
-  
   cls()
-  --[[
-  local x0=-shl(_plyr.angle,7)%128
- 	map(16,0,x0,0,16,16)
- 	if x0>0 then
- 	 map(16,0,x0-128,0,16,16)
- 	end
-  ]]
 
-  if btn(4) and btn(5) then
-    pal()
-    pal(_screen_pal,1)
-    -- spr(0,0,0,16,16)
-    map()
-  elseif false then --btn(5) then
-    pal(_screen_pal,1)
-    map()
-  elseif false then-- btn(4) then
-    -- restore palette
-    pal(_screen_pal,1)
+  --
+  -- draw bsp & visible things
+  -- 
+  local pvs,v_cache=_plyr.ssector.pvs,{}
 
-    --[[
-    -- fov
-    line(64,64,127,0,2)
-    line(64,64,0,0,2)
-    ]]
-    local pvs=_plyr.ssector.pvs
-    visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
-      if node.leaf[side] then
-        local subs=node[side]
-        draw_segs2d(subs,pos,8)
-      else
-        -- bounding box
-        --[[
-        local bbox=node.bbox[side]
-        local x0,y0=cam_to_screen2d(_cam:project({bbox[7],bbox[8]}))
-        for i=1,8,2 do
-          local x1,y1=cam_to_screen2d(_cam:project({bbox[i],bbox[i+1]}))
-          line(x0,y0,x1,y1,5)
-          x0,y0=x1,y1
-        end
-        ]]
-  
-        if _cam:is_visible(node.bbox[side]) then
-          visit_bsp(node[side],pos,visitor)
-        end
-
-        --[[
-        -- draw hyperplane	
-        local v0={node.d*node.n[1],node.d*node.n[2]}	
-        local v1=_cam:project({v0[1]-1280*node.n[2],v0[2]+1280*node.n[1]})	
-        local v2=_cam:project({v0[1]+1280*node.n[2],v0[2]-1280*node.n[1]})	
-        local x0,y0=cam_to_screen2d(v1)	
-        local x1,y1=cam_to_screen2d(v2)	
-        if not side then	
-          line(x0,y0,x1,y1,8)	
-          -- print(angle,(x0+x1)/2,(y0+y1)/2,7)	
-        end	
-        ]]
-      end
-    end)
-    
-    local ca,sa=cos(_plyr.angle),-sin(_plyr.angle)
-    local x0,y0=cam_to_screen2d(_cam:project({_plyr[1]+128*ca,_plyr[2]+128*sa}))
-    --line(64,64,x0,y0,8)
-
-    local hits={}
-    -- intersect(_bsp,_plyr,{ca,sa},0,128,hits)
-
-    local ss=find_sub_sector(_bsp,_plyr)
-    if ss then
-      intersect_sub_sector(ss,_plyr,{ca,sa},0,1024,hits)
+  local sorted_things=setmetatable({},depthsorted_cls)
+  local m1,m2,m3,m4,m5,m6,m7=unpack(_cam.m)
+  for _,thing in pairs(_things) do
+    -- visible?
+    local viz
+    for sub,_ in pairs(thing.subs) do
+      local id=sub.id
+      if(band(pvs[id\32],0x0.0001<<(id&31))!=0) viz=true break
     end
-    
-    local px,py,lines=_plyr[1],_plyr[2],{}
-    for i,hit in pairs(hits) do
-      local pt={
-        px+hit.t*ca,
-        py+hit.t*sa
-      }
-      local x0,y0=cam_to_screen2d(_cam:project(pt))
-      pset(x0,y0,hit.seg and 12 or 8)
-      if hit.seg then
-        local ldef=hit.seg.line
-        if not lines[ldef] then
-          local facingside,otherside=ldef[hit.seg.side],ldef[not hit.seg.side]
-          if facingside then
-            print(i..":"..facingside.sector.id,x0+3,y0-2,15)
+    if viz then
+      local x,y=thing[1],thing[2]
+      local ax,az=m1*x+m2*y+m3,m5*x+m6*y+m7
+      if az>_znear and 2*ax<az and -2*ax<az then
+        -- h: thing offset+cam offset
+        local w,h=128/az,thing[3]+m4
+        local x,y=63.5+ax*w,63.5-h*w
+        -- insertion sort into each sub
+        for sub,_ in pairs(thing.subs) do
+          -- get start of linked list
+          local head=sorted_things[sub][1]
+          -- empty list case
+          local prev=head
+          while head and head.w<w do
+            -- swap/advance
+            prev,head=head,head.next
           end
-          if otherside then
-            print(i..":"..otherside.sector.id,x0-20,y0-2,15)
-          end
-          lines[ldef]=true
-        end
-      else
-        print(i..":"..hit.thing.actor.id,x0+2,y0-3,8)
-      end
-    end
-    pset(64,64,15)
-
-    local res={}
-    find_ssector_thick(_bsp,_plyr,32,res)
-    sectors=""
-    for sub,_ in pairs(res) do
-      sectors=sectors.."|"..sub.id
-    end
-    print("sectors: "..sectors,2,8,8)
-
-  else
-    local pvs,v_cache=_plyr.ssector.pvs,{}
-
-    -- 
-    local sorted_things=setmetatable({},depthsorted_cls)
-    local m1,m2,m3,m4,m5,m6,m7=unpack(_cam.m)
-    for _,thing in pairs(_things) do
-      -- visible?
-      local viz
-      for sub,_ in pairs(thing.subs) do
-        local id=sub.id
-        if(band(pvs[id\32],0x0.0001<<(id&31))!=0) viz=true break
-      end
-      if viz then
-        local x,y=thing[1],thing[2]
-        local ax,az=m1*x+m2*y+m3,m5*x+m6*y+m7
-        if az>_znear and 2*ax<az and -2*ax<az then
-          -- h: thing offset+cam offset
-          local w,h=128/az,thing[3]+m4
-          local x,y=63.5+ax*w,63.5-h*w
-          -- insertion sort into each sub
-          for sub,_ in pairs(thing.subs) do
-            -- get start of linked list
-            local head=sorted_things[sub][1]
-            -- empty list case
-            local prev=head
-            while head and head.w<w do
-              -- swap/advance
-              prev,head=head,head.next
-            end
-            -- insert new thing
-            prev.next={thing=thing,x=x,y=y,w=w,next=prev.next}
-          end
+          -- insert new thing
+          prev.next={thing=thing,x=x,y=y,w=w,next=prev.next}
         end
       end
     end
-
-    visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
-      side=not side
-      if node.leaf[side] then
-        local subs=node[side]
-        -- potentially visible?
-        local id=subs.id
-        if band(pvs[id\32],0x0.0001<<(id&31))!=0 then
-          draw_flats(v_cache,subs,sorted_things[subs])
-        end
-      elseif _cam:is_visible(node.bbox[side]) then
-        visit_bsp(node[side],pos,visitor)
-      end
-    end)
-  
-    -- restore palette
-    -- memcpy(0x5f10,0x4300,16)
-    -- pal({140,1,139,3,4,132,133,7,6,134,5,8,2,9,10},1)
-    pal(_screen_pal,1)
-
-    _draw_state()
-
-    if(_msg) print(_msg,64-#_msg*2,120,15)
-
-    -- debug messages
-    local cpu=stat(1).."|"..stat(0).."\n".._plyr.angle
-    print(cpu,2,3,3)
-    print(cpu,2,2,8)
-    
-    --[[
-    local y=64
-    for k,qty in pairs(actor) do
-      if type(qty)!="table" then
-        print(k..":"..qty,2,y,3)
-        y+=6
-      end
-    end]]
   end
+
+  -- visit bsp
+  visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
+    side=not side
+    if node.leaf[side] then
+      local subs=node[side]
+      -- potentially visible?
+      local id=subs.id
+      if band(pvs[id\32],0x0.0001<<(id&31))!=0 then
+        draw_flats(v_cache,subs,sorted_things[subs])
+      end
+    elseif _cam:is_visible(node.bbox[side]) then
+      visit_bsp(node[side],pos,visitor)
+    end
+  end)
+
+  _draw_state()
+
+  if(_msg) print(_msg,64-#_msg*2,120,15)
+
+  -- debug messages
+  local cpu=stat(1).."|"..stat(0).."\n".._plyr.angle
+  print(cpu,2,3,3)
+  print(cpu,2,2,8)
 end
 
 -->8

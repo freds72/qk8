@@ -12,19 +12,16 @@ from python2pico import to_multicart
 from python2pico import pack_int32
 from PIL import Image, ImageFilter
 class WADImageReader():  
-  def __init__(self):
+  def __init__(self, palette):
     # cache already processed tiles
     # image name -> tiles
     self.frames = {}
-    # read game palette  
-    local_dir = os.path.dirname(os.path.realpath(__file__))
-    img = Image.open("{}\\{}".format(local_dir,'palette_line.png'))
     self.rgba_to_pico = {}
-    for x in range(17):
-      rgba = img.getpixel((x,0))
-      self.rgba_to_pico[rgba] = x-1
+    for i,rgba in enumerate(palette):
+      self.rgba_to_pico[rgba] = i
     # forced transparency color
     self.rgba_to_pico[(00,00,00,00)] = -1
+    self.rgba_to_pico[(255,255,255,0)] = -1
 
   # convert a wad image into a pair of tiles address and tiles data (binary)
   def read(self, file, lumps, name):
@@ -90,10 +87,14 @@ class WADImageReader():
               # image is using the pico palette (+transparency)
               # print(indexed_to_rgba[img.getpixel((i*16 + x + n, j*16 + y))])
               low = img.getpixel((i*16 + x + n, j*16 + y))
+              if low not in self.rgba_to_pico:
+                raise Exception("Image: {} - invalid color: {} at {},{}".format(name, low, i*16 + x + n, j*16 + y))
               low = self.rgba_to_pico[low]
-              if low==-1: low = pico8_transparency
               high = img.getpixel((i*16 + x + n + 1, j*16 + y))
+              if high not in self.rgba_to_pico:
+                raise Exception("Image: {} - invalid color: {} at {},{}".format(name, high, i*16 + x + n + 1, j*16 + y))
               high = self.rgba_to_pico[high]
+              if low==-1: low = pico8_transparency
               if high==-1: high = pico8_transparency
               pixels.append(low|high<<4)
             image_data += bytes(pixels[::-1])
