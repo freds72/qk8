@@ -76,7 +76,7 @@ class SectorWalker(udmfListener):
           for pair in ctx.pair():
             attribute = pair.keyword().getText()
             value = pair.value().getText().strip('"')
-            if attribute in ['heightfloor','heightceiling','id','special']:
+            if attribute in ['heightfloor','heightceiling','id','special','lightlevel']:
               value = int(value)
             sector[attribute] = value
           self.result.append(sector)

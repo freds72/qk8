@@ -273,7 +273,7 @@ function polyfill(v,offset,tex,light)
           if(a>b) a=span b=x0
           -- collect boundaries
           -- color shifing
-          local pal1=light\w0+6
+          local pal1=(light*(1+w0)<<2)\1
           if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1
           
           -- mode7 texturing
@@ -296,7 +296,7 @@ function polyfill(v,offset,tex,light)
   end
 end
 
-function draw_sub_sector(segs,v_cache)
+function draw_sub_sector(segs,v_cache,light)
   -- get heights
   local sector=segs.sector
   local v0,top,bottom,pal0=v_cache[#v_cache],sector.ceil,sector.floor
@@ -348,7 +348,7 @@ function draw_sub_sector(segs,v_cache)
         for x=cx0,x1\1 do
           if w0>0.15 then
             -- color shifing
-            local pal1=2\w0+6
+            local pal1=(light*(1+w0)<<2)\1
             if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1
             local t,b,w=y0-top*w0,y0-bottom*w0,w0<<4
             -- wall
@@ -429,12 +429,12 @@ function draw_flats(v_cache,segs,things)
     if(nearclip!=0) verts=z_poly_clip(_znear,verts)
     if #verts>2 then
       local sector=segs.sector
-
+      local lightlevel=sector.lightlevel
       -- no texture = sky/background
-      if(sector.floortex and sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,sector.floorlight/2)
-      if(sector.ceiltex and sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,sector.ceillight/2)
+      if(sector.floortex and sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,lightlevel)
+      if(sector.ceiltex and sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,lightlevel)
 
-      draw_sub_sector(segs,verts)
+      draw_sub_sector(segs,verts,lightlevel)
 
       -- draw things (if any) in this convex space
       local head,pal0=things[1].next
@@ -445,9 +445,9 @@ function draw_flats(v_cache,segs,things)
         else
           -- get image from current state
           local frame=thing.state
-          local side,_,flipx,light,sides=0,unpack(frame)
+          local side,_,flipx,bright,sides=0,unpack(frame)
           -- use frame brightness level
-          local pal1=light\w0+6
+          local pal1=bright and 8 or (lightlevel*w0<<3)\1
           if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1            
           -- pick side (if any)
           if sides>1 then
@@ -958,6 +958,7 @@ function attach_plyr(thing,actor)
       
       -- active_wp:draw_vm(64,64)
       -- draw current frame
+      -- todo: use sector light
       vspr(frame[5],64,128-wp_y,16)
 
       local ammotype=active_wp.actor.ammotype
@@ -1727,7 +1728,7 @@ function unpack_map()
         -- 3 light level (bright/normal)
         -- 4 number of sides
         -- 5+ sides
-        cmd={unpack_fixed(),mpeek(),flags&0x4>0 and 0 or 2,0}
+        cmd={unpack_fixed(),mpeek(),flags&0x4>0,0}
         -- get all pose sides
         unpack_array(function(i)
           add(cmd,frames[unpack_variant()])
@@ -1776,8 +1777,8 @@ function unpack_map()
       floor=unpack_int(2),
       ceiltex=unpack_texture(),
       floortex=unpack_texture(),
-      ceillight=mpeek(),
-      floorlight=mpeek()
+      -- rebase to 0-1
+      lightlevel=mpeek()/255
     })
   end)
 

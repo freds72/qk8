@@ -219,9 +219,8 @@ def pack_named_texture(owner, textures, name):
   return pack_texture(textures[name])
 
 def pack_lightlevel(owner, name):
-  if name in owner:
-    return "{:02x}".format(4-int(owner[name]))
-  return "04"
+  value = owner.get(name, 160)
+  return "{:02x}".format(value)
 
 def pack_aabb(aabb):
   s = ""
@@ -346,9 +345,8 @@ def pack_zmap(map, textures):
     # sector ceiling/floor textures
     s += pack_named_texture(sector, flats, 'textureceiling')
     s += pack_named_texture(sector, flats, 'texturefloor')
-    # lights
-    s += pack_lightlevel(sector, 'lightceiling')
-    s += pack_lightlevel(sector, 'lightfloor')
+    # light level
+    s += pack_lightlevel(sector, 'lightlevel')
             
   s += pack_variant(len(map.sides))
   for side in map.sides:
