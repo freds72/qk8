@@ -92,13 +92,10 @@ function v_lerp(a,b,t)
 end
 
 -- coroutine helpers
-local _futures,_co_id={},0
+local _futures={}
 -- registers a new coroutine
 function do_async(fn)
-	_futures[_co_id]=cocreate(fn)
-	-- no more than 64 co-routines active at any one time
-	-- allow safe fast delete
-	_co_id=(_co_id+1)%64
+  add(_futures,cocreate(fn))
 end
 -- wait until timer
 function wait_async(t,fn)
@@ -892,7 +889,7 @@ function attach_plyr(thing,actor)
 
   return setmetatable({
     update=function(self,...)
-      thing:update(...)
+      thing.update(self,...)
       hit_ttl-=1
     end,
     control=function(self)
@@ -1052,16 +1049,18 @@ function _init()
 end
 
 function _update()
-  	-- any futures?
+  -- any futures?
+  local tmp={}
 	for k,f in pairs(_futures) do
 		local cs=costatus(f)
 		if cs=="suspended" then
-			assert(coresume(f))
-		elseif cs=="dead" then
-			_futures[k]=nil
+      assert(coresume(f))
+      add(tmp,f)
+    elseif cs=="dead" then
 		end
   end
-  
+  _futures=tmp
+
   -- keep world running
   for _,thing in pairs(_things) do
     if(thing.control) thing:control()
@@ -1138,7 +1137,12 @@ function _draw()
   if(_msg) print(_msg,64-#_msg*2,120,15)
 
   -- debug messages
-  local cpu=stat(1).."|"..stat(0).."\n".._plyr.angle
+  local cpu=stat(1).."|"..stat(0)
+
+  for k,f in pairs(_futures) do
+    cpu=cpu.."\n"..k..":"..costatus(f)
+  end
+
   print(cpu,2,3,3)
   print(cpu,2,2,8)
 end
