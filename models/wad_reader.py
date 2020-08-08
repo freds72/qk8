@@ -251,7 +251,7 @@ def pack_special(line, lines, sides, sectors):
   s = "{:02x}".format(special)
   # door open
   if special==202:
-    print("generic door")
+    print("Special: door open/close")
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
     s += pack_sectors_by_tag(sector_ids)
     # speed
@@ -263,7 +263,7 @@ def pack_special(line, lines, sides, sectors):
     # lock
     s += pack_variant(get_or_default(line,'arg4',0))
   elif special==64:
-    print("platform up/stay/down special")
+    print("Special: platform up/stay/down")
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
     if len(sector_ids)>1:
       raise Exception("Not supported - multiple elevators for 1 trigger")
@@ -284,6 +284,13 @@ def pack_special(line, lines, sides, sectors):
     s += "{:02x}".format(line.arg0)
     # arg1
     s += "{:02x}".format(line.arg1)
+  elif special==112:
+    print("Special: set light level")
+    # set lightlevel
+    sector_ids = find_sectors_by_tag(line.arg0, sectors)
+    s += pack_sectors_by_tag(sector_ids)
+    # light level
+    s += "{:02x}".format(get_or_default(line,'arg1',0))
   return s
 
 # returns reference to image frame(s) (multiple sides if any)

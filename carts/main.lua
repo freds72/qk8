@@ -245,6 +245,7 @@ end
 function polyfill(v,offset,tex,light)
   poke4(0x5f38,tex)
 
+  -- todo: get proper player height
   local ca,sa,cx,cy,cz=_cam.u,_cam.v,_plyr[1]>>4,(_plyr[3]+45-offset)<<3,_plyr[2]>>4
 
   local v0,spans,pal0=v[#v],{}
@@ -273,9 +274,9 @@ function polyfill(v,offset,tex,light)
           if(a>b) a=span b=x0
           -- collect boundaries
           -- color shifing
-          local pal1=(light*(1+w0)<<2)\1
+          local pal1=(light*min(15,w0<<5))\1
           if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1
-          
+
           -- mode7 texturing
           local rz=cy/(y-63.5)
           local rx=rz*(a-63.5)>>7
@@ -348,7 +349,7 @@ function draw_sub_sector(segs,v_cache,light)
         for x=cx0,x1\1 do
           if w0>0.15 then
             -- color shifing
-            local pal1=(light*(1+w0)<<2)\1
+            local pal1=(light*min(15,w0<<5))\1
             if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1
             local t,b,w=y0-top*w0,y0-bottom*w0,w0<<4
             -- wall
@@ -429,12 +430,12 @@ function draw_flats(v_cache,segs,things)
     if(nearclip!=0) verts=z_poly_clip(_znear,verts)
     if #verts>2 then
       local sector=segs.sector
-      local lightlevel=sector.lightlevel
+      local light=sector.lightlevel
       -- no texture = sky/background
-      if(sector.floortex and sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,lightlevel)
-      if(sector.ceiltex and sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,lightlevel)
+      if(sector.floortex and sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,light)
+      if(sector.ceiltex and sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,light)
 
-      draw_sub_sector(segs,verts,lightlevel)
+      draw_sub_sector(segs,verts,light)
 
       -- draw things (if any) in this convex space
       local head,pal0=things[1].next
@@ -447,7 +448,7 @@ function draw_flats(v_cache,segs,things)
           local frame=thing.state
           local side,_,flipx,bright,sides=0,unpack(frame)
           -- use frame brightness level
-          local pal1=bright and 8 or (lightlevel*w0<<3)\1
+          local pal1=bright and 8 or (light*min(15,w0<<5))\1
           if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1            
           -- pick side (if any)
           if sides>1 then
@@ -1351,6 +1352,18 @@ function unpack_special(special,line,sectors,actors)
         
       end)
     end)
+  elseif special==112 then
+    -- sectors
+    local target_sectors={}
+    unpack_array(function()
+      add(target_sectors,sectors[unpack_variant()])
+    end)
+    local lightlevel=mpeek()/255
+    return trigger_async(function()
+      for _,sector in pairs(target_sectors) do
+        sector.lightlevel=lightlevel
+      end
+    end)
   end
 end
 
@@ -1768,10 +1781,11 @@ function unpack_map()
   -- sectors
   local sectors,sides,verts,lines,sub_sectors,all_segs,nodes={},{},{},{},{},{},{}
   unpack_array(function(i)
-    add(sectors,{
+    local special=mpeek()
+    local sector=add(sectors,{
       id=i,
       -- sector attributes
-      special=mpeek(),
+      special=special,
       -- ceiling/floor height
       ceil=unpack_int(2),
       floor=unpack_int(2),
@@ -1780,6 +1794,16 @@ function unpack_map()
       -- rebase to 0-1
       lightlevel=mpeek()/255
     })
+    -- sector behaviors (if any)
+    if special==65 then
+      local lights={sector.lightlevel,0}
+      do_async(function()
+        while true do
+          sector.lightlevel=rnd(lights)
+          wait_async(rnd(15))
+        end
+      end)
+    end
   end)
 
   -- sidedefs
