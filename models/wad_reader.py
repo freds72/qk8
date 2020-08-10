@@ -324,15 +324,28 @@ def get_image_frames(lumps,image,variant):
     raise Exception("Missing image: {} {}".format(image,variant))
   return frames
 
+def get_skill_bit(thing, skill):
+  name = "skill{}".format(skill)
+  if thing.get(name,False)==True:
+    return 1<<(skill-1)
+  return 0
+  
 def pack_thing(thing, actors):
   if thing.type not in [actor.id for actor in actors]:
     raise Exception("Thing: {} references unknown actor: {}".format(thing, thing.type))
 
+  s = ""
+  # pack angle + skills (1-4)
+  skills = 0
+  for i in range(4):
+    skills |= get_skill_bit(thing, i+1)
+  angle = math.floor(thing.get('angle',0)/45)%8
+  s += "{:02x}".format(angle|skills<<4)
   # id
-  s = pack_variant(thing.type)
+  s += pack_variant(thing.type)
+  # position
   s += pack_fixed(thing.x)
   s += pack_fixed(thing.y)
-  s += pack_variant(thing.get('angle',0))
   return s
 
 def pack_flag(owner, name):

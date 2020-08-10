@@ -5,7 +5,7 @@ __lua__
 -- globals
 local _bsp,_cam,_plyr,_things,_sprite_cache
 local _onoff_textures={}
-local _znear=16
+local _ambientlight,_znear=0,16
 local _msg
 
 --local k_far,k_near=0,2
@@ -163,6 +163,7 @@ end
 function make_sprite_cache(tiles,maxlen)
 	local len,index,first,last=0,{}
 
+  -- note: keep multiline assignments, they are *faster*
 	local function remove(t)
 		if t._next then
 			if t._prev then
@@ -201,8 +202,7 @@ function make_sprite_cache(tiles,maxlen)
 				if len+1>maxlen then
 					local old=remove(first)
 					-- reuse cache entry
-					sx,sy=old[1],old[2]
-					index[old.id]=nil
+					sx,sy,index[old.id]=old[1],old[2]
 				end
 				-- new (or relocate)
 				-- copy data to sprite sheet
@@ -267,12 +267,12 @@ function polyfill(v,offset,tex,light)
       if span then
       -- limit visibility
         if w0>0.15 then
+          -- collect boundaries
           local a,b=x0,span
           if(a>b) a=span b=x0
-          -- collect boundaries
           -- color shifing
           local pal1=(light*min(15,w0<<5))\1
-          if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1
+          if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
 
           -- mode7 texturing
           local rz=cy/(y-63.5)
@@ -347,7 +347,7 @@ function draw_sub_sector(segs,v_cache,light)
           if w0>0.15 then
             -- color shifing
             local pal1=(light*min(15,w0<<5))\1
-            if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1
+            if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
             local t,b,w=y0-top*w0,y0-bottom*w0,w0<<4
             -- wall
             -- top wall side between current sector and back sector
@@ -411,7 +411,6 @@ function draw_flats(v_cache,segs,things)
       if(-2*ax>az) code|=4
       if(2*ax>az) code|=8
       
-      -- most of the points are visibles at this point
       local w=128/az
       v={ax,m8,az,outcode=code,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
       v_cache[v0]=v
@@ -427,38 +426,35 @@ function draw_flats(v_cache,segs,things)
     if(nearclip!=0) verts=z_poly_clip(_znear,verts)
     if #verts>2 then
       local sector=segs.sector
-      local light=sector.lightlevel
+      local light=max(sector.lightlevel,_ambientlight)
       -- no texture = sky/background
       if(sector.floortex and sector.floor+m8<0) polyfill(verts,sector.floor,sector.floortex,light)
       if(sector.ceiltex and sector.ceil+m8>0) polyfill(verts,sector.ceil,sector.ceiltex,light)
 
+      -- walls
       draw_sub_sector(segs,verts,light)
 
       -- draw things (if any) in this convex space
       local head,pal0=things[1].next
       while head do
         local thing,x0,y0,w0=head.thing,head.x,head.y,head.w
-        if thing.draw then
-          thing:draw(x0,y0,w0)
+        -- get image from current state
+        local frame=thing.state
+        local side,_,flipx,bright,sides=0,unpack(frame)
+        -- use frame brightness level
+        local pal1=bright and 8 or (light*min(15,w0<<5))\1
+        if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1            
+        -- pick side (if any)
+        if sides>1 then
+          local angle=((atan2(-thing[1]+_plyr[1],thing[2]-_plyr[2])-thing.angle+0.0625)%1+1)%1
+          side=(sides*angle)\1
+          flipx=flipx&(1<<side)!=0
         else
-          -- get image from current state
-          local frame=thing.state
-          local side,_,flipx,bright,sides=0,unpack(frame)
-          -- use frame brightness level
-          local pal1=bright and 8 or (light*min(15,w0<<5))\1
-          if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1            
-          -- pick side (if any)
-          if sides>1 then
-            local angle=((atan2(-thing[1]+_plyr[1],thing[2]-_plyr[2])-thing.angle+0.0625)%1+1)%1
-            side=(sides*angle)\1
-            flipx=flipx&(1<<side)!=0
-          else
-            flipx=nil
-          end
-          vspr(frame[side+5],x0,y0,w0<<5,flipx)
-          -- thing:draw_vm(x0,y0)
-          -- print(thing.angle,x0,y0,8)
+          flipx=nil
         end
+        vspr(frame[side+5],x0,y0,w0<<5,flipx)
+        -- thing:draw_vm(x0,y0)
+        -- print(thing.angle,x0,y0,8)
         head=head.next
       end
     end
@@ -472,31 +468,31 @@ function visit_bsp(node,pos,visitor)
   visitor(node,not side,pos,visitor)
 end
 
-function find_sub_sector(root,pos)
-  local side=v2_dot(root,pos)<=root[3]
-  if root.leaf[side] then
+function find_sub_sector(node,pos)
+  local side=v2_dot(node,pos)<=node[3]
+  if node.leaf[side] then
     -- leaf?
-    return root[side]
+    return node[side]
   else    
-    return find_sub_sector(root[side],pos)
+    return find_sub_sector(node[side],pos)
   end
 end
 
-function find_ssector_thick(root,pos,radius,res)
-  local dist,d=v2_dot(root,pos),root[3]
+function find_ssector_thick(node,pos,radius,res)
+  local dist,d=v2_dot(node,pos),node[3]
   local side,otherside=dist<=d-radius,dist<=d+radius
   -- leaf?
-  if root.leaf[side] then
-    res[root[side]]=true
+  if node.leaf[side] then
+    res[node[side]]=true
   else
-    find_ssector_thick(root[side],pos,radius,res)
+    find_ssector_thick(node[side],pos,radius,res)
   end
   -- straddling?
   if side!=otherside then
-    if root.leaf[otherside] then
-      res[root[otherside]]=true
+    if node.leaf[otherside] then
+      res[node[otherside]]=true
     else
-      find_ssector_thick(root[otherside],pos,radius,res)
+      find_ssector_thick(node[otherside],pos,radius,res)
     end
   end
 end
@@ -548,8 +544,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,res,skipthings)
     end
   end
 
-  for i=1,#segs do
-    local s0=segs[i]
+  for _,s0 in ipairs(segs) do
     local n=s0[5]
     local denom,dist=v2_dot(n,d),s0[6]-v2_dot(n,p)
     if denom==0 then
@@ -806,8 +801,8 @@ function with_physic(thing)
 end
 
 function with_health(thing)
-  local dmg_ttl,dead=0
-  local function die(self)
+  local dmg_ttl,health,dead=0,thing.health
+  local function die(self,dmg)
     self.dead=true
     -- lock state
     dead=true
@@ -820,8 +815,8 @@ function with_health(thing)
       -- avoid reentrancy
       if(dead) return
       
-      --  
-      self.target=instigator
+      -- avoid automatic infight
+      if(self==_plyr or instigator==_plyr or rnd()>0.8) self.target=instigator
 
       local hp=dmg
       -- damage reduction?
@@ -832,7 +827,7 @@ function with_health(thing)
       end
       self.health=max(self.health-hp)\1
       if self.health==0 then
-        die(self)
+        die(self,dmg)
       end
       -- kickback
       if dir then
@@ -845,7 +840,7 @@ function with_health(thing)
       -- instadeath
       if(dmg==-1) then
         self.health=0
-        die(self)
+        die(self,10000)
         return
       end
       -- clear damage
@@ -859,9 +854,9 @@ function with_health(thing)
   },{__index=thing})
 end
 
-function attach_plyr(thing,actor)
-  local speed,da,wp,wp_slot,wp_yoffset,wp_y,wp_switching=actor.speed,0,thing.weapons,thing.active_slot,0,0
-  local hit_ttl=0
+function attach_plyr(thing,actor,skill)
+  local dmg_factor=({0.5,1,1,2})[skill]
+  local speed,da,wp,wp_slot,wp_yoffset,wp_y,hit_ttl,wp_switching=actor.speed,0,thing.weapons,thing.active_slot,0,0,0
 
   local function wp_switch(slot)
     if(wp_switching) return
@@ -952,11 +947,13 @@ function attach_plyr(thing,actor)
       printb("웃"..self.armor,2,120,3)
       
       local active_wp=wp[wp_slot]
-      local frame=active_wp.state
+      local frame,light=active_wp.state,self.sector.lightlevel
       
       -- active_wp:draw_vm(64,64)
-      -- draw current frame
-      -- todo: use sector light
+      light=frame[3] and 8 or min((light*15)\1,15)
+      memcpy(0x5f00,0x4300|light<<4,16)          
+
+      -- draw current (single) frame
       vspr(frame[5],64,128-wp_y,16)
 
       local ammotype=active_wp.actor.ammotype
@@ -965,9 +962,10 @@ function attach_plyr(thing,actor)
       -- set "pain" palette (defaults to screen palette if normal)
       memcpy(0x5f10,0x4400|max(hit_ttl)<<4,16)
     end,
-    hit=function(self,...)
+    hit=function(self,dmg,...)
       -- call parent function
-      local hp=thing.hit(self,...)
+      -- + skill adjustment
+      local hp=thing.hit(self,dmg_factor*dmg,...)
       if hp>5 then
         hit_ttl=min(hp\2,8)
         _cam:shake()
@@ -976,109 +974,8 @@ function attach_plyr(thing,actor)
   },{__index=thing})
 end
 
--->8
--- game states
-function next_state(fn,...)
-  _update_state,_draw_state=fn(...)
-end
-
-function play_state()
-  return 
-    -- update
-    function()
-      if _plyr.dead then
-        next_state(gameover_state,_plyr,_plyr.angle,_plyr.target,45)
-      end
-
-      _cam:track(_plyr,_plyr.angle,_plyr[3]+45)
-    end,
-    -- draw
-    function()
-      _plyr:hud()
-    end
-end
-
-function gameover_state(pos,angle,target,h)
-  local target_angle=angle
-  return
-    -- update
-    function()
-      -- fall to ground
-      h=lerp(h,10,0.2)
-      -- track 'death' instigator
-      if target then
-        target_angle=atan2(-target[1]+pos[1],target[2]-pos[2])+0.5
-        angle=lerp(shortest_angle(target_angle,angle),target_angle,0.08)
-      end
-      _cam:track(pos,angle,pos[3]+h)
-    end,
-    -- draw
-    function()
-      -- set screen palette
-      -- pal({140,1,139,3,4,132,133,7,6,134,5,8,2,9,10},1)
-      memcpy(0x5f10,0x4400,16)
-
-      -- todo: gameover message
-    end
-end
-
--->8
--- game loop
-function _init()
+function draw_bsp()
   cls()
-
-  local root,thingdefs,tiles=unpack_map()
-  _bsp,_things,_sprite_cache=root,{},make_sprite_cache(tiles,32)
-
-  -- attach behaviors to things
-  for k,thingdef in pairs(thingdefs) do 
-    local thing=make_thing(unpack(thingdef))
-    -- get direct access to player
-    local actor=thing.actor
-    if actor.id==1 then
-      _plyr=attach_plyr(thing,actor)
-      thing=_plyr
-    end
-    add(_things,thing)
-  end
-
-  _cam=make_camera()
-
-  next_state(play_state)
-
-end
-
-function _update()
-  -- any futures?
-  local tmp={}
-	for k,f in pairs(_futures) do
-		local cs=costatus(f)
-		if cs=="suspended" then
-      assert(coresume(f))
-      add(tmp,f)
-    elseif cs=="dead" then
-		end
-  end
-  _futures=tmp
-
-  -- keep world running
-  for _,thing in pairs(_things) do
-    if(thing.control) thing:control()
-    thing:tick()
-    if(thing.update) thing:update()
-  end
-
-  _cam:update()
-  _update_state()
-
-  -- 
-  _msg=nil
-
-end
-
-function _draw()
-  cls()
-
   --
   -- draw bsp & visible things
   -- 
@@ -1124,6 +1021,7 @@ function _draw()
       local subs=node[side]
       -- potentially visible?
       local id=subs.id
+      -- use band to support gaps (nil) in pvs hash
       if band(pvs[id\32],0x0.0001<<(id&31))!=0 then
         draw_flats(v_cache,subs,sorted_things[subs])
       end
@@ -1131,20 +1029,180 @@ function _draw()
       visit_bsp(node[side],pos,visitor)
     end
   end)
+end
 
-  _draw_state()
+-->8
+-- game states
+function next_state(fn,...)
+  _update_state,_draw_state=fn(...)
+end
 
-  if(_msg) print(_msg,64-#_msg*2,120,15)
+function menu_state()
+  local colors,skills,skill,loading={
+    [7]=10,
+    [10]=9,
+    [9]=8,
+    [8]=2,
+    [2]=1,
+    [1]=0},
+  {
+    "i AM TOO YOUNG TO DIE",
+    "hEY, NOT TOO ROUGH",
+    "hURT ME PLENTY",
+    "uLTRA-vIOLENCE"
+  },1
+  
+  cls()
+  -- seed line
+  memset(0x7fc0,0x77,64)
 
-  -- debug messages
-  local cpu=stat(1).."|"..stat(0)
+  return 
+    -- update
+    function()
+      if(btnp(2)) skill-=1
+      if(btnp(3)) skill+=1
+      if not loading and (btnp(5) or btnp(4)) then
+        -- avoid reentrancy
+        loading=true
+        do_async(function()
+          -- clear seed
+          memset(0x7fc0,0,64)
+          wait_async(20)
+          next_state(play_state,skill)
+        end)
+      end
+      skill=mid(skill,1,#skills)
+    end,
+    -- draw
+    function()
+      rectfill(0,0,127,99,0)
+      spr(192,35,14,8,4)
 
-  for k,f in pairs(_futures) do
-    cpu=cpu.."\n"..k..":"..costatus(f)
+      for i,txt in pairs(skills) do 
+        local y=40+i*10
+        printb(txt,30,y,9,4)
+        if(skill==i) sspr(64+flr(time()%2)*10,96,10,10,18,y-1,10,10)
+      end
+
+      -- doom fire!
+      -- credits: https://fabiensanglard.net/doom_fire_psx/index.html
+      for x=0,127 do
+        for y=127,100,-1 do
+          local c=pget(x,y)
+          -- decay
+          pset((x+rnd(2)-1)&127,y-1,rnd()>0.5 and colors[c] or c)
+        end
+      end
+    end
+end
+
+function play_state(skill)
+  cls()
+
+  local root,thingdefs,tiles=unpack_map(skill)
+  _bsp,_things,_sprite_cache=root,{},make_sprite_cache(tiles,32)
+
+  -- attach behaviors to things
+  for k,thingdef in pairs(thingdefs) do 
+    local thing=make_thing(unpack(thingdef))
+    -- get direct access to player
+    local actor=thing.actor
+    if actor.id==1 then
+      _plyr=attach_plyr(thing,actor,skill)
+      thing=_plyr
+    end
+    add(_things,thing)
   end
 
-  print(cpu,2,3,3)
-  print(cpu,2,2,8)
+  _cam=make_camera()
+
+  return 
+    -- update
+    function()
+      if _plyr.dead then
+        next_state(gameover_state,_plyr,_plyr.angle,_plyr.target,45)
+      end
+
+      _cam:track(_plyr,_plyr.angle,_plyr[3]+45)
+      _cam:update()
+    end,
+    -- draw
+    function()
+      draw_bsp()
+      _plyr:hud()
+
+      if(_msg) print(_msg,64-#_msg*2,120,15)
+
+      -- debug messages
+      local cpu=stat(1).."|"..stat(0)
+    
+      print(cpu,2,3,3)
+      print(cpu,2,2,8)    
+    end
+end
+
+function gameover_state(pos,angle,target,h)
+  local target_angle=angle
+  return
+    -- update
+    function()
+      -- fall to ground
+      h=lerp(h,10,0.2)
+      -- track 'death' instigator
+      if target then
+        target_angle=atan2(-target[1]+pos[1],target[2]-pos[2])+0.5
+        angle=lerp(shortest_angle(target_angle,angle),target_angle,0.08)
+      end
+      _cam:track(pos,angle,pos[3]+h)
+      _cam:update()
+    end,
+    -- draw
+    function()
+      draw_bsp()
+
+      -- set screen palette
+      -- pal({140,1,139,3,4,132,133,7,6,134,5,8,2,9,10},1)
+      memcpy(0x5f10,0x4400,16)
+
+      -- todo: gameover message
+    end
+end
+
+-->8
+-- game loop
+function _init()
+  next_state(menu_state)
+end
+
+function _update()
+  -- any futures?
+  local tmp={}
+	for k,f in pairs(_futures) do
+		local cs=costatus(f)
+		if cs=="suspended" then
+      assert(coresume(f))
+      add(tmp,f)
+    elseif cs=="dead" then
+		end
+  end
+  _futures=tmp
+
+  -- keep world running
+  for _,thing in pairs(_things) do
+    if(thing.control) thing:control()
+    thing:tick()
+    if(thing.update) thing:update()
+  end
+
+  _update_state()
+
+  -- 
+  _msg=nil
+
+end
+
+function _draw()
+  _draw_state()
 end
 
 -->8
@@ -1199,7 +1257,8 @@ function mpeek()
 	local v=peek(mem)
 	if mem%779==0 then
 		cart_progress+=1
-		rectfill(0,120,shl(cart_progress,4),127,cart_id%2==0 and 1 or 7)
+    
+    rectfill(0,120,shl(cart_progress,4),127,cart_id%2==0 and 1 or 7)
 		flip()
   end
 	mem+=1
@@ -1376,7 +1435,7 @@ function unpack_texture()
   return tex!=0 and tex
 end
 
-function unpack_map()
+function unpack_map(skill)
   -- jump to data cart
   cart_id,mem=0,0
   reload(0,0,0x4300,"poom_"..cart_id..".p8")
@@ -1476,8 +1535,8 @@ function unpack_map()
       end
     }
 
-    -- actor properties
-    local properties,properties_factory=unpack_fixed(),{
+    -- actor properties + skill ammo factor
+    local ammo_factor,properties,properties_factory=({2,1,1,1})[skill],unpack_fixed(),{
       {0x0.0001,"health"},
       {0x0.0002,"armor"},
       {0x0.0004,"amount"},
@@ -1533,13 +1592,13 @@ function unpack_map()
       -- ammo family
       local ammotype=unpack_actor_ref()
       item.pickup=function(thing,target)
-        pickup(target.inventory,ammotype)
+        pickup(target.inventory,ammotype,ammo_factor*item.amount)
       end
     elseif kind==2 then
       -- weapon
       local ammogive,ammotype=unpack_variant(),item.ammotype
       item.pickup=function(thing,target)
-        pickup(target.inventory,ammotype,ammogive,ammotype.maxamount)
+        pickup(target.inventory,ammotype,ammo_factor*ammogive,ammotype.maxamount)
 
         target:attach_weapon(thing)
         -- remove from things
@@ -1574,7 +1633,7 @@ function unpack_map()
           for i=1,bullets do
             local angle=owner.angle+(rnd(2*xspread)-xspread)/360
             local hits,move_dir={},{cos(angle),-sin(angle)}
-            intersect_sub_sector(owner.ssector,owner,move_dir,owner.actor.radius,1024,hits)    
+            intersect_sub_sector(owner.ssector,owner,move_dir,owner.actor.radius/2,1024,hits)    
             -- todo: get from actor properties
             local h=owner[3]+24
             for _,hit in ipairs(hits) do
@@ -1631,7 +1690,7 @@ function unpack_map()
         return function(owner)
           -- find 'real' owner
           owner=owner.owner or owner
-          local angle,speed,radius=owner.angle,projectile.speed,owner.actor.radius
+          local angle,speed,radius=owner.angle,projectile.speed,owner.actor.radius/2
           local ca,sa=cos(angle),-sin(angle)
           -- fire at edge of owner radius
           local thing=with_physic(make_thing(projectile,owner[1]+radius*ca,owner[2]+radius*sa,0,angle))
@@ -1724,6 +1783,13 @@ function unpack_map()
           -- spawn
           self:jump_to(0)
         end
+      end,
+      -- A_Light
+      function()
+        local light=mpeek()/255
+        return function()
+          _ambientlight=light
+        end
       end
     }
     -- states & sprites
@@ -1745,7 +1811,7 @@ function unpack_map()
         -- 3 light level (bright/normal)
         -- 4 number of sides
         -- 5+ sides
-        cmd={unpack_fixed(),mpeek(),flags&0x4>0,0}
+        cmd={mpeek()-128,mpeek(),flags&0x4>0,0}
         -- get all pose sides
         unpack_array(function(i)
           add(cmd,frames[unpack_variant()])
@@ -1766,20 +1832,21 @@ function unpack_map()
 
   -- things
   unpack_array(function()
-    local id=unpack_variant()
-    add(things,{
-      -- link to underlying actor
-      actors[id],
-      -- coordinates
-      unpack_fixed(),
-      unpack_fixed(),
-      -- height
-      0,
-      -- angle
-      unpack_variant()/360,
-    })
+    local flags,id,x,y=mpeek(),unpack_variant(),unpack_fixed(),unpack_fixed()
+    if flags&(0x10<<(skill-1))!=0 then
+      add(things,{
+        -- link to underlying actor
+        actors[id],
+        -- coordinates
+        x,y,
+        -- height
+        0,
+        -- angle
+        (flags&0xf)/8,
+      })
+    end
   end)
-
+ 
   -----------------------------------
   -- unpack level geometry
   -- sectors
