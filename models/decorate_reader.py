@@ -92,7 +92,7 @@ class DecorateWalker(DECORATEListener):
 
       if name in builtin_actors:
         raise Exception("Cannot redefine base actor: {}".format(name))
-      # -1 = not exported
+      # -1 = not exported (ex: base class)
       id = -1
       if ctx.uid():
         id = int(ctx.uid().getText())

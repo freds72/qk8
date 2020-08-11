@@ -324,7 +324,7 @@ def get_image_frames(lumps,image,variant):
     raise Exception("Missing image: {} {}".format(image,variant))
   return frames
 
-def get_skill_bit(thing, skill):
+def get_skillmask(thing, skill):
   name = "skill{}".format(skill)
   if thing.get(name,False)==True:
     return 1<<(skill-1)
@@ -338,7 +338,7 @@ def pack_thing(thing, actors):
   # pack angle + skills (1-4)
   skills = 0
   for i in range(4):
-    skills |= get_skill_bit(thing, i+1)
+    skills |= get_skillmask(thing, i+1)
   angle = math.floor(thing.get('angle',0)/45)%8
   s += "{:02x}".format(angle|skills<<4)
   # id

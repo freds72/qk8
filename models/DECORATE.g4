@@ -103,7 +103,7 @@ BOOLEAN_VALUE:
   ;
 
 SINGLE_CHAR:
-  CHAR
+  AZ
   ;
 
 QUOTED_STRING:
@@ -111,7 +111,11 @@ QUOTED_STRING:
   ;
 
 KEYWORD:
-  CHAR (CHAR|DIGIT)+
+  CHAR (CHAR|DIGIT)*
+  ;
+
+fragment AZ:
+  'A'..'Z'
   ;
 
 fragment CHAR:
