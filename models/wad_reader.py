@@ -339,6 +339,9 @@ def pack_thing(thing, actors):
   skills = 0
   for i in range(4):
     skills |= get_skillmask(thing, i+1)
+  # edge case = no flags = visible on all skills
+  if skills==0:
+    skills = 15
   angle = math.floor(thing.get('angle',0)/45)%8
   s += "{:02x}".format(angle|skills<<4)
   # id
@@ -655,9 +658,10 @@ def pack_actors(file, lumps, map, actors, palette):
       # print("{} -> 0x{:02x}".format(state, flags))
       s += "{:02x}".format(flags)
       s += state_s
-  # things
-  s += pack_variant(len(map.things))
-  for thing in map.things:
+  # things (removes invalid entries) 
+  things = [thing for thing in map.things if thing.type in [actor.id for actor in concrete_actors]]
+  s += pack_variant(len(things))
+  for thing in things:
     s += pack_thing(thing, concrete_actors)
 
   return s
@@ -1100,6 +1104,6 @@ def display_WAD(filepath,mapname):
       pygame.display.flip()
 
 local_dir = os.path.dirname(os.path.realpath(__file__))
-load_WAD("{}\\..\\levels\\poom.wad".format(local_dir), "E1M1")
+load_WAD("{}\\..\\levels\\poom.wad".format(local_dir), "E1M2")
 #display_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
 
