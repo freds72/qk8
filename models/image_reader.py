@@ -5,14 +5,11 @@ import io
 import math
 from collections import namedtuple
 from dotdict import dotdict
-from python2pico import pack_int
-from python2pico import pack_variant
-from python2pico import pack_fixed
-from python2pico import to_multicart
-from python2pico import pack_int32
 from PIL import Image, ImageFilter
-class WADImageReader():  
-  def __init__(self, palette):
+
+# helper methods for image manipulation
+class ImageReader():  
+  def __init__(self, stream, palette):
     # cache already processed tiles
     # image name -> tiles
     self.frames = {}
@@ -22,16 +19,13 @@ class WADImageReader():
     # forced transparency color
     self.rgba_to_pico[(00,00,00,00)] = -1
     self.rgba_to_pico[(255,255,255,0)] = -1
+    if stream is None:
+      raise Exception("Missing resource stream parameter")
+    self.stream = stream
 
   # convert a wad image into a pair of tiles address and tiles data (binary)
-  def read(self, file, lumps, name):
-    # read from WAD
-    entry = lumps.get(name,None)
-    if not entry:
-      raise Exception("Missing WAD image: {}".format(name))
-
-    file.seek(entry.lump_ofs)
-    image_data = file.read(entry.lump_size)
+  def read(self, name):
+    image_data = self.stream.read(name)
 
     # read image bytes
     src_io = io.BytesIO(image_data)
@@ -117,3 +111,35 @@ class WADImageReader():
       'yoffset': int(yoffset),
       'background': pico8_transparency,
       'data': data})
+
+  # returns reference to image frame(s) (multiple sides if any)
+  def read_frames(self,image,variant):
+    pattern = "{}{}".format(image,variant)
+    frames = []
+    lumps = self.stream.directory()
+    if pattern+"1" in lumps:
+      # multi-sided image
+      angles = [
+        re.compile("({}{}1)".format(image,variant)),
+        re.compile("({}{}2)".format(image,variant)),
+        re.compile("({}{}3)".format(image,variant)),
+        re.compile("({}{}4)".format(image,variant)),
+        re.compile("({}{}5)".format(image,variant)),
+        re.compile("({}{}6)|({}{}4{}6)".format(image,variant,image,variant,variant)),
+        re.compile("({}{}7)|({}{}3{}7)".format(image,variant,image,variant,variant)),
+        re.compile("({}{}8)|({}{}2{}8)".format(image,variant,image,variant,variant))]
+      for angle in angles:
+        match = [m for m in map(angle.match, lumps) if m is not None][0]
+        if match:
+          if match.group(1):
+            frames.append((match.string, False))
+          elif match.group(2):
+            frames.append((match.string, True))
+        else:
+          raise Exception("Missing angle: {} for image: {} {}".format(angle,image,variant))
+    elif pattern+"0" in lumps:
+      # single image
+      frames.append((pattern+"0",False))
+    else:
+      raise Exception("Missing image: {} {}".format(image,variant))
+    return frames

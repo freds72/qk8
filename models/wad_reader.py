@@ -5,7 +5,7 @@ import io
 import math
 from collections import namedtuple
 from udmf_reader import UDMF
-from textures_reader import WADTextureReader
+from textures_reader import TextureReader
 from decorate_reader import ACTORS
 from decorate_reader import ACTOR_KIND
 from dotdict import dotdict
@@ -19,15 +19,14 @@ from python2pico import pack_short
 from bsp_compiler import Polygon
 from bsp_compiler import POLYGON_CLASSIFICATION
 from bsp_compiler import normal,ortho
-from image_reader import WADImageReader
+from image_reader import ImageReader
+from colormap_reader import ColormapReader
+from abstract_stream import Stream
 
 # debug/draw
 import sys, pygame
 
 # helper funcs
-def get_or_default(owner, name, default):
-  return name in owner and owner[name] or default
-
 def get_at_or_default(list, index, defaults):
   return list[index] if index < len(list) else defaults[index]
 
@@ -219,14 +218,10 @@ def pack_named_texture(owner, textures, name):
   return pack_texture(textures[name])
 
 def pack_lightlevel(owner, name):
-  value = owner.get(name, 160)
-  return "{:02x}".format(value)
+  return "{:02x}".format(owner.get(name, 160))
 
 def pack_aabb(aabb):
-  s = ""
-  for v in aabb:
-    s += pack_fixed(v)
-  return s
+  return "".join(map(pack_fixed, aabb))
 
 # find all sectors
 def find_sectors_by_tag(tag, sectors):
@@ -257,11 +252,11 @@ def pack_special(line, lines, sides, sectors):
     # speed
     s += "{:02x}".format(line.arg1)
     # door type
-    s += "{:02x}".format(get_or_default(line,'arg2',0)) 
+    s += "{:02x}".format(line.get('arg2',0)) 
     # delay
-    s += "{:02x}".format(get_or_default(line,'arg3',10))
+    s += "{:02x}".format(line.get('arg3',10))
     # lock
-    s += pack_variant(get_or_default(line,'arg4',0))
+    s += pack_variant(line.get('arg4',0))
   elif special==64:
     print("Special: platform up/stay/down")
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
@@ -290,39 +285,8 @@ def pack_special(line, lines, sides, sectors):
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
     s += pack_sectors_by_tag(sector_ids)
     # light level
-    s += "{:02x}".format(get_or_default(line,'arg1',0))
+    s += "{:02x}".format(line.get('arg1',0))
   return s
-
-# returns reference to image frame(s) (multiple sides if any)
-def get_image_frames(lumps,image,variant):
-  pattern = "{}{}".format(image,variant)
-  frames = []
-  if pattern+"1" in lumps:
-    # multi-sided image
-    angles = [
-      re.compile("({}{}1)".format(image,variant)),
-      re.compile("({}{}2)".format(image,variant)),
-      re.compile("({}{}3)".format(image,variant)),
-      re.compile("({}{}4)".format(image,variant)),
-      re.compile("({}{}5)".format(image,variant)),
-      re.compile("({}{}6)|({}{}4{}6)".format(image,variant,image,variant,variant)),
-      re.compile("({}{}7)|({}{}3{}7)".format(image,variant,image,variant,variant)),
-      re.compile("({}{}8)|({}{}2{}8)".format(image,variant,image,variant,variant))]
-    for angle in angles:
-      match = [m for m in map(angle.match, lumps) if m is not None][0]
-      if match:
-        if match.group(1):
-          frames.append((match.string, False))
-        elif match.group(2):
-          frames.append((match.string, True))
-      else:
-        raise Exception("Missing angle: {} for image: {} {}".format(angle,image,variant))
-  elif pattern+"0" in lumps:
-    # single image
-    frames.append((pattern+"0",False))
-  else:
-    raise Exception("Missing image: {} {}".format(image,variant))
-  return frames
 
 def get_skillmask(thing, skill):
   name = "skill{}".format(skill)
@@ -465,23 +429,22 @@ def pack_ratio(x):
     raise Exception("Invalid ratio: {}, must be in range [0;1]".format(x))
   return pack_byte(int(255*x))
 
-def pack_actors(file, lumps, map, actors, palette):
+def pack_actors(image_reader, map, actors):
   s = ""
   # actors/inventory (e.g. items with assigned unique id)
   concrete_actors = [actor for actor in actors.values() if actor.id!=-1]
   
   # collect active images
   images = []
-  image_reader = WADImageReader(palette)
   frames_by_name = {}
   for actor in concrete_actors:
     for state in [state for state in actor._states if 'image' in state]:
       image_name = "{}{}".format(state.image,state.variant)
-      frames = get_image_frames(lumps, state.image, state.variant)
+      frames = image_reader.read_frames(state.image, state.variant)
       frames_by_name[image_name] = frames
       # remove "flipped" duplicate sprites for serialization
       for frame in [frame for frame in frames if frame[1]==False]:
-        images.append(image_reader.read(file, lumps, frame[0]))
+        images.append(image_reader.read(frame[0]))
   
   s += pack_variant(len(images))
   # export frame metadata
@@ -658,6 +621,8 @@ def pack_actors(file, lumps, map, actors, palette):
       # print("{} -> 0x{:02x}".format(state, flags))
       s += "{:02x}".format(flags)
       s += state_s
+
+  # todo: move to pack_map
   # things (removes invalid entries) 
   things = [thing for thing in map.things if thing.type in [actor.id for actor in concrete_actors]]
   s += pack_variant(len(things))
@@ -665,87 +630,6 @@ def pack_actors(file, lumps, map, actors, palette):
     s += pack_thing(thing, concrete_actors)
 
   return s
-
-def read_palette(file, lumps):
-  entry = lumps.get("PLAYPAL",None)
-  if not entry:
-    raise Exception("Missing 'PLAYPAL' palette in WAD")
-  
-  file.seek(entry.lump_ofs)
-  palette_data = file.read(entry.lump_size)
-  if len(palette_data)!=16*16*3:
-    raise Exception("Invalid 'PLAYPAL' palette size: {} - must be 16*16*3".format(len(palette_data)))
-  palette = []
-  for i in range(0,16*16*3,3*16):
-    i += 3*8
-    r,g,b = palette_data[i],palette_data[i+1],palette_data[i+2]
-    palette.append((r,g,b,255))
-  return palette
-
-# RGB to pico8 color index
-rgb_to_pico8={
-  "0x000000":0,
-  "0x1d2b53":1,
-  "0x7e2553":2,
-  "0x008751":3,
-  "0xab5236":4,
-  "0x5f574f":5,
-  "0xc2c3c7":6,
-  "0xfff1e8":7,
-  "0xff004d":8,
-  "0xffa300":9,
-  "0xffec27":10,
-  "0x00e436":11,
-  "0x29adff":12,
-  "0x83769c":13,
-  "0xff77a8":14,
-  "0xffccaa":15,
-  "0x291814":128,
-  "0x111d35":129,
-  "0x422136":130,
-  "0x125359":131,
-  "0x742f29":132,
-  "0x49333b":133,
-  "0xa28879":134,
-  "0xf3ef7d":135,
-  "0xbe1250":136,
-  "0xff6c24":137,
-  "0xa8e72e":138,
-  "0x00b543":139,
-  "0x065ab5":140,
-  "0x754665":141,
-  "0xff6e59":142,
-  "0xff9d81":143}
-
-# returns a pico8 compatible array of gradients from a WAD palette entry
-def read_gradient(name, file, lumps, palette = None):
-  entry = lumps.get(name,None)
-  if entry is None:
-    raise Exception("Unable to find: {} palette in WAD.".format(name))
-  file.seek(entry.lump_ofs)
-  palette_data = file.read(entry.lump_size)
-
-  # align color formats
-  if palette is not None:
-    palette = ["0x{:02x}{:02x}{:02x}".format(pal[0],pal[1],pal[2]) for pal in palette]
-
-  # transpose
-  columns = [[] for i in range(16)]
-  for i,rgb in enumerate(["0x{:02x}{:02x}{:02x}".format(palette_data[i],palette_data[i+1],palette_data[i+2]) for i in range(0,3*16*16,3)]):
-    if palette is None:
-      # get hardware color (inc. extended color ids)
-      p8 = rgb_to_pico8.get(rgb, None)
-      if p8 is None:
-        raise Exception("Unknown PICO8 color: {} in palette: {}".format(rgb, name))
-    else:
-      # remap hardware color identifiers (0-15/129-145) to palette index (0-15) (for shading gradients)
-      if rgb not in palette:
-        raise Exception("Unable to reference: {}  in remap palette: {}".format(rgb,palette))
-      p8 = palette.index(rgb)
-    c = i%16
-    columns[c].append(p8)
-  # flatten list
-  return [item for sublist in columns for item in sublist]
 
 # generate main game cart
 def pack_sprite(arr):
@@ -858,6 +742,23 @@ def lzw_encode(data):
 
     return bytes(aux)
 
+class WADStream(Stream):
+  def __init__(self, file, lumps):
+    self.file = file
+    self.lumps = lumps
+
+  def read(self, name):
+    # read from WAD
+    entry = self.lumps.get(name,None)
+    if not entry:
+      raise Exception("Unknown WAD resource: {}".format(name))
+
+    self.file.seek(entry.lump_ofs)
+    return self.file.read(entry.lump_size)
+
+  def directory(self) -> []:
+    return self.lumps
+
 def load_WAD(filepath,mapname):
   with open(filepath, 'rb') as file:
     # read file header
@@ -893,20 +794,20 @@ def load_WAD(filepath,mapname):
       i += 1
 
     # extract palette
-    palette = read_palette(file, lumps)
-    gradients = read_gradient("PLAYPAL", file, lumps, palette) + read_gradient("PAINPAL", file, lumps)
+    colormap = ColormapReader(file, lumps)
+    gradients = colormap.read("PLAYPAL", file, lumps, use_palette=True) + colormap.read("PAINPAL", file, lumps)
 
     # decode textures
     textures = None
     if textures_entry is not None:
       file.seek(textures_entry.lump_ofs)
       textmap_data = file.read(textures_entry.lump_size).decode('ascii')
-      reader = WADTextureReader(palette)
-      textures = reader.read(textmap_data, file, lumps)
+      reader = TextureReader(WADStream(file, lumps), colormap.palette)
+      textures = reader.read(textmap_data)
 
-    # decode actors
+    # decode actors & sprites
     actors = {}
-    image_reader = WADImageReader(palette)
+    image_reader = ImageReader(WADStream(file, lumps), colormap.palette)
     if decorate_entry is not None:
       file.seek(decorate_entry.lump_ofs)
       textmap_data = file.read(decorate_entry.lump_size).decode('ascii')
@@ -914,7 +815,7 @@ def load_WAD(filepath,mapname):
     
     # pick map
     zmap = maps[mapname].read(file)
-    data = pack_actors(file, lumps, zmap, actors, palette) + pack_zmap(zmap, textures)
+    data = pack_actors(image_reader, zmap, actors) + pack_zmap(zmap, textures)
 
     to_multicart(data, "poom")
 

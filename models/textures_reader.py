@@ -44,15 +44,17 @@ class TEXTURES(TEXTURESListener):
     })
     self.flats[name] = texture
   
-class WADTextureReader(TEXTURESListener):
-  def __init__(self, palette):
+# Converts a TEXTURE file definition into a set of unique tiles + map index
+class TextureReader(TEXTURESListener):
+  def __init__(self, stream, palette):
     self.rgba_to_pico = {}
     for i,rgba in enumerate(palette):
       self.rgba_to_pico[rgba] = i
     # forced transparency color
     self.rgba_to_pico[(00,00,00,00)] = -1
+    self.stream = stream
     
-  def read(self, data, file, lumps):    
+  def read(self, data):    
     lexer = TEXTURESLexer(InputStream(data))
     stream = CommonTokenStream(lexer)
     parser = TEXTURESParser(stream)
@@ -67,13 +69,7 @@ class WADTextureReader(TEXTURESListener):
       raise Exception("Multiple texture images not supported: {}".format(listener.patches))
 
     texture_name = listener.patches.pop()
-    # read from WAD
-    entry = lumps.get(texture_name,None)
-    if not entry:
-      raise Exception("Missing WAD image: {}".format(texture_name))
-
-    file.seek(entry.lump_ofs)
-    image_data = file.read(entry.lump_size)
+    image_data = self.stream.read(texture_name)
 
     # read image bytes
     src = Image.open(io.BytesIO(image_data))
