@@ -229,8 +229,10 @@ class DecorateWalker(DECORATEListener):
         }))
 
 
-class ACTORS():
-  def __init__(self, data):
+class DecorateReader():
+  def __init__(self, stream):
+    # get data
+    data = stream.read("DECORATE").decode('ascii')
     lexer = DECORATELexer(InputStream(data))
     stream = CommonTokenStream(lexer)
     parser = DECORATEParser(stream)

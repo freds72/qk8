@@ -23,7 +23,7 @@ class ImageReader():
       raise Exception("Missing resource stream parameter")
     self.stream = stream
 
-  # convert a wad image into a pair of tiles address and tiles data (binary)
+  # convert an image into a pair of tiles address and tiles data (binary)
   def read(self, name):
     image_data = self.stream.read(name)
 
@@ -47,7 +47,6 @@ class ImageReader():
     pattern_index = src_bytes.find(b"grAb")
     if pattern_index!=-1:
       xoffset,yoffset = struct.unpack_from(">ii",src_bytes,pattern_index+4)
-      print("Custom offset: {}/{}".format(xoffset,yoffset))
 
     img = Image.new('RGBA', (width, height), (0,0,0,0))
     img.paste(src, (0,0,src_width,src_height))

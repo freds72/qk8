@@ -54,7 +54,10 @@ class TextureReader(TEXTURESListener):
     self.rgba_to_pico[(00,00,00,00)] = -1
     self.stream = stream
     
-  def read(self, data):    
+  def read(self):    
+    # get data
+    data = self.stream.read("TEXTURES").decode('ascii')
+
     lexer = TEXTURESLexer(InputStream(data))
     stream = CommonTokenStream(lexer)
     parser = TEXTURESParser(stream)

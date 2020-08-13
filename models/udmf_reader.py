@@ -94,7 +94,7 @@ class ThingWalker(udmfListener):
             value = pair.value().getText()
             if attribute in ['x','y']:
               value = float(value)
-            elif attribute in ['skill1','skill2','skill3','skill4','skill5']:
+            elif attribute in ['skill1','skill2','skill3','skill4','skill5','dm','single','coop']:
               value = value == 'true'
             elif attribute in ['type','angle']:
               value = int(value)

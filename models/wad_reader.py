@@ -6,7 +6,7 @@ import math
 from collections import namedtuple
 from udmf_reader import UDMF
 from textures_reader import TextureReader
-from decorate_reader import ACTORS
+from decorate_reader import DecorateReader
 from decorate_reader import ACTOR_KIND
 from dotdict import dotdict
 from python2pico import pack_int
@@ -21,10 +21,13 @@ from bsp_compiler import POLYGON_CLASSIFICATION
 from bsp_compiler import normal,ortho
 from image_reader import ImageReader
 from colormap_reader import ColormapReader
-from abstract_stream import Stream
+from wad_stream import WADStream
+from file_stream import FileStream
 
 # debug/draw
 import sys, pygame
+
+local_dir = os.path.dirname(os.path.realpath(__file__))
 
 # helper funcs
 def get_at_or_default(list, index, defaults):
@@ -83,7 +86,7 @@ ZNODE = namedtuple('ZNODE',['n','d','flags','child','aabb'])
 ZMAP = namedtuple('ZMAP',['vertices','other_vertices','lines','sides','sectors','things', 'sub_sectors', 'nodes'])
 
 class MAPDirectory():
-  def __init__(self,file, name, entry):
+  def __init__(self, file, name, entry):
     # map name
     self.name = name    
     lumps={}
@@ -294,10 +297,7 @@ def get_skillmask(thing, skill):
     return 1<<(skill-1)
   return 0
   
-def pack_thing(thing, actors):
-  if thing.type not in [actor.id for actor in actors]:
-    raise Exception("Thing: {} references unknown actor: {}".format(thing, thing.type))
-
+def pack_thing(thing):
   s = ""
   # pack angle + skills (1-4)
   skills = 0
@@ -318,7 +318,7 @@ def pack_thing(thing, actors):
 def pack_flag(owner, name):
   return owner.get(name,False) and 1 or 0
 
-def pack_zmap(map, textures):
+def pack_zmap(map, textures, actors):
   # shortcut to wall textures
   flats = textures.flats
 
@@ -422,6 +422,19 @@ def pack_zmap(map, textures):
     s+= pack_texture(texture)
     # get pair or self
     s+= pack_texture(texture_pairs.get(name, texture))
+
+  # things
+  things = []
+  actors = [actor.get('id',-1) for actor in actors.values()]
+  for thing in map.things:
+    if thing.type not in actors:
+      print("WARNING - Thing: {} references unknown actor: {} - skipping".format(thing, thing.type))
+    else:
+      things.append(thing)
+  
+  s += pack_variant(len(things))
+  for thing in things:
+    s += pack_thing(thing)
   return s
 
 def pack_ratio(x):
@@ -429,7 +442,7 @@ def pack_ratio(x):
     raise Exception("Invalid ratio: {}, must be in range [0;1]".format(x))
   return pack_byte(int(255*x))
 
-def pack_actors(image_reader, map, actors):
+def pack_actors(image_reader, actors):
   s = ""
   # actors/inventory (e.g. items with assigned unique id)
   concrete_actors = [actor for actor in actors.values() if actor.id!=-1]
@@ -622,13 +635,6 @@ def pack_actors(image_reader, map, actors):
       s += "{:02x}".format(flags)
       s += state_s
 
-  # todo: move to pack_map
-  # things (removes invalid entries) 
-  things = [thing for thing in map.things if thing.type in [actor.id for actor in concrete_actors]]
-  s += pack_variant(len(things))
-  for thing in things:
-    s += pack_thing(thing, concrete_actors)
-
   return s
 
 # generate main game cart
@@ -742,35 +748,14 @@ def lzw_encode(data):
 
     return bytes(aux)
 
-class WADStream(Stream):
-  def __init__(self, file, lumps):
-    self.file = file
-    self.lumps = lumps
-
-  def read(self, name):
-    # read from WAD
-    entry = self.lumps.get(name,None)
-    if not entry:
-      raise Exception("Unknown WAD resource: {}".format(name))
-
-    self.file.seek(entry.lump_ofs)
-    return self.file.read(entry.lump_size)
-
-  def directory(self) -> []:
-    return self.lumps
-
-def load_WAD(filepath,mapname):
-  with open(filepath, 'rb') as file:
+def load_WAD(stream, mapname):
+  with stream.open(mapname) as file:
     # read file header
     header_data = file.read(struct.calcsize(fmt_WADHeader))
     header = WADHeader._make(struct.unpack(fmt_WADHeader, header_data))
 
-    print("WAD type: {}".format(header.type))
+    print("Packing map: {} - WAD type: {}".format(mapname, header.type))
 
-    maps = {}
-    lumps = {}
-    textures_entry = None
-    decorate_entry = None
     # go to directory
     file.seek(header.dir_ofs)
     i = 0
@@ -780,46 +765,39 @@ def load_WAD(filepath,mapname):
       lump_name = entry.lump_name.decode('ascii').rstrip('\x00')
       # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_glnodes.cpp
       # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_setup.cpp
-      lumps[lump_name] = entry
       if re.match("E[0-9]M[0-9]",lump_name):
         # read UDMF
-        map_dir = MAPDirectory(file, lump_name, entry)
-        maps[lump_name] = map_dir
-        # skip map entries + ENDMAP
-        i += len(map_dir.lumps) + 1
-      elif lump_name == 'TEXTURES':
-        textures_entry = entry
-      elif lump_name == 'DECORATE':
-        decorate_entry = entry
+        return MAPDirectory(file, lump_name, entry).read(file)
       i += 1
+  raise Exception("No entry matching E[0-9]M[0-9] found in WAD: {}".format(mapname))
 
-    # extract palette
-    colormap = ColormapReader(file, lumps)
-    gradients = colormap.read("PLAYPAL", file, lumps, use_palette=True) + colormap.read("PAINPAL", file, lumps)
+def pack_archive(root, modname, mapname):
+  # resource readers
+  maps_stream = FileStream(os.path.join(root, modname, "maps"))
+  file_stream = FileStream(os.path.join(root, modname))
+  graphics_stream = FileStream(os.path.join(root, modname, "graphics"))
 
-    # decode textures
-    textures = None
-    if textures_entry is not None:
-      file.seek(textures_entry.lump_ofs)
-      textmap_data = file.read(textures_entry.lump_size).decode('ascii')
-      reader = TextureReader(WADStream(file, lumps), colormap.palette)
-      textures = reader.read(textmap_data)
+  # extract map + things
+  zmap = load_WAD(maps_stream, mapname)
+  
+  # extract palette
+  colormap = ColormapReader(file_stream)
+  gradients = colormap.read("PLAYPAL", use_palette=True) + colormap.read("PAINPAL")
 
-    # decode actors & sprites
-    actors = {}
-    image_reader = ImageReader(WADStream(file, lumps), colormap.palette)
-    if decorate_entry is not None:
-      file.seek(decorate_entry.lump_ofs)
-      textmap_data = file.read(decorate_entry.lump_size).decode('ascii')
-      actors = ACTORS(textmap_data).actors
-    
-    # pick map
-    zmap = maps[mapname].read(file)
-    data = pack_actors(image_reader, zmap, actors) + pack_zmap(zmap, textures)
+  # decode textures
+  reader = TextureReader(file_stream, colormap.palette)
+  textures = reader.read()
 
-    to_multicart(data, "poom")
+  # decode actors & sprites
+  image_reader = ImageReader(graphics_stream, colormap.palette)
+  actors = DecorateReader(file_stream).actors
+  
+  # pick map
+  data = pack_actors(image_reader, actors) + pack_zmap(zmap, textures, actors)
 
-    to_gamecart("poom",textures.width,textures.map,textures.gfx,gradients)
+  to_multicart(data, modname)
+
+  to_gamecart(modname, textures.width, textures.map, textures.gfx, gradients)
 
 def to_float(n):
   return float((n-0x100000000)/65535.0) if n>0x7fffffff else float(n/65535.0)
@@ -1004,7 +982,6 @@ def display_WAD(filepath,mapname):
 
       pygame.display.flip()
 
-local_dir = os.path.dirname(os.path.realpath(__file__))
-load_WAD("{}\\..\\levels\\poom.wad".format(local_dir), "E1M2")
+pack_archive(os.path.join(local_dir,"..","mods"), "poom", "E1M1")
 #display_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
 

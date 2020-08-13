@@ -6,6 +6,7 @@ import math
 from collections import namedtuple
 from dotdict import dotdict
 from PIL import Image, ImageFilter
+from abstract_stream import Stream
 
 # RGB to pico8 color index
 rgb_to_pico8={
@@ -44,13 +45,8 @@ rgb_to_pico8={
 
 # helper methods for gradient/colormap manipulation
 class ColormapReader():
-  def __init__(self, file, lumps):
-    entry = lumps.get("PLAYPAL",None)
-    if not entry:
-      raise Exception("Missing 'PLAYPAL' palette in WAD")
-    
-    file.seek(entry.lump_ofs)
-    palette_data = file.read(entry.lump_size)
+  def __init__(self, stream):
+    palette_data = stream.read("PLAYPAL")
     if len(palette_data)!=16*16*3:
       raise Exception("Invalid 'PLAYPAL' palette size: {} - must be 16*16*3".format(len(palette_data)))
     palette = []
@@ -59,19 +55,16 @@ class ColormapReader():
       r,g,b = palette_data[i],palette_data[i+1],palette_data[i+2]
       palette.append((r,g,b,255))
     self.palette = palette
+    self.stream = stream
 
   # returns a pico8 compatible array of gradients
   # use_palette : indicates if color should be checked against the class palette
-  def read(self, name, file, lumps, use_palette = False):
+  def read(self, name, use_palette = False):
     palette = None
     if use_palette:
       palette = self.palette
 
-    entry = lumps.get(name,None)
-    if entry is None:
-      raise Exception("Unable to find: {} palette in WAD.".format(name))
-    file.seek(entry.lump_ofs)
-    palette_data = file.read(entry.lump_size)
+    palette_data = self.stream.read(name)
 
     # align color formats
     if palette is not None:
