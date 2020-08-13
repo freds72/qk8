@@ -303,9 +303,10 @@ function draw_sub_sector(segs,v_cache,light)
   -- todo: test ipairs
   for i,v1 in ipairs(v_cache) do
     local seg,x1,y1,w1=v0.seg,v1.x,v1.y,v1.w
-    local _x1=x1
-    -- front facing
-    if x0<x1 then
+    local _x1,ldef=x1,seg.line
+    -- logical split or wall?
+    -- front facing?
+    if x0<x1 and ldef then
       -- span rasterization
       -- pick correct texture "major"
       local dx,u0=x1-x0,v0[seg[7]]*w0
@@ -316,71 +317,67 @@ function draw_sub_sector(segs,v_cache,light)
       u0+=sx*du
       w0+=sx*dw
 
-      -- logical split or wall?
-      local ldef=seg.line
-      if ldef then
-        -- dual?
-        local facingside,otherside,otop,obottom=ldef[seg.side],ldef[not seg.side]
-        -- peg bottom?
-        local offsety,toptex,midtex,bottomtex=(bottom-top)>>4,facingside.toptex,facingside.midtex,facingside.bottomtex
-        -- fix animated side walls (elevators)
+      -- dual?
+      local facingside,otherside,otop,obottom=ldef[seg.side],ldef[not seg.side]
+      -- peg bottom?
+      local offsety,toptex,midtex,bottomtex=(bottom-top)>>4,facingside.toptex,facingside.midtex,facingside.bottomtex
+      -- fix animated side walls (elevators)
+      if ldef.flags&0x4!=0 then
+        offsety=0
+      end
+      if otherside then
+        -- visible other side walls?
+        otop=otherside.sector.ceil
+        obottom=otherside.sector.floor
+        -- offset animated walls (doors)
         if ldef.flags&0x4!=0 then
-          offsety=0
+          offsety=(otop-top)>>4
         end
-        if otherside then
-          -- visible other side walls?
-          otop=otherside.sector.ceil
-          obottom=otherside.sector.floor
-          -- offset animated walls (doors)
-          if ldef.flags&0x4!=0 then
-            offsety=(otop-top)>>4
-          end
-          -- make sure bottom is not crossing this side top
-          obottom=min(top,obottom)
-          otop=max(bottom,otop)
-          if(top<=otop) otop=nil
-          if(bottom>=obottom) obottom=nil
-        end
+        -- make sure bottom is not crossing this side top
+        obottom=min(top,obottom)
+        otop=max(bottom,otop)
+        if(top<=otop) otop=nil
+        if(bottom>=obottom) obottom=nil
+      end
 
-        if(x1>127) x1=127
-        for x=cx0,x1\1 do
-          if w0>0.15 then
-            -- color shifing
-            local pal1=(light*min(15,w0<<5))\1
-            if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
-            local t,b,w=y0-top*w0,y0-bottom*w0,w0<<4
-            -- wall
-            -- top wall side between current sector and back sector
-            local ct=t\1+1
-            if otop and toptex then
-              poke4(0x5f38,toptex)             
-              local ot=y0-otop*w0
-              tline(x,ct,x,ot,u0/w,(ct-t)/w+offsety,0,1/w)
-              -- new window top
-              t=ot
-              ct=ot\1+1
-            end
-            -- bottom wall side between current sector and back sector     
-            if obottom and bottomtex then
-              poke4(0x5f38,bottomtex)             
-              local ob=y0-obottom*w0
-              local cob=ob\1+1
-              tline(x,cob,x,b,u0/w,(cob-ob)/w,0,1/w)
-              -- new window bottom
-              b=ob\1
-            end
-            -- middle wall?
-            if not otherside and midtex then
-              -- texture selection
-              poke4(0x5f38,midtex)
-
-              tline(x,ct,x,b,u0/w,(ct-t)/w+offsety,0,1/w)
-            end
+      if(x1>127) x1=127
+      for x=cx0,x1\1 do
+        if w0>0.15 then
+          -- color shifing
+          local pal1=(light*min(15,w0<<5))\1
+          if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
+          local t,b,w=y0-top*w0,y0-bottom*w0,w0<<4
+          -- wall
+          -- top wall side between current sector and back sector
+          local ct=t\1+1
+          if otop and toptex then
+            poke4(0x5f38,toptex)             
+            local ot=y0-otop*w0
+            tline(x,ct,x,ot,u0/w,(ct-t)/w+offsety,0,1/w)
+            -- new window top
+            t=ot
+            ct=ot\1+1
           end
-          y0+=dy
-          u0+=du
-          w0+=dw
+          -- bottom wall side between current sector and back sector     
+          if obottom and bottomtex then
+            poke4(0x5f38,bottomtex)             
+            local ob=y0-obottom*w0
+            local cob=ob\1+1
+            tline(x,cob,x,b,u0/w,(cob-ob)/w,0,1/w)
+            -- new window bottom
+            b=ob\1
+          end
+          -- middle wall?
+          if not otherside and midtex then
+            -- texture selection
+            poke4(0x5f38,midtex)
+
+            tline(x,ct,x,b,u0/w,(ct-t)/w+offsety,0,1/w)
+          end
         end
+        y0+=dy
+        u0+=du
+        w0+=dw
       end
     end
     v0=v1
@@ -801,7 +798,7 @@ function with_physic(thing)
 end
 
 function with_health(thing)
-  local dmg_ttl,health,dead=0,thing.health
+  local dmg_ttl,dead=0
   local function die(self,dmg)
     self.dead=true
     -- lock state
@@ -818,12 +815,11 @@ function with_health(thing)
       -- avoid automatic infight
       if(self==_plyr or instigator==_plyr or rnd()>0.8) self.target=instigator
 
-      local hp=dmg
       -- damage reduction?
-      local armor=self.armor or 0
+      local hp,armor=dmg,self.armor or 0
       if armor>0 then
-        hp=2*dmg/3
-        self.armor=max(armor-dmg/3)\1
+        hp=0.7*dmg
+        self.armor=max(armor-0.3*dmg)\1
       end
       self.health=max(self.health-hp)\1
       if self.health==0 then
@@ -839,8 +835,7 @@ function with_health(thing)
       if(dead) return
       -- instadeath
       if(dmg==-1) then
-        self.health=0
-        die(self,10000)
+        self:hit(10000)
         return
       end
       -- clear damage
@@ -1830,25 +1825,8 @@ function unpack_map(skill)
     actors[id]=item
   end)
 
-  -- things
-  unpack_array(function()
-    local flags,id,x,y=mpeek(),unpack_variant(),unpack_fixed(),unpack_fixed()
-    if flags&(0x10<<(skill-1))!=0 then
-      add(things,{
-        -- link to underlying actor
-        actors[id],
-        -- coordinates
-        x,y,
-        -- height
-        0,
-        -- angle
-        (flags&0xf)/8,
-      })
-    end
-  end)
- 
   -----------------------------------
-  -- unpack level geometry
+  -- unpack level data (geometry + things)
   -- sectors
   local sectors,sides,verts,lines,sub_sectors,all_segs,nodes={},{},{},{},{},{},{}
   unpack_array(function(i)
@@ -1992,6 +1970,24 @@ function unpack_map(skill)
   unpack_array(function()
     _onoff_textures[unpack_fixed()]=unpack_fixed()
   end)
+
+  -- things
+  unpack_array(function()
+    local flags,id,x,y=mpeek(),unpack_variant(),unpack_fixed(),unpack_fixed()
+    if flags&(0x10<<(skill-1))!=0 then
+      add(things,{
+        -- link to underlying actor
+        actors[id],
+        -- coordinates
+        x,y,
+        -- height
+        0,
+        -- angle
+        (flags&0xf)/8,
+      })
+    end
+  end)
+   
   
   -- restore main cart
   reload()
