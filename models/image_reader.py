@@ -14,6 +14,9 @@ class ImageReader():
     # image name -> tiles
     self.frames = {}
     self.rgba_to_pico = {}
+    if len(palette)>16:
+      raise Exception("Invalid palette length: {} - must be 16.".format(len(palette)))
+    
     for i,rgba in enumerate(palette):
       self.rgba_to_pico[rgba] = i
     # forced transparency color

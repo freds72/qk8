@@ -43,6 +43,10 @@ rgb_to_pico8={
   "0xff6e59":142,
   "0xff9d81":143}
 
+# returns pico8 standard palette
+def std_palette():
+  return {rgb:p8 for rgb,p8 in rgb_to_pico8.items() if p8<16}
+
 # helper methods for gradient/colormap manipulation
 class ColormapReader():
   def __init__(self, stream):
@@ -56,7 +60,7 @@ class ColormapReader():
       palette.append((r,g,b,255))
     self.palette = palette
     self.stream = stream
-
+  
   # returns a pico8 compatible array of gradients
   # use_palette : indicates if color should be checked against the class palette
   def read(self, name, use_palette = False):

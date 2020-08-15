@@ -1071,12 +1071,12 @@ function menu_state()
     -- draw
     function()
       rectfill(0,0,127,99,0)
-      spr(192,35,14,8,4)
+      spr(160,0,14,16,4)
 
       for i,txt in pairs(skills) do 
         local y=40+i*10
         printb(txt,30,y,9,4)
-        if(skill==i) sspr(64+flr(time()%2)*10,96,10,10,18,y-1,10,10)
+        if(skill==i) sspr(flr(time()%2)*10,112,10,10,18,y-1,10,10)
       end
 
       -- doom fire!
@@ -1177,7 +1177,6 @@ function _update()
 		if cs=="suspended" then
       assert(coresume(f))
       add(tmp,f)
-    elseif cs=="dead" then
 		end
   end
   _futures=tmp
