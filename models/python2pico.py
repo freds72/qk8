@@ -147,4 +147,5 @@ def to_multicart(s,cart_name):
   # remaining data?
   if len(cart_data)!=0:
       to_cart(cart_data,cart_name,cart_id)
+  return cart_id
 

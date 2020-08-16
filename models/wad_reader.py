@@ -643,6 +643,41 @@ def pack_actors(image_reader, actors):
 def pack_sprite(arr):
     return ["".join(map("{:02x}".format,arr[i*4:i*4+4])) for i in range(8)]
 
+# remap image to given palette and export to byte string
+def pack_image(img, palette):
+  s = ""
+  for y in range(img.size[1]):
+    for x in range(0,img.size[0],8):
+      pixels = []
+      for n in range(0,8,2):
+        low = "0x{0[0]:02x}{0[1]:02x}{0[2]:02x}".format(img.getpixel((x + n, y)))
+        if low not in palette:
+          raise Exception("Invalid color: {} in image".format(low))
+        low = palette[low]
+        high = "0x{0[0]:02x}{0[1]:02x}{0[2]:02x}".format(img.getpixel((x + n + 1,y)))
+        if high not in palette:
+          raise Exception("Invalid color: {} in image".format(high))
+        high = palette[high]
+        if low==-1: low = 0
+        if high==-1: high = 0
+        s += "{:02x}".format(low|high<<4)
+  return s
+
+# read G_TITLE image
+def pack_title(stream, palette):
+  src = None
+  try:
+    src = Image.open(io.BytesIO(stream.read("G_TITLE")))
+  except:
+    # no label image
+    print("INFO - no cart label image - skipping")
+    return ""
+  
+  print("Packing title image: G_TITLE")
+  img = Image.new('RGBA', (128,128), (0,0,0,0))
+  img.paste(src)
+  return pack_image(img, palette)
+
 # read M_* images
 def pack_menu(stream, palette):
   images = dotdict({
@@ -657,31 +692,17 @@ def pack_menu(stream, palette):
       raise Exception("Menu image: {} size mismatch - Expected: {} Actual: {}".format(name, size, img.size))
     data[name] = img
   
+  print("Packing menu images")
+
   img = Image.new('RGBA', (128,48), (0,0,0,0))
   img.paste(data.get('M_TITLE'), (0,0))
   img.paste(data.get('M_SKULL1'), (0,32))
   img.paste(data.get('M_SKULL2'), (10,32))
   
   # convert to pico image
-  s = ""
-  for y in range(img.size[1]):
-    for x in range(0,img.size[0],8):
-      pixels = []
-      for n in range(0,8,2):
-        low = "0x{0[0]:02x}{0[1]:02x}{0[2]:02x}".format(img.getpixel((x + n, y)))
-        if low not in palette:
-          raise Exception("Invalid color: {} in menu image".format(low))
-        low = palette[low]
-        high = "0x{0[0]:02x}{0[1]:02x}{0[2]:02x}".format(img.getpixel((x + n + 1,y)))
-        if high not in palette:
-          raise Exception("Invalid color: {} in menu image".format(low))
-        high = palette[high]
-        if low==-1: low = 0
-        if high==-1: high = 0
-        s += "{:02x}".format(low|high<<4)
-  return s
+  return pack_image(img, palette)
 
-def to_gamecart(name,width,map_data,gfx_data,gfx_menu,palette):
+def to_gamecart(name,width,map_data,gfx_data,gfx_label,gfx_menu,palette):
     cart="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
@@ -732,6 +753,16 @@ __lua__
     map_data = "".join(map_data)
     cart += "__map__\n"
     cart += re.sub("(.{256})", "\\1\n", map_data, 0, re.DOTALL)
+
+    # label image
+    if len(gfx_label)!=0:
+      s = ""
+      for i in range(0,len(gfx_label),2):
+        s += gfx_label[i+1:i+2] + gfx_label[i:i+1]
+
+      cart += "__label__\n"
+      cart += re.sub("(.{128})", "\\1\n", s, 0, re.DOTALL)
+      cart += "\n"
 
     cart_path = os.path.join(local_dir, "..", "carts", "{}.p8".format(name))
     f = open(cart_path, "w")
@@ -784,13 +815,19 @@ def pack_archive(root, modname, mapname):
   
   # decode menu
   menu = pack_menu(graphics_stream, std_palette())
-
+  title = pack_title(graphics_stream, std_palette())
   # pack map
   data = pack_actors(image_reader, actors) + pack_zmap(zmap, textures, actors)
 
-  to_multicart(data, modname)
+  last_cart_id = to_multicart(data, modname)
 
-  to_gamecart(modname, textures.width, textures.map, textures.gfx, menu, gradients)
+  to_gamecart(modname, textures.width, textures.map, textures.gfx, title, menu, gradients)
+
+  export_cmd=""
+  for i in range(0,last_cart_id+1):
+    export_cmd += "{}_{}.p8 ".format(modname,i)
+  print("export index.html {} {}.p8".format(export_cmd,modname))
+  print("export {}.bin {} {}.p8".format(modname,export_cmd,modname))
 
 def to_float(n):
   return float((n-0x100000000)/65535.0) if n>0x7fffffff else float(n/65535.0)
