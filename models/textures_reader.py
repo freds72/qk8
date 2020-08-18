@@ -10,6 +10,7 @@ from TEXTURESListener import TEXTURESListener
 from collections import namedtuple
 from dotdict import dotdict
 from PIL import Image, ImageFilter
+import logging
 
 class TEXTURES(TEXTURESListener):
   def __init__(self):
@@ -19,7 +20,7 @@ class TEXTURES(TEXTURESListener):
   def exitBlock(self, ctx):  
     name = ctx.name().getText().strip('"')
     namespace = ctx.namespace().getText().lower()
-    print("Texture: {}.{}".format(namespace, name))
+    logging.debug("Found texture: {}.{}".format(namespace, name))
     if namespace == "sprite":
       raise Exception("Texture sprite not supportted - {}: must be defined as lump entry.".format(name))
     # get texture data
@@ -81,6 +82,8 @@ class TextureReader(TEXTURESListener):
       raise Exception("Texture: {} invalid size: {}x{} - Texture file size must be less than 1024x256px".format(width,height))
     img = Image.new('RGBA', (width, height), (0,0,0,0))
     img.paste(src, (0,0,width,height))
+
+    logging.info("Found tileset: {} - {}x{}px".format(texture_name,width, height))
 
     # extract tiles
     # tile 0 (all black)

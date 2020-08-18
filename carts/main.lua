@@ -635,7 +635,7 @@ function make_thing(actor,x,y,z,angle)
     -- shootable
     thing=with_physic(with_health(thing))
   end
-  return thing
+  return thing,actor
 end
 
 -- sector damage
@@ -842,7 +842,7 @@ function with_health(thing)
       if(not dmg) dmg_ttl=0 return
       dmg_ttl-=1
       if dmg_ttl<0 then
-        dmg_ttl=30
+        dmg_ttl=15
         self:hit(dmg)
       end
     end
@@ -1098,10 +1098,9 @@ function play_state(skill)
   _bsp,_things,_sprite_cache=root,{},make_sprite_cache(tiles,32)
 
   -- attach behaviors to things
-  for k,thingdef in pairs(thingdefs) do 
-    local thing=make_thing(unpack(thingdef))
+  for _,thingdef in pairs(thingdefs) do 
+    local thing,actor=make_thing(unpack(thingdef))
     -- get direct access to player
-    local actor=thing.actor
     if actor.id==1 then
       _plyr=attach_plyr(thing,actor,skill)
       thing=_plyr
@@ -1868,7 +1867,7 @@ function unpack_map(skill)
   unpack_array(function()
     add(verts,{unpack_fixed(),unpack_fixed()})
   end)
-
+  
   -- linedefs
   unpack_array(function()
     local line={
@@ -1964,7 +1963,7 @@ function unpack_map(skill)
     unpack_node(true,flags&0x1>0)
     unpack_node(false,flags&0x2>0)
   end)
-
+  
   -- texture pairs
   unpack_array(function()
     _onoff_textures[unpack_fixed()]=unpack_fixed()
@@ -1986,8 +1985,7 @@ function unpack_map(skill)
       })
     end
   end)
-   
-  
+
   -- restore main cart
   reload()
   return nodes[#nodes],things,tiles

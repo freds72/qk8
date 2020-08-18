@@ -5,14 +5,15 @@ import tempfile
 import random
 import math
 import socket
+import shutil
 
 # file helpers
 local_dir = os.path.dirname(os.path.realpath(__file__))
-pico_dir = ""
-if socket.gethostname()=="FRWS3706":
-    pico_dir = os.path.join("C:",os.path.sep,"pico-8-0.2.0")
-else:
-    pico_dir = os.path.join("D:",os.path.sep,"pico-8_0.1.12c")
+pico_exe = shutil.which("pico8")
+if pico_exe is None:
+    pico_exe = os.environ.get("PICO_PATH")
+if pico_exe is None:
+    raise Exception("Unable to locate pico8 executable. Add to path or define PICO_PATH variable.")
 
 def call(args):
     proc = Popen(args, stdout=PIPE, stderr=PIPE)
@@ -130,7 +131,7 @@ cstore()
     f.close()
 
     # run cart
-    exitcode, out, err = call([os.path.join(pico_dir,"pico8.exe"),"-x",cart_path])
+    exitcode, out, err = call([pico_exe,"-x",cart_path])
     if err:
         raise Exception('Unable to process pico-8 cart: {}. Exception: {}'.format(cart_path,err))
 

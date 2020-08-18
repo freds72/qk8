@@ -3,6 +3,7 @@ import os
 import re
 import io
 import math
+import logging
 from collections import namedtuple
 from udmf_reader import UDMF
 from textures_reader import TextureReader
@@ -23,11 +24,10 @@ from image_reader import ImageReader
 from colormap_reader import ColormapReader, std_palette
 from wad_stream import WADStream
 from file_stream import FileStream
-from lzw import lzw_encode
 from PIL import Image
 
 # debug/draw
-import sys, pygame
+import sys
 
 local_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -251,7 +251,7 @@ def pack_special(line, lines, sides, sectors):
   s = "{:02x}".format(special)
   # door open
   if special==202:
-    print("Special: door open/close")
+    logging.info("Linedef special: door open/close")
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
     s += pack_sectors_by_tag(sector_ids)
     # speed
@@ -263,7 +263,7 @@ def pack_special(line, lines, sides, sectors):
     # lock
     s += pack_variant(line.get('arg4',0))
   elif special==64:
-    print("Special: platform up/stay/down")
+    logging.info("Linedef special: platform up/stay/down")
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
     if len(sector_ids)>1:
       raise Exception("Not supported - multiple elevators for 1 trigger")
@@ -285,7 +285,7 @@ def pack_special(line, lines, sides, sectors):
     # arg1
     s += "{:02x}".format(line.arg1)
   elif special==112:
-    print("Special: set light level")
+    logging.info("Linedef special: set light level")
     # set lightlevel
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
     s += pack_sectors_by_tag(sector_ids)
@@ -377,6 +377,7 @@ def pack_zmap(map, textures, actors):
     s += "{:02x}".format(flags)
     s += special_data
   
+  sub_sectors_len = len(map.sub_sectors)
   s += pack_variant(len(map.sub_sectors))
   for i in range(len(map.sub_sectors)):
     s += pack_segs(map.sub_sectors[i])
@@ -386,6 +387,7 @@ def pack_zmap(map, textures, actors):
     s += pack_variant(i + 1)
     for sub_id in pvs:
       s += pack_variant(sub_id + 1)
+    logging.info("Packing sub-sectors - completion: {:.2%}".format((i+1)/len(map.sub_sectors)))
 
   s += pack_variant(len(map.nodes))
   for node in map.nodes:
@@ -424,16 +426,20 @@ def pack_zmap(map, textures, actors):
     s+= pack_texture(texture)
     # get pair or self
     s+= pack_texture(texture_pairs.get(name, texture))
-
+  
   # things
   things = []
   actors = [actor.get('id',-1) for actor in actors.values()]
+  if 1 not in actors:
+    raise Exception("Missing player start location in WAD")
   for thing in map.things:
     if thing.type not in actors:
-      print("WARNING - Thing: {} references unknown actor: {} - skipping".format(thing, thing.type))
+      logging.warning("Thing: {} references unknown actor: {} - skipping".format(thing, thing.type))
     else:
       things.append(thing)
   
+  logging.info("Packing: {} things".format(len(things)))
+
   s += pack_variant(len(things))
   for thing in things:
     s += pack_thing(thing)
@@ -461,12 +467,14 @@ def pack_actors(image_reader, actors):
       for frame in [frame for frame in frames if frame[1]==False]:
         images.append(image_reader.read(frame[0]))
   
+  logging.info("Found {} sprites".format(len(images)))
+  
   s += pack_variant(len(images))
   # export frame metadata
   tiles_count = 0
   sprites = {}
   for i,image_data in enumerate(images):
-    print("Packing sprite: {}".format(image_data.name))
+    logging.debug("Packing sprite: {}".format(image_data.name))
     sprites[image_data.name] = i
     s += "{:02x}".format(image_data.width|image_data.background<<4)
     s += pack_short(image_data.xoffset)
@@ -481,7 +489,7 @@ def pack_actors(image_reader, actors):
   if tiles_count>32763-32:
     # exceeded pico8 array size?
     raise Exception("Tiles count ({}) exceeds PICO8 table size - not yet supported".format(tiles_count))
-  print("Packing {} 16x16 tiles".format(tiles_count))
+  logging.info("Packing {} 16x16 tiles".format(tiles_count))
   image_s = pack_variant(tiles_count)
   for image_bytes in [img.data for img in images]:
     for b in image_bytes:
@@ -816,6 +824,7 @@ def pack_archive(root, modname, mapname):
   # decode menu
   menu = pack_menu(graphics_stream, std_palette())
   title = pack_title(graphics_stream, std_palette())
+
   # pack map
   data = pack_actors(image_reader, actors) + pack_zmap(zmap, textures, actors)
 
@@ -831,27 +840,6 @@ def pack_archive(root, modname, mapname):
 
 def to_float(n):
   return float((n-0x100000000)/65535.0) if n>0x7fffffff else float(n/65535.0)
-
-def project(v):
-  return (v[0]/4+320,320-v[1]/4)
-
-black = 0, 0, 0
-white = (255, 255, 255)
-grey = (128, 128, 128)
-red = (255, 0, 0)
-dark_red = (128, 0 , 0)
-yellow = (255, 0, 255)
-blue = (0,0,255)
-light_blue = (128, 128, 255)
-
-def draw_plane(surface, v0, v1, color):
-  pygame.draw.line(surface, color, project(v0), project(v1), 2)
-  x = (v0[0]+v1[0])/2
-  y = (v0[1]+v1[1])/2
-  n = normal(ortho(v0,v1))
-  n = (x + 8*n[0], y + 8*n[1])
-  pygame.draw.line(surface, light_blue, project((x,y)), project(n), 2)
-
 
 def get_PVS(zmap, sub_id):
   vertices = zmap.vertices + [(to_float(v[0]),to_float(v[1])) for v in zmap.other_vertices]
@@ -925,93 +913,17 @@ def get_PVS(zmap, sub_id):
               pairs.add(next_portal)
               #print("*portal*: {}:{} -> {}".format(0, portal.sub_id, s0.partner))
       s0 = s1
-
+      
   #print("pvs: {}".format(pvs))
   # remove self from PVS
   if sub_id in pvs: pvs.remove(sub_id)
   return (pvs, clips, vertices)
 
-def display_WAD(filepath,mapname):
-  with open(filepath, 'rb') as file:
-    # read file header
-    header_data = file.read(struct.calcsize(fmt_WADHeader))
-    header = WADHeader._make(struct.unpack(fmt_WADHeader, header_data))
+def main():
+    logging.basicConfig(level=logging.INFO)
+    pack_archive(os.path.join(local_dir,"..","mods"), "poom", "E1M1")
+    logging.info('DONE')
 
-    maps = {}
-    # go to directory
-    file.seek(header.dir_ofs)
-    i = 0
-    while i<header.dir_size:
-      entry_data = file.read(struct.calcsize(fmt_WADDirectory))
-      entry = WADDirectory._make(struct.unpack(fmt_WADDirectory, entry_data))
-      lump_name = entry.lump_name.decode('ascii').rstrip('\x00')
-      # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_glnodes.cpp
-      # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_setup.cpp
-      if re.match("E[0-9]M[0-9]",lump_name):
-        # read UDMF
-        map_dir = MAPDirectory(file, lump_name, entry)
-        maps[lump_name] = map_dir
-        # skip map entries + ENDMAP
-        i += len(map_dir.lumps) + 1
-      i += 1
-
-    # pick map
-    zmap = maps[mapname].read(file)
-    
-    pvs, clips, vertices = get_PVS(zmap, 38)
-
-    #  debug display
-    pygame.init()
-
-    size = width, height = 640, 640
-    screen = pygame.display.set_mode(size)
-    my_font = pygame.font.SysFont("Courier", 16)
-    my_bold_font = pygame.font.SysFont("Courier", 16, bold=1)
-
-    while 1:
-      for event in pygame.event.get():
-        if event.type == pygame.QUIT: sys.exit()
-
-      screen.fill(black)
-
-      # draw segments
-      for k in range(len(zmap.sub_sectors)):
-        segs = zmap.sub_sectors[k]
-        n = len(segs)
-        s0 = segs[n-1]
-        v0 = vertices[s0.v1]
-        xc = 0
-        yc = 0
-        
-        for i in range(n):
-          s1 = segs[i]
-          v1 = vertices[s1.v1]
-          xc += v1[0]
-          yc += v1[1]
-          r = 2
-          c = dark_red
-          pygame.draw.line(screen, s0.partner==-1 and grey or c, project(v0), project(v1), r)
-          s0 = s1
-          v0 = v1
-        xc /= n
-        yc /= n
-        font = my_font
-        if k in pvs:
-          font = my_bold_font
-        the_text = font.render("{}".format(k), True, grey)
-        screen.blit(the_text, project((xc, yc)))
-      # portals
-      #for portal in portals:
-      #  # draw frustrum
-      #  draw_plane(screen, vertices[portal.dst.v1], vertices[portal.src.v0], yellow)
-      #  draw_plane(screen, vertices[portal.src.v1], vertices[portal.dst.v0], yellow)
-
-      for portal in clips:
-        # draw frustrum
-        pygame.draw.line(screen, blue, project(vertices[portal.v0]), project(vertices[portal.v1]), 2)
-
-      pygame.display.flip()
-
-pack_archive(os.path.join(local_dir,"..","mods"), "poom", "E1M1")
-#display_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
+if __name__ == '__main__':
+    main()
 
