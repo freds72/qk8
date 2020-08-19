@@ -12,7 +12,9 @@ models/__pycache__
 /models/resized
 /models/orig
 /models/env
+/models/dist
 *.bak
+*.egg-info
 
 
 

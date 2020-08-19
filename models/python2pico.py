@@ -7,14 +7,6 @@ import math
 import socket
 import shutil
 
-# file helpers
-local_dir = os.path.dirname(os.path.realpath(__file__))
-pico_exe = shutil.which("pico8")
-if pico_exe is None:
-    pico_exe = os.environ.get("PICO_PATH")
-if pico_exe is None:
-    raise Exception("Unable to locate pico8 executable. Add to path or define PICO_PATH variable.")
-
 def call(args):
     proc = Popen(args, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate()
@@ -90,7 +82,7 @@ def pack_double(x):
         raise Exception('Unable to convert: {} into a word: {}'.format(x,h))
     return h
 
-def to_cart(s,cart_name,cart_id):
+def to_cart(s,pico_path,carts_path,cart_name,cart_id):
     cart="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
@@ -125,28 +117,28 @@ cstore()
 
     # save cart + export cryptic music+sfx part
     sfx_data=s[2*0x3100:2*0x4300]
-    cart_path = os.path.join(local_dir, "..", "carts", "{}_{}.p8".format(cart_name,cart_id))
+    cart_path = os.path.join(carts_path, "{}_{}.p8".format(cart_name,cart_id))
     f = open(cart_path, "w")
     f.write(cart.format(sfx_data))
     f.close()
 
     # run cart
-    exitcode, out, err = call([pico_exe,"-x",cart_path])
+    exitcode, out, err = call([os.path.join(pico_path,"pico8.exe"),"-x",cart_path])
     if err:
         raise Exception('Unable to process pico-8 cart: {}. Exception: {}'.format(cart_path,err))
 
-def to_multicart(s,cart_name):
+def to_multicart(s,pico_path,carts_path,cart_name):
   cart_id = 0
   cart_data = ""
   for b in s:
       cart_data += b
       # full cart?
       if len(cart_data)==2*0x4300:
-          to_cart(cart_data,cart_name,cart_id)
+          to_cart(cart_data, pico_path, carts_path, cart_name, cart_id)
           cart_id += 1
           cart_data = ""
   # remaining data?
   if len(cart_data)!=0:
-      to_cart(cart_data,cart_name,cart_id)
+      to_cart(cart_data, pico_path, carts_path, cart_name, cart_id)
   return cart_id
 
