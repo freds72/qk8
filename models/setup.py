@@ -10,7 +10,6 @@ import setuptools
 # python -m venv sandbox
 # sandbox/script/activate
 # pip install wad_reader-0.0.1.tar.gz
-# set PICO_PATH=...
 # python
 # >>from wad_reader import pack_archive
 # >>
@@ -18,7 +17,7 @@ setuptools.setup(
     name="wad_reader",
     version="0.0.1",
     author="https://twitter.com/FSouchu",
-    description="DOOM archive compiler for PICO8",
+    description="POOM archive compiler for PICO8",
     url="https://github.com/freds72/qk8",
     py_modules=[
       'abstract_stream',
