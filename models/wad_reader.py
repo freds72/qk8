@@ -9,6 +9,7 @@ from collections import namedtuple
 from udmf_reader import UDMF
 from textures_reader import TextureReader
 from decorate_reader import DecorateReader
+from mapinfo_reader import MapinfoReader
 from decorate_reader import ACTOR_KIND
 from dotdict import dotdict
 from python2pico import pack_int
@@ -283,6 +284,9 @@ def pack_special(line, lines, sides, sectors):
     s += "{:02x}".format(line.arg0)
     # arg1
     s += "{:02x}".format(line.arg1)
+  elif special==243:
+    # exit level
+    logging.info("Linedef special: exit level")
   elif special==112:
     logging.info("Linedef special: set light level")
     # set lightlevel
@@ -709,15 +713,27 @@ def pack_menu(stream, palette):
   # convert to pico image
   return pack_image(img, palette)
 
-def to_gamecart(carts_path,name,width,map_data,gfx_data,gfx_label,gfx_menu,palette):
+def to_gamecart(carts_path, name, maps, width,map_data,gfx_data,gfx_label,gfx_menu,palette):
     cart="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
 -- poom
 -- @freds72
+-- *********************************
+-- generated code - do not edit
+-- *********************************
+mod_name="{}"
+_maps_label=split"{}"
+_maps_cart=split"{}"
+_maps_offset=split"{}"
 #include main.lua
-"""
+""".format(
+  name, 
+  ",".join(["{}".format(m.label) for m in maps]),
+  ",".join(["{}".format(m.cart_id) for m in maps]),
+  ",".join(["{}".format(m.cart_offset) for m in maps]))
+
     # transpose gfx
     gfx_data=[pack_sprite(data) for data in gfx_data]
 
@@ -782,7 +798,7 @@ def load_WAD(stream, mapname):
     header_data = file.read(struct.calcsize(fmt_WADHeader))
     header = WADHeader._make(struct.unpack(fmt_WADHeader, header_data))
 
-    print("Packing map: {} - WAD type: {}".format(mapname, header.type))
+    logging.debug("Map: {} WAD type: {}".format(mapname, header.type))
 
     # go to directory
     file.seek(header.dir_ofs)
@@ -805,9 +821,18 @@ def pack_archive(pico_path, carts_path, root, modname, mapname):
   file_stream = FileStream(os.path.join(root))
   graphics_stream = FileStream(os.path.join(root, "graphics"))
 
-  # extract map + things
-  zmap = load_WAD(maps_stream, mapname)
-  
+  maps = []
+  if mapname=="":
+    # all maps
+    logging.info("Packing all mod maps")
+    maps = MapinfoReader(file_stream).read()
+  else:    
+    logging.info("Packing single map: {}".format(mapname))
+    maps = [dotdict({
+      'name': mapname,
+      'label': mapname
+    })]
+
   # extract palette
   colormap = ColormapReader(file_stream)
   gradients = colormap.read("PLAYPAL", use_palette=True) + colormap.read("PAINPAL")
@@ -824,14 +849,26 @@ def pack_archive(pico_path, carts_path, root, modname, mapname):
   menu = pack_menu(graphics_stream, std_palette())
   title = pack_title(graphics_stream, std_palette())
 
-  # pack map
-  data = pack_actors(image_reader, actors) + pack_zmap(zmap, textures, actors)
+  # pack actors (shared by all maps)
+  data = pack_actors(image_reader, actors)
+
+  # extract map + things
+  cart_len = 2*0x4300
+  for m in maps:
+    # locate maps in multicarts
+    cart_id = int(len(data)/cart_len)
+    cart_offset = int((len(data)%cart_len)/2)
+    m.cart_id = cart_id
+    m.cart_offset = cart_offset
+    logging.info("Packing map: {} - cart id: {}".format(m.name,cart_id))
+    zmap = load_WAD(maps_stream, m.name)  
+    data += pack_zmap(zmap, textures, actors)
 
   # export data carts
   last_cart_id = to_multicart(data, pico_path, carts_path, modname)
-
+  
   # export game cart
-  to_gamecart(carts_path, modname, textures.width, textures.map, textures.gfx, title, menu, gradients)
+  to_gamecart(carts_path, modname, maps, textures.width, textures.map, textures.gfx, title, menu, gradients)
 
   export_cmd=""
   for i in range(0,last_cart_id+1):
@@ -922,15 +959,16 @@ def get_PVS(zmap, sub_id):
 
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument("pico", type=str, help="full path to PICO8 folder")
-  parser.add_argument("carts", type=str, help="path to carts folder where game is exported")
-  parser.add_argument("mod", type=str, help="path to mod folder. Ex: ./mods/poom")
-  parser.add_argument("map", type=str, help="map name to compile (ex: E1M1)")
+  parser.add_argument("--pico-home", required=True, type=str, help="full path to PICO8 folder")
+  parser.add_argument("--carts-path", required=True,type=str, help="path to carts folder where game is exported")
+  parser.add_argument("--mod-name", required=True,type=str, help="game cart name (ex: poom)")
+  parser.add_argument("--map", type=str, default="", required=False, help="map name to compile (ex: E1M1)")
   args = parser.parse_args()
 
   logging.basicConfig(level=logging.INFO)
 
-  pack_archive(args.pico, args.carts, args.mod, os.path.basename(args.mod), args.map)
+  print(args)
+  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map)
   logging.info('DONE')
 
 if __name__ == '__main__':

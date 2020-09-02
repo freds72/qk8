@@ -98,9 +98,13 @@ class TextureReader(TEXTURESListener):
             # print("{}/{}".format(i+x,j+y))
             # image is using the pico palette (+transparency)
             low = img.getpixel((i*8 + x, j*8 + y))
+            if low not in self.rgba_to_pico:
+              raise Exception("Tileset: {} - invalid color: {} at {},{}".format(texture_name,low,i*8 + x, j*8 + y))
             low = self.rgba_to_pico[low]
             if low==-1: low = 0
             high = img.getpixel((i*8 + x + 1, j*8 + y))
+            if high not in self.rgba_to_pico:
+              raise Exception("Tileset: {} - invalid color: {} at {},{}".format(texture_name,high,i*8 + x + 1, j*8 + y))
             high = self.rgba_to_pico[high]
             if high==-1: high = 0
             data += bytes([high|low<<4])

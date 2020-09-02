@@ -87,7 +87,7 @@ def to_cart(s,pico_path,carts_path,cart_name,cart_id):
 pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
--- data cart
+-- {} data cart
 -- @freds72
 local data="{}"
 local mem=0x3100
@@ -97,6 +97,7 @@ for i=1,#data,2 do
 end
 cstore()
 """
+
     tmp=s[:2*0x2000]
     # swap bytes
     gfx_data = ""
@@ -117,13 +118,13 @@ cstore()
 
     # save cart + export cryptic music+sfx part
     sfx_data=s[2*0x3100:2*0x4300]
-    cart_path = os.path.join(carts_path, "{}_{}.p8".format(cart_name,cart_id))
+    cart_path = os.path.join(carts_path,"{}_{}.p8".format(cart_name,cart_id))
     f = open(cart_path, "w")
-    f.write(cart.format(sfx_data))
+    f.write(cart.format(cart_name, sfx_data))
     f.close()
 
     # run cart
-    exitcode, out, err = call([os.path.join(pico_path,"pico8.exe"),"-x",cart_path])
+    exitcode, out, err = call([os.path.join(pico_path,"pico8.exe"),"-x",os.path.abspath(cart_path)])
     if err:
         raise Exception('Unable to process pico-8 cart: {}. Exception: {}'.format(cart_path,err))
 
