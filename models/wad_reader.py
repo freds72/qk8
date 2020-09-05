@@ -718,15 +718,15 @@ def to_gamecart(carts_path, name, maps, width,map_data,gfx_data,gfx_label,gfx_me
 pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
--- poom
+-- {0}
 -- @freds72
 -- *********************************
 -- generated code - do not edit
 -- *********************************
-mod_name="{}"
-_maps_label=split"{}"
-_maps_cart=split"{}"
-_maps_offset=split"{}"
+mod_name="{0}"
+_maps_label=split"{1}"
+_maps_cart=split"{2}"
+_maps_offset=split"{3}"
 #include main.lua
 """.format(
   name, 
@@ -882,11 +882,12 @@ def to_float(n):
 def get_PVS(zmap, sub_id):
   vertices = zmap.vertices + [(to_float(v[0]),to_float(v[1])) for v in zmap.other_vertices]
 
-  # init PVS for sector 6
+  # init PVS for sector
   pvs = set()
   # already processed portal pairs
   pairs = set()
   portals = []
+  # starting sub sector
   sub0 = zmap.sub_sectors[sub_id]
   s0 = sub0[len(sub0)-1]
   for i in range(len(sub0)):
@@ -913,7 +914,7 @@ def get_PVS(zmap, sub_id):
               'dst':portal1,
               'sub_id':os0.partner
             }))
-            pairs.add("{}:{}".format( s0.partner, os0.partner))
+            pairs.add("{}-{}:{}-{}".format(portal0.v0, portal0.v1, portal1.v0, portal1.v1))
             # print("portal: {}:{} -> {}".format(0, s0.partner, os0.partner))
         os0 = os1
     s0 = s1
@@ -922,6 +923,7 @@ def get_PVS(zmap, sub_id):
   # clip portals
   while len(portals)>0:
     portal = portals.pop()
+    # antipenumbra region
     clip0 = Polygon(v0=portal.dst.v1,v1=portal.src.v0, vertices=vertices)
     clip1 = Polygon(v0=portal.src.v1,v1=portal.dst.v0, vertices=vertices)
 
@@ -941,7 +943,8 @@ def get_PVS(zmap, sub_id):
             # anything remains?
             pvs.add(portal.sub_id)
             # is seg connected?
-            next_portal = "{}:{}".format(portal.sub_id, s0.partner)
+            # next_portal = "{}:{}".format(portal.sub_id, s0.partner)
+            next_portal = "{}-{}:{}-{}".format(portal.src.v0, portal.src.v1, front.v0, front.v1)
             if s0.partner!=-1 and next_portal not in pairs:
               portals.append(dotdict({
                 'src': portal.src,
@@ -949,7 +952,7 @@ def get_PVS(zmap, sub_id):
                 'sub_id': s0.partner
               }))
               pairs.add(next_portal)
-              #print("*portal*: {}:{} -> {}".format(0, portal.sub_id, s0.partner))
+              #print("*portal*: {}".format(next_portal))
       s0 = s1
       
   #print("pvs: {}".format(pvs))

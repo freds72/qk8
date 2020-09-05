@@ -864,6 +864,7 @@ end
 function attach_plyr(thing,actor,skill)
   local dmg_factor=({0.5,1,1,2})[skill]
   local speed,da,wp,wp_slot,wp_yoffset,wp_y,hit_ttl,wp_switching=actor.speed,0,thing.weapons,thing.active_slot,0,0,0
+  local bobx,boby=0,0
 
   local function wp_switch(slot)
     if(wp_switching) return
@@ -932,6 +933,9 @@ function attach_plyr(thing,actor,skill)
       -- update weapon vm
       wp[wp_slot].owner=self
       wp[wp_slot]:tick()
+
+      -- weapon bobing
+      bobx,boby=lerp(bobx,2*da,0.3),lerp(boby,cos(time()*3)*abs(dz)*speed*2,0.2)
     end,
     attach_weapon=function(self,weapon)
       local slot=weapon.actor.slot
@@ -960,8 +964,8 @@ function attach_plyr(thing,actor,skill)
       light=frame[3] and 8 or min((light*15)\1,15)
       memcpy(0x5f00,0x4300|light<<4,16)          
 
-      -- draw current (single) frame
-      vspr(frame[5],64,128-wp_y,16)
+      -- draw current weapon (single) frame      
+      vspr(frame[5],64-bobx,132-wp_y+boby,16)
 
       local ammotype=active_wp.actor.ammotype
       printb(ammotype.icon..self.inventory[ammotype],2,100,8)
@@ -1136,6 +1140,8 @@ end
 
 function play_state(skill,map_id)
   cls()
+  printb("loading...",44,120,6,5)
+  flip()
 
   -- not already loaded?
   if not _actors then
@@ -1322,21 +1328,14 @@ end
 
 -->8
 -- unpack map
-local cart_progress,cart_id,mem=0
+local cart_id,mem=0
 function mpeek()
 	if mem==0x4300 then
-		cart_progress=0
     cart_id+=1
 		reload(0,0,0x4300,mod_name.."_"..cart_id..".p8")
 		mem=0
 	end
-	local v=peek(mem)
-	if mem%779==0 then
-		cart_progress+=1
-    
-    rectfill(0,120,shl(cart_progress,4),127,cart_id%2==0 and 1 or 7)
-		flip()
-  end
+	local v=@mem
 	mem+=1
 	return v
 end
@@ -1718,7 +1717,7 @@ function unpack_actors()
             local hits,move_dir={},{cos(angle),-sin(angle)}
             intersect_sub_sector(owner.ssector,owner,move_dir,owner.actor.radius/2,1024,hits)    
             -- todo: get from actor properties
-            local h=owner[3]+24
+            local h=owner[3]+32
             for _,hit in ipairs(hits) do
               local fix_move
               if hit.seg then
@@ -1735,7 +1734,10 @@ function unpack_actors()
                 -- thing hit?
                 local otherthing=hit.thing
                 local otheractor=otherthing.actor
-                if otheractor.flags&0x1>0 then
+                -- within height?
+                if otheractor.flags&0x1>0 and 
+                  h>otherthing[3] and 
+                  h<otherthing[3]+otheractor.height then
                   -- solid actor?
                   fix_move=hit
                 end
@@ -1786,12 +1788,12 @@ function unpack_actors()
         end
       end,
       -- A_WeaponReady
+      -- actor must be a weapon
       function()
         local ammouse,ammotype=item.ammouse,item.ammotype
         return function(weapon)
           if btn(❎) then
-            local owner=weapon.owner
-            local inventory=owner.inventory
+            local inventory=weapon.owner.inventory
             local newqty=inventory[ammotype]-ammouse
             if newqty>=0 then
               inventory[ammotype]=newqty
@@ -1828,9 +1830,7 @@ function unpack_actors()
       -- A_Look
       function()
         return function(self)
-          local targets,otherthing={self.target,_plyr}
-          for i=1,#targets do
-            local ptgt=targets[i]
+          for ptgt in all({self.target,_plyr}) do
             if(ptgt and not ptgt.dead) otherthing=ptgt break
           end
           -- nothing to do?
@@ -1846,18 +1846,21 @@ function unpack_actors()
       end,
       -- A_Chase
       function()
-        local side=1
+        local speed=item.speed
         return function(self)
           -- still active target?
           local otherthing=self.target
           if otherthing and not otherthing.dead then
+            -- add a bit of random
+            if(rnd()>0.8) return
             -- in range/visible?
             local n,d=line_of_sight(self,otherthing,1024)
-            if n and d<512 then
-              local speed=self.actor.speed
-              self:apply_forces(speed*n[1],speed*n[2])
-              -- missile attack
-              self:jump_to(4)
+            if n then
+              self:apply_forces(speed*n[1],speed*n[2])              
+              if d<512 then
+                -- missile attack
+                self:jump_to(4)
+              end
             end
             return
           end
@@ -1878,9 +1881,8 @@ function unpack_actors()
     -- states & sprites
     unpack_array(function()
       local flags=mpeek()
-      local ctrl=flags&0x3
-      -- stop
-      local cmd={jmp=-1}
+      -- default cmd: stop
+      local ctrl,cmd=flags&0x3,{jmp=-1}
       if ctrl==2 then
         -- loop or goto label id   
         cmd={jmp=flr(flags>>4)}

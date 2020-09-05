@@ -120,5 +120,11 @@ class TextureReader(TEXTURESListener):
         pico_map.append(tile)
     # map width
     width=width>>3
-    
+
+    max_tiles = 16*4*2-1
+    if len(pico_gfx)>max_tiles:
+      raise Exception("Too many unique tiles: {} in tileset: {} (max: {})".format(len(pico_gfx), texture_name, max_tiles))
+
+    logging.info("Tileset: Found {}/{} unique tiles".format(len(pico_gfx),max_tiles))
+
     return dotdict({'flats':listener.flats,'width':width,'map':pico_map,'gfx':pico_gfx})

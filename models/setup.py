@@ -15,7 +15,7 @@ import setuptools
 # >>
 setuptools.setup(
     name="wad_reader",
-    version="0.2",
+    version="0.5",
     author="https://twitter.com/FSouchu",
     description="POOM archive compiler for PICO8",
     url="https://github.com/freds72/qk8",
@@ -38,6 +38,11 @@ setuptools.setup(
       'TEXTURESParser',
       'TEXTURESVisitor',
       'textures_reader',
+      'MAPINFOLexer',
+      'MAPINFOListener',
+      'MAPINFOParser',
+      'MAPINFOVisitor',
+      'mapinfo_reader',
       'udmfLexer',
       'udmfListener',
       'udmfParser',
