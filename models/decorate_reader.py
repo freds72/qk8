@@ -125,7 +125,7 @@ class DecorateWalker(DECORATEListener):
         value = pair.value(0).getText().lower().strip('"')
         if attribute in []:
           value = value=='true'
-        elif attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon']:
+        elif attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound']:
           value = int(value)
         elif attribute in ['ammotype']:
           if value not in self.result:

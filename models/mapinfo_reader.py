@@ -23,11 +23,9 @@ class MAPINFO(MAPINFOListener):
     for pair in ctx.pair():
       attribute = pair.keyword().getText().lower()
       value = pair.value().getText().strip('"')
-      if attribute in []:
-        value = value=='true'
-      elif attribute in ['levelnum']:
+      if attribute in ['levelnum','music']:
         value = int(value)
-        
+      
       # else string
       properties[attribute] = value
                 
@@ -36,7 +34,9 @@ class MAPINFO(MAPINFOListener):
       'label': label,
       # need first entry only
       'num': properties.get('levelnum',-1),
-      'next': properties.get('next',None)
+      # music (or none)
+      'music': properties.get('music',-1),
+      'next': properties.get('next','endgame')
     })
   
   

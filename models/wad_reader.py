@@ -584,6 +584,18 @@ def pack_actors(image_reader, actors):
     if actor.get('mass'):
       properties |= 0x800
       properties_data += pack_variant(actor.mass)      
+    if actor.get('pickupsound'):
+      properties |= 0x1000
+      properties_data += pack_variant(actor.pickupsound)      
+    if actor.get('attacksound'):
+      properties |= 0x2000
+      properties_data += pack_variant(actor.attacksound)      
+    if actor.get('hudcolor'):
+      properties |= 0x4000
+      properties_data += pack_variant(actor.hudcolor)      
+    if actor.get('deathsound'):
+      properties |= 0x8000
+      properties_data += pack_variant(actor.deathsound)      
     s += pack_int32(properties)
     s += properties_data
   
@@ -727,12 +739,14 @@ mod_name="{0}"
 _maps_label=split"{1}"
 _maps_cart=split"{2}"
 _maps_offset=split"{3}"
+_maps_music=split"{4}"
 #include main.lua
 """.format(
   name, 
   ",".join(["{}".format(m.label) for m in maps]),
   ",".join(["{}".format(m.cart_id) for m in maps]),
-  ",".join(["{}".format(m.cart_offset) for m in maps]))
+  ",".join(["{}".format(m.cart_offset) for m in maps]),
+  ",".join(["{}".format(m.music) for m in maps]))
 
     # transpose gfx
     gfx_data=[pack_sprite(data) for data in gfx_data]
@@ -787,10 +801,28 @@ _maps_offset=split"{3}"
       cart += re.sub("(.{128})", "\\1\n", s, 0, re.DOTALL)
       cart += "\n"
 
+    # music and sfx (from external cart)
+    music_path = os.path.join(carts_path, "music.p8")    
+    if os.path.isfile(music_path):
+      logging.info("Found music&sfx cart: {}".format(music_path))
+
+      copy = False
+      with open(music_path, "r") as f:
+        for line in f:
+          line = line.rstrip("\n\r")
+          if line in ["__music__","__sfx__"]:
+            copy = True
+          elif re.match("__([a-z]+)__",line):
+            # any other section
+            copy = False
+          if copy:
+            cart += line
+            cart += "\n"
+
     cart_path = os.path.join(carts_path, "{}.p8".format(name))
-    f = open(cart_path, "w")
-    f.write(cart)
-    f.close()
+    with open(cart_path, "w") as f:
+      f.write(cart)
+
 
 def load_WAD(stream, mapname):
   with stream.open(mapname) as file:
@@ -830,7 +862,8 @@ def pack_archive(pico_path, carts_path, root, modname, mapname):
     logging.info("Packing single map: {}".format(mapname))
     maps = [dotdict({
       'name': mapname,
-      'label': mapname
+      'label': mapname,
+      'music': -1
     })]
 
   # extract palette
