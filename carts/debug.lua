@@ -262,6 +262,38 @@ function cam_to_screen2d(v)
   return 64+x,64-y
 end
 
+function polyfill(p,col)
+	color(col)
+	local p0,spans=p[#p],{}
+	local x0,y0=cam_to_screen2d(p0)
+
+	for i=1,#p do
+		local p1=p[i]
+		local x1,y1=cam_to_screen2d(p1)
+		-- backup before any swap
+		local _x1,_y1=x1,y1
+		if(y0>y1) x0,y0,x1,y1=x1,y1,x0,y0
+		-- exact slope
+		local dx=(x1-x0)/(y1-y0)
+		if(y0<0) x0-=y0*dx y0=0
+		-- subpixel shifting (after clipping)
+		local cy0=ceil(y0)
+		x0+=(cy0-y0)*dx
+		for y=cy0,min(ceil(y1)-1,127) do
+			local x=spans[y]
+			if x then
+				rectfill(x,y,x0,y)
+			else
+				spans[y]=x0
+			end
+			x0+=dx
+		end
+		-- next vertex
+		x0,y0=_x1,_y1
+	end
+end
+
+_sessionid=0
 function draw_segs2d(segs,pos,c)
   local verts={}
   local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
@@ -280,22 +312,23 @@ function draw_segs2d(segs,pos,c)
   end
 
   if #verts>2 then
+    
+    if(segs.sessionid==_sessionid) polyfill(verts, 2)
+
     local v0=verts[#verts]
     local x0,y0,w0=cam_to_screen2d(v0)
     for i=1,#verts do
       local v1=verts[i]
       local x1,y1,w1=cam_to_screen2d(v1)
       
-      line(x0,y0,x1,y1,c)      
+      line(x0,y0,x1,y1,v0.seg.txt and 8 or c)
 
-
-      if(segs.id==1 and v0.seg.txt) print(v0.seg.txt,(x0+x1)/2,(y0+y1)/2,7)
+      --if(segs.id==1 and v0.seg.txt) print(v0.seg.txt,(x0+x1)/2,(y0+y1)/2,7)
 
       x0,y0=x1,y1
       v0=v1
     end
   end
-  
   
   --[[
   local v0=verts[#verts]
@@ -361,63 +394,97 @@ function find_ssector_thick(node,pos,radius,res)
 end
 
 -- http://web.archive.org/web/20111112060250/http://www.devmaster.net/articles/quake3collision/
-local _epsilon=0.001
+local _epsilon=1/32
 function checkleaf(segs,tmin,tmax,a,b,offset,res)
-  local a_out,b_out
-  for _,s0 in ipairs(segs) do
+  local a_out,b_out,t_out,t_in
+  
+  local ab_n=v2_normal(v2_make(a,b))
+  -- ortho
+  ab_n={-ab_n[2],ab_n[1]}
+  local an_d=v2_dot(ab_n,a)
+
+  -- visited
+  segs.sessionid=_sessionid
+
+  local s0=segs[#segs]
+  local side0=v2_dot(ab_n,s0[1])<=an_d
+  for _,s1 in ipairs(segs) do
+    local side1=v2_dot(ab_n,s1[1])<=an_d
+    
     -- segment normal & distance
-    local n,d=s0[5],s0[6]+offset
+    local n,d=s0[5],s0[6]-offset
     local a_dist,b_dist=v2_dot(n,a)-d,v2_dot(n,b)-d
     if(a_dist>0) a_out=true
     if(b_dist>0) b_out=true
 
+    -- printh(tmin.."<"..tmax.." : "..a_dist.." / "..b_dist)
     --s0.txt=(a_dist>0 and "out" or "in").."|"..(b_dist>0 and "out" or "in")
     --s0.txt=a_dist.."\n"..b_dist
-    s0.txt=nil
+    -- s0.txt=s0.line and "---" or "..."
+    s0.txt=side0!=side1
 
     if a_dist>0 and b_dist>0 then
       -- completely out (eg behind plane = out of convex region)
-      s0.txt="out"
       return
     end
 
     if a_dist<=0 and b_dist<=0 then
       -- continue
-    elseif a_dist>b_dist then
-      -- entering convex region
-      local t=(a_dist-_epsilon)/(a_dist-b_dist)      
-      if(t>tmax) tmin=t
-    else
-      -- leaving convex region
-      local t=(a_dist+_epsilon)/(a_dist-b_dist)
-      if(t<tmax) tmax=t
+    elseif (side0!=side1) and s0.line then
+      -- crossing?
+      if a_dist>b_dist then
+        -- entering convex region
+        local t=(a_dist-_epsilon)/(a_dist-b_dist)      
+        if t>=tmin then
+          tmin=t
+          t_in=s0
+        end
+        if(tmin>tmax) return 
+      else
+        -- leaving convex region
+        local t=(a_dist+_epsilon)/(a_dist-b_dist)
+        if t<=tmax then
+          tmax=t
+          t_out=s0
+        end
+        if(tmax<tmin) return
+      end      
     end
+    s0=s1
+    side0=side1
   end
-  -- printh(tmin.."<"..tmax.." a_out:"..(a_out and "true" or "false"))
-  -- todo: fix
-  -- if(a_out) return
-  if tmin<tmax then
+  
+  -- all segment in convex space
+  -- if(not b_out) return
+  -- add(res,{tmin=tmin,tmax=tmax})
+  local s=""
+  if(t_seg and t_seg.line) s="yes"
+  printh(tmin.."<"..tmax.." a_out:"..(a_out and "true" or "false").." b_out:"..(b_out and "true" or "false").." seg: "..(t_seg and "|" or "x").." line:"..s)
+  --printh(tmin.." | "..tmax.." -> "..(t_seg and "clip" or "missed"))
+  if a_out and t_in and t_in.line and tmin<=tmax then
+    --add(res,{t=tmin,id=segs.id})
+  end
+  if b_out and t_out and t_out.line and tmin<=tmax then
+    -- if(t_seg.line) add(res,{t=tmax,id=segs.id}) t_seg.txt=tmax
+    add(res,{t=tmax,id=segs.id})
     -- todo: fix
-    if tmin>-1 and tmin<res.t then
-      printh("ok")
+    --[[if tmin>-1 then
       if(tmin<0) tmin=0
-      res.t=tmax
-      res.tmax=tmax
-      res.id=segs.id
       add(res,{t=tmax})
     end
+    ]]
   end
 end
 function checknode(root,tmin,tmax,a,b,offset,res)
   -- leaf?
   if root.pvs then
     --add(res,{id=root.id,tmin=tmin,tmax=tmax})
-    checkleaf(root,tmin,tmax,a,b,offset,res)
+    checkleaf(root,0,1,a,b,offset,res)
     return
   end
 
   local d=root[3]
-  local a_dist,b_dist,side=v2_dot(root,a)-d,v2_dot(root,b)-d
+  local a_dist,b_dist=v2_dot(root,a)-d,v2_dot(root,b)-d
   -- front of plane
   if a_dist>=offset and b_dist>=offset then
     checknode(root[false],tmin,tmax,a,b,offset,res)
@@ -440,14 +507,14 @@ function checknode(root,tmin,tmax,a,b,offset,res)
     t1=mid(t1,0,1)
     t2=mid(t2,0,1)
     local tmid,c=lerp(tmin,tmax,t1),v2_lerp(a,b,t1)
-    --add(res,tmid)
     
     -- was a c
+    --add(res,{tmin=tmin,tmax=tmid})
     checknode(root[not side],tmin,tmid,a,b,offset,res)
     tmid,c=lerp(tmin,tmax,t2),v2_lerp(a,b,t2)
-    --add(res,tmid)
 
     -- was c b
+    --add(res,{tmin=tmid,tmax=tmax})
     checknode(root[side],tmid,tmax,a,b,offset,res)
   end
 end
@@ -913,11 +980,6 @@ function attach_plyr(thing,actor,skill)
       wp_switch(slot)
     end,
     hud=function(self)
-      -- player!
-      pset(64,64,8)
-
-      -- set "pain" palette (defaults to screen palette if normal)
-      memcpy(0x5f10,0x4400|max(hit_ttl)<<4,16)
     end,
     hit=function(self,dmg,...)
       -- call parent function
@@ -975,8 +1037,8 @@ function draw_bsp()
   visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
     if node.leaf[side] then
       local subs=node[side]
-      local id,c=subs.id,8
-      if(band(pvs[id\32],0x0.0001<<(id&31))!=0) c=7
+      local id,c=subs.id,5
+      if(band(pvs[id\32],0x0.0001<<(id&31))!=0) c=2
       draw_segs2d(subs,pos,c)
     else
       visit_bsp(node[side],pos,visitor)
@@ -992,7 +1054,7 @@ function draw_bsp()
         line(x0,y0,x1,y1,8)	
         -- print(angle,(x0+x1)/2,(y0+y1)/2,7)	
       end	
-      ]] 
+      ]]
     end
   end)
 
@@ -1000,29 +1062,28 @@ function draw_bsp()
   local ca,sa=cos(_plyr.angle),-sin(_plyr.angle)
   local tgt={_plyr[1]+256*ca,_plyr[2]+256*sa}
   local x0,y0=cam_to_screen2d(_cam:project(tgt))
-  line(64,64,x0,y0,8)
+  line(64,64,x0,y0,1)
 
   local hits={t=1}
+  _sessionid+=1
   checknode(_bsp,0,1,_plyr,tgt,0,hits)
   --checkleaf(_plyr.ssector,0,1,_plyr,tgt,0,hits)
-
-  local x0,y0=cam_to_screen2d(_cam:project(v2_lerp(_plyr,tgt,hits.t)))
-  circfill(x0,y0,2,12)
-  if(hits.tmax) print(hits.t.."|"..hits.tmax,x0+2,y0,12)
 
   for i,hit in ipairs(hits) do
     if hit.t then
       local x0,y0=cam_to_screen2d(_cam:project(v2_lerp(_plyr,tgt,hit.t)))
-      circfill(x0,y0,1,1+i)
+      line(x0-1,y0,x0+1,y0,7)
+      print(hit.id,x0+3-(i%2)*8,y0-2,7)
     else
       local x0,y0=cam_to_screen2d(_cam:project(v2_lerp(_plyr,tgt,hit.tmin)))
       local x1,y1=cam_to_screen2d(_cam:project(v2_lerp(_plyr,tgt,hit.tmax)))
-      --i-=1
-      line(x0,y0,x1,y1,1+i)
+      line(x0+i,y0,x1+i,y1,1+i)
+      print(hit.tmin.." | "..hit.tmax,(x0+x1)/2+2,(y0+y1)/2,7)
     end
-      -- print(hit.id,x0+6*i+1,y0,8)
+    -- print(hit.id,x0+6*i+1,y0,8)
   end
-  
+  pset(64,64,8)
+
 end
 
 -->8
@@ -1183,10 +1244,6 @@ function gameover_state(pos,angle,target,h)
     -- draw
     function()
       draw_bsp()
-
-      -- set screen palette
-      -- pal({140,1,139,3,4,132,133,7,6,134,5,8,2,9,10},1)
-      memcpy(0x5f10,0x4400,16)
     end
 end
 
@@ -1539,11 +1596,11 @@ function unpack_actors()
           actor=self,
           health=self.health,
           armor=self.armor,
-          -- for player only
-          weapons=weapons,
           active_slot=active_slot,
           -- pickable things
-          pickup=self.pickup,          
+          pickup=self.pickup,  
+          -- ****************** 
+          -- decorate vm engine       
           -- goto vm label
           jump_to=function(self,label)
             i,ticks=state_labels[label],-2
@@ -1572,13 +1629,19 @@ function unpack_actors()
           end
         },{__index=thing})
 
-        -- clone startup inventory
-        if inventory then
-          thing.inventory={}
-          for k,v in pairs(inventory) do
-            thing.inventory[k]=v
+        local function clone(coll,name)
+          if coll then
+            thing[name]={}
+            for k,v in pairs(coll) do
+              thing[name][k]=v
+            end  
           end
         end
+
+        -- clone startup inventory
+        clone(inventory,"inventory")
+        -- clone weapons (to avoid changing actor definition)
+        clone(weapons,"weapons")
 
         return thing
       end
@@ -1590,6 +1653,7 @@ function unpack_actors()
       {0x0.0002,"armor"},
       {0x0.0004,"amount"},
       {0x0.0008,"maxamount"},
+      -- convert icon code into character
       {0x0.0010,"icon",function() return chr(mpeek()) end},
       {0x0.0020,"slot",mpeek},
       {0x0.0040,"ammouse"},
@@ -1597,13 +1661,18 @@ function unpack_actors()
       {0x0.0100,"damage"},
       {0x0.0200,"ammotype",unpack_actor_ref},
       {0x0.0800,"mass"},
+      -- some actor have multiple sounds (weapon for ex.)
+      {0x0.1000,"pickupsound"},
+      {0x0.2000,"attacksound"},
+      {0x0.4000,"hudcolor"},
+      {0x0.8000,"deathsound"},
       {0x0.0400,"",function()
         -- 
         unpack_array(function()
           local startitem,amount=unpack_actor_ref(),unpack_variant()
           if startitem.kind==2 then
             -- weapon
-            if(not weapons) weapons={}
+            weapons=weapons or {}
             -- create a new "dummy" thing
             local weapon_thing=startitem:attach({})
             weapons[startitem.slot]=weapon_thing
@@ -1629,7 +1698,7 @@ function unpack_actors()
     local function pickup(owner,ref,qty,maxqty)
       ref=ref or item
       owner[ref]=min((owner[ref] or 0)+(qty or item.amount),maxqty or item.maxamount)
-      if(item.sound) sfx(item.sound)
+      if(item.pickupsound) sfx(item.pickupsound)
     end
     
     if kind==0 then
@@ -1717,7 +1786,7 @@ function unpack_actors()
                 local puffthing=make_thing(puff,pos[1],pos[2],0,angle)
                 -- todo: get height from properties
                 -- todo: improve z setting
-                puffthing[3]=owner[3]+32
+                puffthing[3]=h
                 add(_things,puffthing)
       
                 -- hit thing
@@ -1755,15 +1824,15 @@ function unpack_actors()
         end
       end,
       -- A_WeaponReady
-      -- actor must be a weapon
       function()
-        local ammouse,ammotype=item.ammouse,item.ammotype
         return function(weapon)
           if btn(❎) then
             local inventory=weapon.owner.inventory
-            local newqty=inventory[ammotype]-ammouse
+            local newqty=inventory[item.ammotype]-item.ammouse
             if newqty>=0 then
-              inventory[ammotype]=newqty
+              inventory[item.ammotype]=newqty
+              -- play attack sound
+              if(item.attacksound) sfx(item.attacksound)
               -- fire state
               weapon:jump_to(9)
             end
@@ -1778,7 +1847,7 @@ function unpack_actors()
           for _,otherthing in pairs(_things) do
             if otherthing!=thing and otherthing.hit then
               local n,d=line_of_sight(thing,otherthing,maxdist)
-              if(n) otherthing:hit(dmg*(1-d/maxdist),n)
+              if(d) otherthing:hit(dmg*(1-d/maxdist),n)
             end
           end
         end
@@ -1804,7 +1873,7 @@ function unpack_actors()
           if(not otherthing) self.target=nil return
           -- in range/visible?
           local n,d=line_of_sight(self,otherthing,1024)
-          if n then
+          if d then
             self.target=otherthing
             -- see
             self:jump_to(2)
@@ -1818,16 +1887,18 @@ function unpack_actors()
           -- still active target?
           local otherthing=self.target
           if otherthing and not otherthing.dead then
-            -- add a bit of random
-            if(rnd()>0.8) return
             -- in range/visible?
             local n,d=line_of_sight(self,otherthing,1024)
-            if n then
-              self:apply_forces(speed*n[1],speed*n[2])              
-              if d<512 then
-                -- missile attack
-                self:jump_to(4)
-              end
+            if d and d<512 and rnd()<0.4 then
+              -- missile attack
+              self:jump_to(4)
+            else
+              -- zigzag toward target
+              local nx,ny,dir=n[1]*0.5,n[2]*0.5,rnd{1,-1}
+              local mx,my=ny*dir+nx,nx*-dir+ny
+              local target_angle=atan2(mx,-my)
+              self.angle=lerp(shortest_angle(target_angle,self.angle),target_angle,0.5)
+              self:apply_forces(speed*mx,speed*my)
             end
             return
           end
