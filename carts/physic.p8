@@ -97,41 +97,129 @@ function ClosestPtSegmentSegment(p1, q1, p2, q2)
   return s,t
 end
 
+local walls={
+  {-30,30},
+  {30,30},
+  {30,-30},
+  {-30,-40}
+}
+
+local velocity,plyr,hits={0,0},{0,0},{}
 function _update()
   local dx,dy=0,0
   if(btn(0)) dx=-1
   if(btn(1)) dx=1
   if(btn(2)) dy=1
   if(btn(3)) dy=-1
-  if(btnp(4)) sel-=1
-  if(btnp(5)) sel+=1
 
-  sel=((sel%4)+4)%4
-  segments[sel+1][1]+=dx
-  segments[sel+1][2]+=dy
+  velocity[1]+=dx/8
+  velocity[2]+=dy/8
+
+  velocity[1]*=0.9
+  velocity[2]*=0.9
+
+  hits={}
+  
+  if v2_len(velocity)>1/32 then
+
+    local tgt={plyr[1]+velocity[1],plyr[2]+velocity[2]}
+    local offset=5
+
+    -- find intersection with walls
+    
+    local w0=walls[#walls]
+    for i,w1 in ipairs(walls) do
+      w0.hit=nil
+      w0.txt=nil
+
+      -- distance to plane (inc. offset)
+      local a_dist,b_dist=v2_dot(w0.n,plyr)-(w0.d-offset),v2_dot(w0.n,tgt)-(w0.d-offset)
+      --w0.txt=a_dist>b_dist and "out" or "in"
+      w0.txt=a_dist.."\n"..b_dist
+
+      if a_dist>0 or b_dist>0 then
+        local s,t=ClosestPtSegmentSegment(w0,w1,plyr,tgt)
+
+        local c1,c2=v2_lerp(w0,w1,s),v2_lerp(plyr,tgt,t)
+        local dist=v2_len(v2_make(c1,c2))
+        if dist<=offset then
+          -- collision
+          --w0.txt=dist
+
+          -- impact point
+          if a_dist<b_dist then
+            local t=(b_dist)/(b_dist-a_dist)
+            add(hits,{t=t,n=w0.n})
+            w0.hit=true
+            w0.txt=t
+          end 
+        end
+      end
+
+      w0=w1
+    end
+
+    for i,hit in ipairs(hits) do
+      local f=-hit.t*v2_dot(hit.n,velocity)
+      v2_add(velocity,hit.n,f)
+    end
+
+    v2_add(plyr,velocity)
+  else
+    velocity={0,0}
+  end
+
+  --[[
+  local w0=walls[#walls]
+  for i,w1 in ipairs(walls) do
+    w0.out=v2_dot(w0.n,plyr)-w0.d
+    w0=w1
+  end
+  ]]
+
 end
 
-local _line={-5,10,32,9}
+function project(a)
+  return a[1],-a[2]
+end
 
 function _init()
   camera(-64,-64)
-end
--- draw a segment a/b
-function seg(a,b,col)
-  line(a[1],-a[2],b[1],-b[2],col)
+  -- add normals to walls
+  local w0=walls[#walls]
+  for i,w1 in ipairs(walls) do
+    local n=v2_normal(v2_make(w0,w1))
+    n={-n[2],n[1]}
+    w0.n=n
+    -- distance
+    w0.d=v2_dot(n,w0)
+    w0=w1
+  end
 end
 
 function _draw()
   cls()
 
-  seg(segments[1],segments[2],5)  
-  seg(segments[3],segments[4],2)  
-  circ(segments[3][1],-segments[3][2],20,2)
-  circ(segments[4][1],-segments[4][2],20,2)
+  local w0=walls[#walls]
+  for i,w1 in ipairs(walls) do
+    local x0,y0=project(w0)
+    local x1,y1=project(w1)
+    line(x0,y0,x1,y1,w0.hit and 8 or 5)
+    -- normal
+    local m={(w0[1]+w1[1])/2,(w0[2]+w1[2])/2}
+    local n={m[1]+8*w0.n[1],m[2]+8*w0.n[2]}
+    local x2,y2=project(n)
+    line((x0+x1)/2,(y0+y1)/2,x2,y2,3)
 
-  local selpt=segments[sel+1]
-  circfill(selpt[1],-selpt[2],2,11)
+    if(w0.txt) print(w0.txt,(x0+x1)/2,(y0+y1)/2,6)
+    w0=w1
+  end
+
+  local x0,y0=project(plyr)
+  pset(x0,y0,8)
   
+  
+  --[[
   local s,t=ClosestPtSegmentSegment(segments[1],segments[2],segments[3],segments[4])
 
   local c1,c2=v2_lerp(segments[1],segments[2],s),v2_lerp(segments[3],segments[4],t)
@@ -139,15 +227,9 @@ function _draw()
   print("s",c1[1]+2,-c1[2],8)
   circfill(c2[1],-c2[2],1,8)
   print("t",c2[1]+2,-c2[2],8)
+  ]]
 
-
-  local n,d=v2_normal(v2_make(c1,c2))
-  if d<20 then
-    print("collide",2,2,8)
-    local t=d/20
-    local c={c1[1]-t*n[1],c1[2]-t*n[2]}
-    circfill(c[1],-c[2],1,4)
-  end
+  print(velocity[1].." / "..velocity[2],-62,-62,8)
 end
 
 
