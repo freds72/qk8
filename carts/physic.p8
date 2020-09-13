@@ -39,7 +39,6 @@ function v2_make(a,b,scale)
   return {(b[1]-a[1])>>scale,(b[2]-a[2])>>scale}
 end
 
-
 local sel=0
 local segments={
   {0,0},{32,32},
@@ -98,13 +97,15 @@ function ClosestPtSegmentSegment(p1, q1, p2, q2)
 end
 
 local walls={
-  {-30,30},
+  {-30,0},
   {30,30},
   {30,-30},
   {-30,-40}
 }
 
 local velocity,plyr,hits={0,0},{0,0},{}
+local min_distance=1/32
+
 function _update()
   local dx,dy=0,0
   if(btn(0)) dx=-1
@@ -131,37 +132,42 @@ function _update()
     for i,w1 in ipairs(walls) do
       w0.hit=nil
       w0.txt=nil
+      if i!=1 then
+        -- distance to plane (inc. offset)
+        local b_dist,a_dist=v2_dot(w0.n,plyr)-(w0.d-offset),v2_dot(w0.n,tgt)-(w0.d-offset)
+        --w0.txt=a_dist>b_dist and "out" or "in"
+        w0.txt=a_dist.."\n"..b_dist
 
-      -- distance to plane (inc. offset)
-      local a_dist,b_dist=v2_dot(w0.n,plyr)-(w0.d-offset),v2_dot(w0.n,tgt)-(w0.d-offset)
-      --w0.txt=a_dist>b_dist and "out" or "in"
-      w0.txt=a_dist.."\n"..b_dist
+        if a_dist>0 or b_dist>0 then
+          local s,t=ClosestPtSegmentSegment(w0,w1,plyr,tgt)
 
-      if a_dist>0 or b_dist>0 then
-        local s,t=ClosestPtSegmentSegment(w0,w1,plyr,tgt)
+          local c1,c2=v2_lerp(w0,w1,s),v2_lerp(plyr,tgt,t)
+          local _,dist=v2_normal(v2_make(c1,plyr))
+          if dist<=offset then
+            -- collision
+            --w0.txt=dist
 
-        local c1,c2=v2_lerp(w0,w1,s),v2_lerp(plyr,tgt,t)
-        local dist=v2_len(v2_make(c1,c2))
-        if dist<=offset then
-          -- collision
-          --w0.txt=dist
-
-          -- impact point
-          if a_dist<b_dist then
-            local t=(b_dist)/(b_dist-a_dist)
-            add(hits,{t=t,n=w0.n})
-            w0.hit=true
-            w0.txt=t
-          end 
+            -- impact point
+            if a_dist>b_dist then
+              local t=(a_dist)/(a_dist-b_dist)
+              local ti=(a_dist-min_distance)/(a_dist-b_dist)
+              add(hits,{t=t,ti=ti,n=w0.n,c=c1})
+              w0.hit=true
+              w0.txt=t
+            end 
+          end
         end
       end
 
       w0=w1
     end
 
+    local frac=1
     for i,hit in ipairs(hits) do
-      local f=-hit.t*v2_dot(hit.n,velocity)
-      v2_add(velocity,hit.n,f)
+      local f=-hit.ti*v2_dot(hit.n,velocity)
+      if f<0 then
+        v2_add(velocity,hit.n,f)
+      end
     end
 
     v2_add(plyr,velocity)
@@ -201,10 +207,10 @@ function _draw()
   cls()
 
   local w0=walls[#walls]
-  for i,w1 in ipairs(walls) do
+  for i,w1 in ipairs(walls) do    
     local x0,y0=project(w0)
     local x1,y1=project(w1)
-    line(x0,y0,x1,y1,w0.hit and 8 or 5)
+    line(x0,y0,x1,y1,w0.hit and 8 or (i==1 and 0 or 5))
     -- normal
     local m={(w0[1]+w1[1])/2,(w0[2]+w1[2])/2}
     local n={m[1]+8*w0.n[1],m[2]+8*w0.n[2]}
@@ -213,6 +219,13 @@ function _draw()
 
     if(w0.txt) print(w0.txt,(x0+x1)/2,(y0+y1)/2,6)
     w0=w1
+  end
+
+  for i,hit in pairs(hits) do
+    local x0,y0=project(hit.c)
+    local n={hit.c[1]+8*hit.n[1],hit.c[2]+8*hit.n[2]}
+    local x1,y1=project(n)
+    line(x0,y0,x1,y1,11)
   end
 
   local x0,y0=project(plyr)

@@ -146,8 +146,9 @@ function v2_len(a)
   return d*sqrt(n*n + 1)
 end
 
-function v2_make(a,b)
-  return {b[1]-a[1],b[2]-a[2]}
+function v2_make(a,b,scale)
+  scale=scale or 0
+  return {(b[1]-a[1])>>scale,(b[2]-a[2])>>scale}
 end
 
 -- bold print helper
@@ -258,7 +259,7 @@ end
 -->8
 -- debug bsp rendering
 function cam_to_screen2d(v)
-  local scale=4
+  local scale=8
   local x,y=v[1]/scale,v[3]/scale
   return 64+x,64-y
 end
@@ -322,7 +323,7 @@ function draw_segs2d(segs,pos,c)
       local v1=verts[i]
       local x1,y1,w1=cam_to_screen2d(v1)
       
-      line(x0,y0,x1,y1,v0.seg.txt and 8 or 5)
+      line(x0,y0,x1,y1,v0.seg.hit and 8 or 5)
 
       if(segs.id==1 and v0.seg.txt) print(v0.seg.txt,(x0+x1)/2,(y0+y1)/2,7)
 
@@ -395,9 +396,60 @@ function find_ssector_thick(node,pos,radius,res)
 end
 
 -- http://web.archive.org/web/20111112060250/http://www.devmaster.net/articles/quake3collision/
-local _epsilon=1
+local _epsilon,min_distance=1>>16,1
+function ClosestPtSegmentSegment(p1, q1, p2, q2)
+  local scale=8
+  local d1,d2=v2_make(p1,q1,scale),v2_make(p2,q2,scale)
+  local r=v2_make(p2,p1,scale)
+
+  local a,e,f=v2_dot(d1,d1),v2_dot(d2,d2),v2_dot(d2,r)
+  
+  -- Check if either or both segments degenerate into points
+  if a <= _epsilon and e <= _epsilon then
+    -- Both segments degenerate into points
+    return 0,0
+  end
+
+  local s,t=0,0
+  if a <= _epsilon then
+    -- First segment degenerates into a point
+    t = mid(f / e,0,1) -- s = 0 => t = (b*s + f) / e = f / e
+  else
+    local c = v2_dot(d1, r)
+    if e <= _epsilon then
+      -- Second segment degenerates into a point
+      s = mid(-c / a, 0, 1) -- t = 0 => s = (b*t - c) / a = -c / a
+    else
+      -- The general nondegenerate case starts here
+      local b = v2_dot(d1, d2)
+      local denom = a*e-b*b -- Always nonnegative
+      -- If segments not parallel, compute closest point on L1 to L2 and
+      -- clamp to segment S1. Else pick arbitrary s (here 0)
+      if denom != 0 then
+        s = mid((b*f - c*e) / denom, 0, 1)
+      else
+        s = 0
+      end
+      -- Compute point on L2 closest to S1(s) using
+      -- t = Dot((P1 + D1*s) - P2,D2) / Dot(D2,D2) = (b*s + f) / e
+      t = (b*s + f) / e;
+      -- If t in [0,1] done. Else clamp t, recompute s for the new value
+      -- of t using s = Dot((P2 + D2*t) - P1,D1) / Dot(D1,D1)= (t*b - c) / a
+      -- and clamp s to [0, 1]
+      if t < 0 then
+        t = 0
+        s = mid(-c / a, 0, 1)
+      elseif t > 1 then
+        t = 1
+        s = mid((b - c) / a, 0, 1)
+      end
+    end
+  end
+  return s,t
+end
+
 function checkleaf(segs,tmin,tmax,a,b,offset,res)
-  local a_out,b_out,t_out,t_in
+  local a_out,b_out,t_out,t_in,ti
   
   local ab_n=v2_normal(v2_make(a,b))
   -- ortho
@@ -411,75 +463,40 @@ function checkleaf(segs,tmin,tmax,a,b,offset,res)
   local v0=s0[1]
   for _,s1 in ipairs(segs) do
     local v1=s1[1]
-    local side0=v2_dot(ab_n,v0)<=an_d-offset
-    local side1=v2_dot(ab_n,v1)<=an_d+offset
-    
-    -- segment normal & distance
-    local n,d=s0[5],s0[6]-offset
-    local a_dist,b_dist=v2_dot(n,a)-d,v2_dot(n,b)-d
-    if(a_dist>0) a_out=true
-    if(b_dist>0) b_out=true
+    local side0,side1=v2_dot(ab_n,v0)<=an_d-offset,v2_dot(ab_n,v1)<=an_d+offset
+    if (side0!=side1) and s0.line then
+      -- segment normal & distance
+      local n,d=s0[5],s0[6]-offset
+      local a_dist,b_dist=v2_dot(n,a)-d,v2_dot(n,b)-d
 
-    -- printh(tmin.."<"..tmax.." : "..a_dist.." / "..b_dist)
-    --s0.txt=(a_dist>0 and "out" or "in").."|"..(b_dist>0 and "out" or "in")
-    --s0.txt=(v2_dot(ab_n,s0[1])-(an_d-offset)).."\n"..(v2_dot(ab_n,s1[1])-(an_d+offset))
-    -- s0.txt=s0.line and "---" or "..."
-    --
-    --s0.txt=side0!=side1 and "true" or "false" --(side0 and "out" or "in").."\n"..(side01 and "out" or "in")
-    s0.txt=nil
+      -- printh(tmin.."<"..tmax.." : "..a_dist.." / "..b_dist)
+      --s0.txt=(a_dist>0 and "out" or "in").."|"..(b_dist>0 and "out" or "in")
+      --s0.txt=(v2_dot(ab_n,s0[1])-(an_d-offset)).."\n"..(v2_dot(ab_n,s1[1])-(an_d+offset))
+      -- s0.txt=s0.line and "---" or "..."
+      --
+      -- s0.txt=side0!=side1 and "true" or "false" --(side0 and "out" or "in").."\n"..(side01 and "out" or "in")
+      --s0.txt=nil
 
-    if a_dist>0 and b_dist>0 then
-      -- completely out (eg behind plane = out of convex region) 
-      -- return
-    elseif a_dist<=0 and b_dist<=0 then
-      -- continue
-    elseif (side0!=side1) and s0.line then
-      -- crossing?
-      if a_dist>b_dist then
-        -- entering convex region
-        local t=(a_dist-_epsilon)/(a_dist-b_dist)      
-        if t>=tmin then
-          tmin=t
-          t_in=s0
-        end
-        if(tmin>tmax) return 
-      else
-        -- leaving convex region
-        local t=(a_dist+_epsilon)/(a_dist-b_dist)
-        if t<=tmax then
-          tmax=t
-          t_out=s0
-        end
-        if(tmax<tmin) return
-      end      
+      s0.hit=nil
+      --s0.txt=(a_dist>0 and "out" or "in").."|"..(b_dist>0 and "out" or "in")
+      s0.txt=tmin.."\n"..tmax
+      --s0.txt=side0!=side1 and "true" or "false" 
+
+      if a_dist<b_dist and (a_dist>0 or b_dist0) then
+        local t=a_dist/(a_dist-b_dist)
+        s0.txt=t--a_dist.."\n"..b_dist
+        --if t>=tmin and t<=tmax then
+          s0.hit=true
+          local ti=-(a_dist-min_distance)/(a_dist-b_dist)
+          add(res,{t=t,ti=mid(ti,0,1),n=n,seg=s0,id=segs.id})      
+        --end
+      end
     end
     s0=s1
     v0=v1
   end
-  
-  -- all segment in convex space
-  -- if(not b_out) return
-  -- add(res,{tmin=tmin,tmax=tmax})
-  local s=""
-  if(t_seg and t_seg.line) s="yes"
-  printh(tmin.."<"..tmax.." a_out:"..(a_out and "true" or "false").." b_out:"..(b_out and "true" or "false").." seg: "..(t_seg and "|" or "x").." line:"..s)
-  --printh(tmin.." | "..tmax.." -> "..(t_seg and "clip" or "missed"))
-  if a_out and t_in and t_in.line and tmin<=tmax then
-    --add(res,{t=tmin,seg=t_in,n=t_in[5],id=segs.id})
-    t_in.txt="in"
-  end
-  if b_out and t_out and t_out.line and tmin<=tmax then
-    -- if(t_seg.line) add(res,{t=tmax,id=segs.id}) t_seg.txt=tmax
-    add(res,{t=tmax,seg=t_out,n=t_out[5],id=segs.id})
-    t_out.txt="out"
-    -- todo: fix
-    --[[if tmin>-1 then
-      if(tmin<0) tmin=0
-      add(res,{t=tmax})
-    end
-    ]]
-  end
 end
+
 function checknode(root,tmin,tmax,a,b,offset,res)
   -- leaf?
   if root.pvs then
@@ -497,28 +514,18 @@ function checknode(root,tmin,tmax,a,b,offset,res)
     checknode(root[true],tmin,tmax,a,b,offset,res)
   else
     -- stradling
-    local side,t1,t2=true,1,0
+    local side,t1,t2,dist=true,1,0,a_dist-b_dist
     if a_dist<b_dist then
       side=false
-      t1=(a_dist-offset+_epsilon)/(a_dist-b_dist)
-      t2=(a_dist+offset+_epsilon)/(a_dist-b_dist)
+      t1=(a_dist-_epsilon)/dist
+      t2=(a_dist-_epsilon)/dist
     elseif b_dist<a_dist then
-      t1=(a_dist+offset+_epsilon)/(a_dist-b_dist)
-      t2=(a_dist-offset-_epsilon)/(a_dist-b_dist)
+      t1=(a_dist+_epsilon)/dist
+      t2=(a_dist+_epsilon)/dist
     end
+    checknode(root[not side],tmin,mid(t1,0,1),a,b,offset,res)
 
-    t1=mid(t1,0,1)
-    t2=mid(t2,0,1)
-    local tmid,c=lerp(0,1,t1),v2_lerp(a,b,t1)
-    
-    -- was a c
-    --add(res,{tmin=tmin,tmax=tmid})
-    checknode(root[not side],tmin,tmid,a,b,offset,res)
-    tmid,c=lerp(0,1,t2),v2_lerp(a,b,t2)
-
-    -- was c b
-    --add(res,{tmin=tmid,tmax=tmax})
-    checknode(root[side],tmid,tmax,a,b,offset,res)
+    checknode(root[side],mid(t2,0,1),tmax,a,b,offset,res)
   end
 end
 
@@ -700,12 +707,14 @@ function with_physic(thing)
       
       -- check collision with world
       local move_dir,move_len,hits=v2_normal(velocity)
-      
-      if move_len>0.001 then
-        local h=self[3]
-        hits={}
 
+      if v2_len(velocity)>1/32 then
+        local h=self[3]
+        hits={t=0}
+        
         -- player: check intersection w/ additional contact radius
+        _sessionid+=1
+
         checknode(_bsp,0,1,self,{self[1]+velocity[1],self[2]+velocity[2]},radius,hits)    
         -- fix position
         local stair_h=is_missile and 0 or 24
@@ -725,7 +734,6 @@ function with_physic(thing)
                 h+stair_h<otherside.sector.floor then
                 fix_move=hit
               end
-
             elseif hit.thing!=self then
               -- thing hit?
               local otherthing=hit.thing
@@ -757,10 +765,9 @@ function with_physic(thing)
                 break
               else
                 local n=fix_move.n
-                local fix=-(1-fix_move.t)*v2_dot(n,velocity)
+                local fix=-fix_move.ti*v2_dot(n,velocity)
                 -- avoid being pulled toward prop/wall
                 if fix<0 then
-                  --assert(false,fix_move.t)
                   -- apply impulse (e.g. fix velocity)
                   v2_add(velocity,n,fix)
                 end
@@ -781,7 +788,12 @@ function with_physic(thing)
         local subs={}
         find_ssector_thick(_bsp,self,radius,subs)
         self.subs=subs
+      else
+        velocity[1]=0
+        velocity[2]=0
       end
+    
+        --v2_add(self,velocity)
       -- triggers?
       -- check triggers/bumps/...
       if is_player then
@@ -1057,13 +1069,13 @@ function draw_bsp()
   end)
 
   -- hit testing
+
   local ca,sa=cos(_plyr.angle),-sin(_plyr.angle)
   local tgt={_plyr[1]+256*ca,_plyr[2]+256*sa}
   local x0,y0=cam_to_screen2d(_cam:project(tgt))
   line(64,64,x0,y0,1)
 
   local hits={t=1}
-  _sessionid+=1
   checknode(_bsp,0,1,_plyr,tgt,20,hits)
   --checkleaf(_plyr.ssector,0,1,_plyr,tgt,0,hits)
 
@@ -1080,6 +1092,7 @@ function draw_bsp()
     end
     -- print(hit.id,x0+6*i+1,y0,8)
   end
+  
   pset(64,64,8)
 
 end
