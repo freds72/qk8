@@ -201,6 +201,7 @@ actor Rocket : Projectile 9997
 {
   Radius 11
   Height 8
+	Mass 8
   Speed 20
   Damage 20
 	DeathSound 3
@@ -404,8 +405,9 @@ actor ChainGun : Weapon 2002
 
 actor PoomGuy: Player 1
 {
-	Radius 32
+	Radius 16
 	Health 100
+	Height 56
 	Armor 50
 	Speed 3
 	StartItem "ShotGun"

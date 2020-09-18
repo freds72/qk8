@@ -26,7 +26,7 @@ class TEXTURES(TEXTURESListener):
     # get texture data
     patch = ctx.patch()
 
-    self.patches.add(patch.name().getText().strip('"'))
+    self.patches.add(patch.name().getText().lower().strip('"'))
 
     # texture size
     width = int(ctx.width().getText())

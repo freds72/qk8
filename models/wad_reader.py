@@ -526,7 +526,7 @@ def pack_actors(image_reader, actors):
     s += pack_fixed(actor.radius)
     s += pack_fixed(actor.height)
     # behavior flags
-    flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2
+    flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2 | pack_flag(actor, 'ismonster')<<3
     s += "{:02x}".format(flags)
     
     ################## properties

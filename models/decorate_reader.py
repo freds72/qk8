@@ -65,7 +65,8 @@ builtin_actors = {
     'armor': 0,
     'health': 50,
     'shootable': True,
-    'solid': True
+    'solid': True,
+    'ismonster': True
   },
   'projectile':{
     'kind': ACTOR_KIND.PROJECTILE,
@@ -123,6 +124,7 @@ class DecorateWalker(DECORATEListener):
       for pair in ctx.pair():
         attribute = pair.keyword().getText().lower()
         value = pair.value(0).getText().lower().strip('"')
+        # note: flags are handled outside of regular properties (see below)
         if attribute in []:
           value = value=='true'
         elif attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound']:
