@@ -586,15 +586,9 @@ function line_of_sight(thing,otherthing,maxdist)
     local h,hits,blocking=thing[3]+24,{}
     intersect_sub_sector(thing.ssector,thing,n,0,d,0,hits,true)
     for _,hit in pairs(hits) do
-      -- bsp hit?
-      local ldef=hit.seg.line
-      local otherside=ldef[not hit.seg.side]
-      if otherside==nil or 
-        h>otherside.sector.ceil or 
-        h<otherside.sector.floor then
-        -- blocking wall
+      if intersect_line(hit.seg,h,0,0,true) then
         return n
-      end 
+      end
     end
     -- normal and distance to hit
     return n,d
@@ -651,6 +645,26 @@ local _sector_dmg={
   [115]=-1
 }
 
+function intersect_line(seg,h,height,clearance,is_missile,is_monster)
+  local ldef=seg.line
+  local otherside=ldef[not seg.side]
+
+  return otherside==nil or 
+    -- impassable
+    (not is_missile and ldef.flags&0x40>0) or
+    h+height>otherside.sector.ceil or 
+    h+clearance<otherside.sector.floor or 
+    -- avoid monster jumping off cliffs
+    (is_monster and h-otherside.sector.floor>clearance)
+end
+
+function intersect_thing(otherthing,h,radius)
+  local otheractor=otherthing.actor
+  return otheractor.flags&0x1>0 and
+    h>=otherthing[3]-radius and 
+    h<otherthing[3]+otheractor.height+radius
+end
+
 -- attach physic behavior
 function with_physic(thing)
   local actor=thing.actor
@@ -685,45 +699,24 @@ function with_physic(thing)
         intersect_sub_sector(ss,self,move_dir,0,move_len,radius,hits)    
         -- fix position
         for _,hit in ipairs(hits) do
-          -- skip "front colliders"
-          local fix_move
+          local otherthing,fix_move=hit.thing
           if hit.seg then
-            -- bsp hit?
-            local ldef=hit.seg.line
-            local otherside=ldef[not hit.seg.side]
-
-            if otherside==nil or 
-              -- impassable
-              (not is_missile and ldef.flags&0x40>0) or
-              h+height>otherside.sector.ceil or 
-              h+stair_h<otherside.sector.floor or 
-              -- avoid monster jumping off cliffs
-              (is_monster and h-otherside.sector.floor>stair_h) then
-              fix_move=hit
-            end
-            
+            fix_move=intersect_line(hit.seg,h,height,stair_h,is_missile,is_monster) and hit
             -- cross special?
             -- todo: supports monster activated triggers
+            local ldef=hit.seg.line
             if is_player and ldef.trigger and ldef.flags&0x10>0 then
               ldef.trigger(self)
             end
-          elseif hit.thing!=self then 
-            -- thing hit?
-            local otherthing=hit.thing
-            local otheractor=otherthing.actor
-
-            if is_player and otherthing.pickup then
+          elseif otherthing!=self then
+            if is_player and otherthing and otherthing.pickup then
               -- avoid reentrancy
               otherthing.pickup=nil
               -- jump to pickup state
               otherthing:jump_to(10)
-              otheractor.pickup(otherthing,self)
-            elseif otheractor.flags&0x1>0 and
-              h>=otherthing[3]-radius and 
-              h<otherthing[3]+otheractor.height+radius then
-              -- solid actor?
-              fix_move=hit
-              fix_move.n=v2_normal(v2_make(self,otherthing))
+              otherthing.actor.pickup(otherthing,self)
+            else
+              fix_move=intersect_thing(otherthing,h,radius) and hit
             end
           end
 
@@ -737,12 +730,11 @@ function with_physic(thing)
               -- death state
               self:jump_to(5)
               -- hit thing
-              local otherthing=fix_move.thing
               if(otherthing and otherthing.hit) otherthing:hit(actor.damage,move_dir,self.owner)
               -- stop at first wall/thing
               break
             else
-              local n=fix_move.n
+              local n=fix_move.n or v2_normal(v2_make(self,otherthing))
               local fix=-fix_move.t*v2_dot(n,velocity)
               -- avoid being pulled toward prop/wall
               if fix<0 then
@@ -1761,28 +1753,11 @@ function unpack_actors()
             local h,hits,move_dir=owner[3]+32,{},{cos(angle),-sin(angle)}
             intersect_sub_sector(owner.ssector,owner,move_dir,owner.actor.radius/2,1024,0,hits)    
             for _,hit in ipairs(hits) do
-              local fix_move
+              local otherthing,fix_move=hit.thing
               if hit.seg then
-                -- bsp hit?
-                local ldef=hit.seg.line
-                local otherside=ldef[not hit.seg.side]
-    
-                if otherside==nil or 
-                  h>otherside.sector.ceil or 
-                  h<otherside.sector.floor then
-                  fix_move=hit
-                end              
-              elseif hit.thing!=owner then
-                -- thing hit?
-                local otherthing=hit.thing
-                local otheractor=otherthing.actor
-                -- within height?
-                if otheractor.flags&0x1>0 and 
-                  h>otherthing[3] and 
-                  h<otherthing[3]+otheractor.height then
-                  -- solid actor?
-                  fix_move=hit
-                end
+                fix_move=intersect_line(hit.seg,h,0,0,true) and hit
+              elseif otherthing!=owner and intersect_thing(otherthing,h,0) then
+                fix_move=hit
               end
     
               if fix_move then
@@ -1796,7 +1771,6 @@ function unpack_actors()
                 add(_things,puffthing)
       
                 -- hit thing
-                local otherthing=fix_move.thing
                 if(otherthing and otherthing.hit) otherthing:hit(dmg,move_dir,owner)
                 break
               end
