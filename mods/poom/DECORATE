@@ -322,7 +322,7 @@ actor PlasmaRifle : Weapon 2004
 	AmmoUse 1
 	AmmoGive 40
 	AmmoType "Cell"
-	SlotNumber 5
+	SlotNumber 3
 	States {
 		Spawn:
 			PLAS A 5
@@ -343,7 +343,7 @@ actor RocketLauncher : Weapon 2003
 	AmmoUse 1
 	AmmoGive 2
 	AmmoType "RocketAmmo"
-	SlotNumber 6
+	SlotNumber 4
 	States {
 		Spawn:
 			LAUN A 5
@@ -364,7 +364,7 @@ actor ShotGun : Weapon 2001
 	AmmoUse 1
 	AmmoGive 8
 	AmmoType "Shell"
-	SlotNumber 2
+	SlotNumber 1
 	States {
 		Spawn:
 			SHOT A 5
@@ -387,7 +387,7 @@ actor ChainGun : Weapon 2002
 	AmmoUse 1
 	AmmoGive 20
 	AmmoType "Clip"
-	SlotNumber 3
+	SlotNumber 2
 	States {
 		Spawn:
 			MGUN A 5
