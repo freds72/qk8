@@ -5,7 +5,7 @@ __lua__
 -- globals
 local _bsp,_cam,_plyr,_things,_sprite_cache,_actors
 local _onoff_textures={}
-local _ambientlight,_znear,_ammo_factor=0,8,1
+local _ambientlight,_znear,_ammo_factor,_intersectid=0,8,1,0
 local _msg
 
 --local k_far,k_near=0,2
@@ -442,7 +442,7 @@ function draw_flats(v_cache,segs,things)
         end
         vspr(frame[side+5],x0,y0,w0<<5,flipx)
         -- thing:draw_vm(x0,y0)
-        -- print(thing.angle,x0,y0,8)
+        --if(thing.owner) print(thing.owner.actor.id,x0,y0,8)
         head=head.next
       end
     end
@@ -490,16 +490,17 @@ end
 -- t: impact depth (to fix velocity)
 -- ti: impact on velocity vector
 function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
-  local _tmax,px,pz,dx,dz,othersector=tmax,p[1],p[2],d[1],d[2]
+  local intersectid,_tmax,px,pz,dx,dz,othersector=_intersectid,tmax,p[1],p[2],d[1],d[2]
 
   if not skipthings then
     -- hitting things?
     local things_hits={t=-32000}
     for _,thing in pairs(_things) do
       local actor=thing.actor
+      -- not already "hit"
       -- not a missile
       -- not dead
-      if actor.flags&0x4==0 and not thing.dead and thing.subs[segs] then
+      if thing.intersectid!=intersectid and actor.flags&0x4==0 and not thing.dead and thing.subs[segs] then
         -- overflow 'safe' coordinates
         local m,r={(px-thing[1])>>8,(pz-thing[2])>>8},(actor.radius+radius)>>8
         local b,c=v2_dot(m,d),v2_dot(m,m)-r*r
@@ -511,7 +512,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
             -- convert back to world units
             local t=(-b-sqrt(discr))<<8
             -- if t is negative, ray started inside sphere so clamp t to zero 
-            -- if(t<tmin) t=tmin
+            if(t<tmin) t=tmin
             -- record hit
             if t>=tmin and t<tmax then
               -- empty list case
@@ -525,6 +526,8 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
             end
           end
         end
+        -- avoid duplicate hits
+        thing.intersectid=intersectid
       end
     end
     -- add sorted things intersections
@@ -584,6 +587,7 @@ function line_of_sight(thing,otherthing,maxdist)
   if d<maxdist then
     -- line of sight?
     local h,hits,blocking=thing[3]+24,{}
+    _intersectid+=1
     intersect_sub_sector(thing.ssector,thing,n,0,d,0,hits,true)
     for _,hit in pairs(hits) do
       if intersect_line(hit.seg,h,0,0,true) then
@@ -692,10 +696,11 @@ function with_physic(thing)
       local move_dir,move_len,hits=v2_normal(velocity)
       
       -- cancel small moves
-      if move_len>1/32 then
+      if move_len>1/16 then
         local h,stair_h=self[3],is_missile and 0 or 24
         hits={}
         -- check intersection with actor radius
+        _intersectid+=1
         intersect_sub_sector(ss,self,move_dir,0,move_len,radius,hits)    
         -- fix position
         for _,hit in ipairs(hits) do
@@ -708,14 +713,14 @@ function with_physic(thing)
             if is_player and ldef.trigger and ldef.flags&0x10>0 then
               ldef.trigger(self)
             end
-          elseif otherthing!=self then
-            if is_player and otherthing and otherthing.pickup then
+          elseif otherthing!=self then    
+            if is_player and otherthing.pickup then
               -- avoid reentrancy
               otherthing.pickup=nil
               -- jump to pickup state
               otherthing:jump_to(10)
               otherthing.actor.pickup(otherthing,self)
-            else
+            elseif self.owner!=otherthing then -- avoid projectile intersect with owner
               fix_move=intersect_thing(otherthing,h,radius) and hit
             end
           end
@@ -765,10 +770,10 @@ function with_physic(thing)
       -- triggers?
       -- check triggers/bumps/...
       if is_player then
-        if not hits then
-          hits={}
+        --if not hits then
+          hits={}          
           intersect_sub_sector(ss,self,{cos(self.angle),-sin(self.angle)},0,radius+24,0,hits,true)    
-        end
+        --end
         for _,hit in ipairs(hits) do
           if hit.seg then
             local ldef=hit.seg.line
@@ -1040,7 +1045,7 @@ function draw_bsp()
       local subs=node[side]
       -- potentially visible?
       local id=subs.id
-      -- use band to support gaps (nil) in pvs hash
+      -- use band to support gaps (nil) in pvs hashmap
       if band(pvs[id\32],0x0.0001<<(id&31))!=0 then
         draw_flats(v_cache,subs,sorted_things[subs])
       end
@@ -1751,6 +1756,7 @@ function unpack_actors()
             local angle=owner.angle+(rnd(2*xspread)-xspread)/360
             -- todo: get from actor properties
             local h,hits,move_dir=owner[3]+32,{},{cos(angle),-sin(angle)}
+            _intersectid+=1
             intersect_sub_sector(owner.ssector,owner,move_dir,owner.actor.radius/2,1024,0,hits)    
             for _,hit in ipairs(hits) do
               local otherthing,fix_move=hit.thing
@@ -1791,9 +1797,9 @@ function unpack_actors()
         return function(owner)
           -- find 'real' owner
           owner=owner.owner or owner
+          -- fire at 1/2 edge of owner radius (ensure collision when close to walls)
           local angle,speed,radius=owner.angle,projectile.speed,owner.actor.radius/2
           local ca,sa=cos(angle),-sin(angle)
-          -- fire at edge of owner radius
           local thing=with_physic(make_thing(projectile,owner[1]+radius*ca,owner[2]+radius*sa,0,angle))
           thing.owner=owner
           -- todo: get height from properties
