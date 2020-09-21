@@ -62,6 +62,8 @@ actor ArmorBonus : Armor 2015
 actor RedCard:Key 13
 {
  SlotNumber 1
+ HUDColor 12
+ Icon 17
  States
  {
   Spawn:
@@ -73,9 +75,11 @@ actor RedCard:Key 13
 actor BlueCard:Key 5
 {
  SlotNumber 2
+ HUDColor 1
+ Icon 17
  States
  {
-  Spawn:
+  Spawn:	
    RKEY A -1
    Stop
  }
@@ -84,6 +88,8 @@ actor BlueCard:Key 5
 actor YellowCard:Key 6
 {
  SlotNumber 3
+ HUDColor 15
+ Icon 17
  States
  {
   Spawn:
@@ -144,7 +150,7 @@ actor ExplosiveBarrel 2035
     BAR1 A -1
     Stop
   Death:
-    BAR1 A 10 Bright
+    BAR1 A 10 Bright A_PlaySound(3)
     BEXP C 5 Bright
     BEXP D 5 Bright A_Explode(100, 128);
     BEXP E 10 Bright
@@ -195,8 +201,10 @@ actor Rocket : Projectile 9997
 {
   Radius 11
   Height 8
+	Mass 8
   Speed 20
   Damage 20
+	DeathSound 3
   +MISSILE
   States
   {
@@ -314,7 +322,7 @@ actor PlasmaRifle : Weapon 2004
 	AmmoUse 1
 	AmmoGive 40
 	AmmoType "Cell"
-	SlotNumber 5
+	SlotNumber 3
 	States {
 		Spawn:
 			PLAS A 5
@@ -335,7 +343,7 @@ actor RocketLauncher : Weapon 2003
 	AmmoUse 1
 	AmmoGive 2
 	AmmoType "RocketAmmo"
-	SlotNumber 6
+	SlotNumber 4
 	States {
 		Spawn:
 			LAUN A 5
@@ -356,7 +364,7 @@ actor ShotGun : Weapon 2001
 	AmmoUse 1
 	AmmoGive 8
 	AmmoType "Shell"
-	SlotNumber 2
+	SlotNumber 1
 	States {
 		Spawn:
 			SHOT A 5
@@ -379,7 +387,7 @@ actor ChainGun : Weapon 2002
 	AmmoUse 1
 	AmmoGive 20
 	AmmoType "Clip"
-	SlotNumber 3
+	SlotNumber 2
 	States {
 		Spawn:
 			MGUN A 5
@@ -397,8 +405,9 @@ actor ChainGun : Weapon 2002
 
 actor PoomGuy: Player 1
 {
-	Radius 32
+	Radius 16
 	Health 100
+	Height 56
 	Armor 50
 	Speed 3
 	StartItem "ShotGun"

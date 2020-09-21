@@ -3,6 +3,7 @@ import os
 import re
 import io
 import math
+import logging
 from collections import namedtuple
 from dotdict import dotdict
 from PIL import Image, ImageFilter
@@ -28,6 +29,7 @@ class ImageReader():
 
   # convert an image into a pair of tiles address and tiles data (binary)
   def read(self, name):
+    logging.debug("Reading image: {}".format(name))
     image_data = self.stream.read(name)
 
     # read image bytes
@@ -55,7 +57,7 @@ class ImageReader():
     img.paste(src, (0,0,src_width,src_height))
 
     # find a transparency color
-    all_colors = set([rgba for rgba,i in self.rgba_to_pico.items()])
+    all_colors = set([rgba for rgba,i in self.rgba_to_pico.items() if i!=-1])
 
     for j in range(src_height):
       for i in range(src_width):
@@ -104,6 +106,8 @@ class ImageReader():
     if abs(xoffset)>127 or abs(yoffset)>127:
       raise Exception("Unsupported image offset: {}/{} - must be in [-127,127]".format(xoffset,yoffset))
     
+    logging.debug("Image: {} - tiles#: {}".format(name, tiles))
+
     return dotdict({
       'name': name,
       'tiles': frame_tiles,

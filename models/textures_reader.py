@@ -10,6 +10,7 @@ from TEXTURESListener import TEXTURESListener
 from collections import namedtuple
 from dotdict import dotdict
 from PIL import Image, ImageFilter
+import logging
 
 class TEXTURES(TEXTURESListener):
   def __init__(self):
@@ -19,13 +20,13 @@ class TEXTURES(TEXTURESListener):
   def exitBlock(self, ctx):  
     name = ctx.name().getText().strip('"')
     namespace = ctx.namespace().getText().lower()
-    print("Texture: {}.{}".format(namespace, name))
+    logging.debug("Found texture: {}.{}".format(namespace, name))
     if namespace == "sprite":
       raise Exception("Texture sprite not supportted - {}: must be defined as lump entry.".format(name))
     # get texture data
     patch = ctx.patch()
 
-    self.patches.add(patch.name().getText().strip('"'))
+    self.patches.add(patch.name().getText().lower().strip('"'))
 
     # texture size
     width = int(ctx.width().getText())
@@ -82,6 +83,8 @@ class TextureReader(TEXTURESListener):
     img = Image.new('RGBA', (width, height), (0,0,0,0))
     img.paste(src, (0,0,width,height))
 
+    logging.info("Found tileset: {} - {}x{}px".format(texture_name,width, height))
+
     # extract tiles
     # tile 0 (all black)
     pico_gfx = [bytes(32)]
@@ -95,9 +98,13 @@ class TextureReader(TEXTURESListener):
             # print("{}/{}".format(i+x,j+y))
             # image is using the pico palette (+transparency)
             low = img.getpixel((i*8 + x, j*8 + y))
+            if low not in self.rgba_to_pico:
+              raise Exception("Tileset: {} - invalid color: {} at {},{}".format(texture_name,low,i*8 + x, j*8 + y))
             low = self.rgba_to_pico[low]
             if low==-1: low = 0
             high = img.getpixel((i*8 + x + 1, j*8 + y))
+            if high not in self.rgba_to_pico:
+              raise Exception("Tileset: {} - invalid color: {} at {},{}".format(texture_name,high,i*8 + x + 1, j*8 + y))
             high = self.rgba_to_pico[high]
             if high==-1: high = 0
             data += bytes([high|low<<4])
@@ -113,5 +120,11 @@ class TextureReader(TEXTURESListener):
         pico_map.append(tile)
     # map width
     width=width>>3
-    
+
+    max_tiles = 16*4*2-1
+    if len(pico_gfx)>max_tiles:
+      raise Exception("Too many unique tiles: {} in tileset: {} (max: {})".format(len(pico_gfx), texture_name, max_tiles))
+
+    logging.info("Tileset: Found {}/{} unique tiles".format(len(pico_gfx),max_tiles))
+
     return dotdict({'flats':listener.flats,'width':width,'map':pico_map,'gfx':pico_gfx})

@@ -5,8 +5,8 @@ __lua__
 -- globals
 local _bsp,_cam,_plyr,_things,_sprite_cache,_actors
 local _onoff_textures={}
-local _ambientlight,_znear,_zfar,_ammo_factor,_intersectid,_msg=0,8,854,1,0
-local _ui_funcs,_wp_ui={circfill,rectfill,print},split"1,1,63,90,12,2,0,1,2,19,86,49,94,0,1,3,⬅️,52,88,5,0,1,3,shotgun,21,88,11,0,2,2,77,86,111,94,0,2,3,➡️,68,88,5,0,2,3,chaingun,79,88,11,0,3,2,50,68,76,76,0,3,3,⬆️,60,80,5,0,3,3,rocket,52,70,11,0,4,2,50,104,76,112,0,4,3,⬇️,60,96,5,0,4,3,plasma,52,106,11,0"
+local _ambientlight,_znear,_ammo_factor=0,16,1
+local _msg
 
 --local k_far,k_near=0,2
 --local k_right,k_left=4,8
@@ -14,19 +14,12 @@ local _ui_funcs,_wp_ui={circfill,rectfill,print},split"1,1,63,90,12,2,0,1,2,19,8
 -- copy color gradients (16*16 colors x 2) to memory
 memcpy(0x4300,0x1000,512)
 
--- single-linked list keyed on "w"
-local depth_cls={
-  __index=function(t,k)
-    -- head of stack
-    local head={w=0}
-    t[k]=head
-    return head
-  end
-}
-
 function make_camera()
+  local shkx,shky=0,0  
   return {
-    m=split"1,0,0,0,1,0",
+    m={
+      1,0,0,
+      0,1,0},
     u=1,
     v=0,
     track=function(self,pos,angle,height)
@@ -40,15 +33,36 @@ function make_camera()
         sa,ca,-sa*pos[1]-ca*pos[2]
       }
     end,
+    shake=function()
+      shkx,shky=min(1,shkx+rnd()),min(1,shky+rnd())
+    end,
+    update=function()
+      shkx*=-0.7-rnd(0.2)
+      shky*=-0.7-rnd(0.2)
+      if abs(shkx)<0.5 and abs(shky)<0.5 then
+        shkx,shky=0,0
+      end
+      camera(shkx,shky)  
+    end,
+    -- debug/map
+    project=function(self,v)
+      local m,x,z=self.m,v[1],v[2]
+      return {
+        m[1]*x+m[2]*z+m[3],
+        m[4],
+        m[5]*x+m[6]*z+m[7]
+      }
+    end,
     is_visible=function(self,bbox)    
       local outcode,m1,m3,m4,_,m9,m11,m12=0xffff,unpack(self.m)
       for i=1,8,2 do
-        local code,x,z=2,bbox[i],bbox[i+1]
+        local x,z=bbox[i],bbox[i+1]
         -- x2: fov
         local ax,az=(m1*x+m3*z+m4)<<1,m9*x+m11*z+m12
         -- todo: optimize?
-        if(az>_znear) code=0
-        if(az>_zfar) code|=1
+        local code=2
+        if(az>16) code=0
+        if(az>854) code|=1
         if(ax>az) code|=4
         if(-ax>az) code|=8
         outcode&=code
@@ -76,6 +90,16 @@ function shortest_angle(target_angle,angle)
 	return angle
 end
 
+-- 3d vector functions
+function v_lerp(a,b,t)
+  local t_1=1-t
+  return {
+    a[1]*t_1+t*b[1],
+    a[2]*t_1+t*b[2],
+    a[3]*t_1+t*b[3]
+  }
+end
+
 -- coroutine helpers
 local _futures={}
 -- registers a new coroutine
@@ -93,6 +117,14 @@ end
 -- 2d vector functions
 function v2_dot(a,b)
   return a[1]*b[1]+a[2]*b[2]
+end
+
+function v2_lerp(a,b,t)
+  local t_1=1-t
+  return {
+    a[1]*t_1+t*b[1],
+    a[2]*t_1+t*b[2]
+  }
 end
 
 function v2_normal(v)
@@ -114,8 +146,9 @@ function v2_len(a)
   return d*sqrt(n*n + 1)
 end
 
-function v2_make(a,b)
-  return {b[1]-a[1],b[2]-a[2]}
+function v2_make(a,b,scale)
+  scale=scale or 0
+  return {(b[1]-a[1])>>scale,(b[2]-a[2])>>scale}
 end
 
 -- bold print helper
@@ -133,8 +166,7 @@ function vspr(frame,sx,sy,scale,flipx)
   palt(tc,true)
   local sw,xscale=xoffset*scale,flipx and -scale or scale
   sx-=sw
-  -- todo: bug?
-  if(flipx) sx+=sw  
+	if(flipx) sx+=sw  
 	sy-=yoffset*scale
 	for i,tile in pairs(tiles) do
     local dx,dy,ssx,ssy=sx+(i%w)*xscale,sy+(i\w)*scale,_sprite_cache:use(tile)
@@ -225,250 +257,106 @@ function make_sprite_cache(tiles,maxlen)
 end
 
 -->8
--- bsp rendering
-
--- floor/ceiling n-gon filling routine
--- xoffset: used as texture offset
--- yoffset: height
-function polyfill(v,xoffset,yoffset,tex,light)
-  poke4(0x5f38,tex)
-
-  local ca,sa,cx,cy,cz=_cam.u,_cam.v,(_plyr[1]>>4)+xoffset,(-_cam.m[4]-yoffset)<<3,_plyr[2]>>4
-
-  local v0,spans,pal0=v[#v],{}
-  local x0,w0=v0.x,v0.w
-  local y0=v0.y-yoffset*w0
-  for i,v1 in ipairs(v) do
-    local x1,w1=v1.x,v1.w
-    local y1=v1.y-yoffset*w1
-    local _x1,_y1,_w1=x1,y1,w1
-    if(y0>y1) x1=x0 y1=y0 w1=w0 x0=_x1 y0=_y1 w0=_w1
-    local dy=y1-y0
-    local dx,dw=(x1-x0)/dy,(w1-w0)/dy
-    local cy0=y0\1+1
-    local sy=cy0-y0
-    if(y0<0) x0-=y0*dx w0-=y0*dw cy0=0 sy=0
-    x0+=sy*dx
-    w0+=sy*dw
-
-    if(y1>127) y1=127
-    for y=cy0,y1\1 do
-      local span=spans[y]
-      if span then
-      -- limit visibility
-        if w0>0.15 then
-          -- collect boundaries
-          local a,b=x0,span
-          if(a>b) a=span b=x0
-          -- color shifing
-          local pal1=(light*min(15,w0<<5))\1
-          if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
-
-          -- mode7 texturing
-          local rz=cy/(y-63.5)
-          local rx=rz*(a-63.5)>>7
-          local x,z=ca*rx+sa*rz+cx,-sa*rx+ca*rz+cz
-        
-          tline(a,y,b,y,x,z,ca*rz>>7,-sa*rz>>7)   
-        end       
-      else
-        spans[y]=x0
-      end
-
-      x0+=dx
-      w0+=dw
-    end			
-    x0=_x1
-    y0=_y1
-    w0=_w1
-  end
+-- debug bsp rendering
+function cam_to_screen2d(v)
+  local scale=8
+  local x,y=v[1]/scale,v[3]/scale
+  return 64+x,64-y
 end
 
-function draw_walls(segs,v_cache,light)
-  -- get heights
-  local sector=segs.sector
-  local v0,top,bottom,pal0=v_cache[#v_cache],sector.ceil,sector.floor
-  local x0,y0,w0=v0.x,v0.y,v0.w
+function polyfill(p,col)
+	color(col)
+	local p0,spans=p[#p],{}
+	local x0,y0=cam_to_screen2d(p0)
 
-  -- todo: test ipairs
-  for i,v1 in ipairs(v_cache) do
-    local seg,x1,y1,w1=v0.seg,v1.x,v1.y,v1.w
-    local _x1,ldef=x1,seg.line
-    -- logical split or wall?
-    -- front facing?
-    if x0<x1 and ldef then
-      -- span rasterization
-      -- pick correct texture "major"
-      local dx,u0=x1-x0,v0[seg[7]]*w0
-      local cx0,dy,du,dw=x0\1+1,(y1-y0)/dx,(v1[seg[7]]*w1-u0)/dx,(w1-w0)/dx
-      local sx=cx0-x0      
-      if(x0<0) y0-=x0*dy u0-=x0*du w0-=x0*dw cx0=0 sx=0
-      y0+=sx*dy
-      u0+=sx*du
-      w0+=sx*dw
-
-      -- dual?
-      local facingside,otherside,otop,obottom=ldef[seg.side],ldef[not seg.side]
-      -- peg bottom?
-      local yoffset,toptex,midtex,bottomtex=(bottom-top)>>4,facingside.toptex,facingside.midtex,facingside.bottomtex
-      -- fix animated side walls (elevators)
-      if ldef.flags&0x4!=0 then
-        yoffset=0
-      end
-      if otherside then
-        -- visible other side walls?
-        otop=otherside.sector.ceil
-        obottom=otherside.sector.floor
-        -- offset animated walls (doors)
-        if ldef.flags&0x4!=0 then
-          yoffset=(otop-top)>>4
-        end
-        -- make sure bottom is not crossing this side top
-        obottom=min(top,obottom)
-        otop=max(bottom,otop)
-        if(top<=otop) otop=nil
-        if(bottom>=obottom) obottom=nil
-      end
-
-      if(x1>127) x1=127
-      for x=cx0,x1\1 do
-        if w0>0.15 then
-          -- color shifing
-          local pal1=(light*min(15,w0<<5))\1
-          if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
-          local t,b,w=y0-top*w0,y0-bottom*w0,w0<<4
-          -- wall
-          -- top wall side between current sector and back sector
-          local ct=t\1+1
-          if otop and toptex then
-            poke4(0x5f38,toptex)             
-            local ot=y0-otop*w0
-            tline(x,ct,x,ot,u0/w,(ct-t)/w+yoffset,0,1/w)
-            -- new window top
-            t=ot
-            ct=ot\1+1
-          end
-          -- bottom wall side between current sector and back sector     
-          if obottom and bottomtex then
-            poke4(0x5f38,bottomtex)             
-            local ob=y0-obottom*w0
-            local cob=ob\1+1
-            tline(x,cob,x,b,u0/w,(cob-ob)/w,0,1/w)
-            -- new window bottom
-            b=ob\1
-          end
-          -- middle wall?
-          if not otherside and midtex then
-            -- texture selection
-            poke4(0x5f38,midtex)
-
-            tline(x,ct,x,b,u0/w,(ct-t)/w+yoffset,0,1/w)
-          end
-        end
-        y0+=dy
-        u0+=du
-        w0+=dw
-      end
-    end
-    v0=v1
-    x0=_x1
-    y0=y1
-    w0=w1
-  end
+	for i=1,#p do
+		local p1=p[i]
+		local x1,y1=cam_to_screen2d(p1)
+		-- backup before any swap
+		local _x1,_y1=x1,y1
+		if(y0>y1) x0,y0,x1,y1=x1,y1,x0,y0
+		-- exact slope
+		local dx=(x1-x0)/(y1-y0)
+		if(y0<0) x0-=y0*dx y0=0
+		-- subpixel shifting (after clipping)
+		local cy0=ceil(y0)
+		x0+=(cy0-y0)*dx
+		for y=cy0,min(ceil(y1)-1,127) do
+			local x=spans[y]
+			if x then
+				rectfill(x,y,x0,y)
+			else
+				spans[y]=x0
+			end
+			x0+=dx
+		end
+		-- next vertex
+		x0,y0=_x1,_y1
+	end
 end
 
--- ceil/floor/wal rendering
-function draw_flats(v_cache,segs,things)
-  local verts,outcode,nearclip={},0xffff,0
+_sessionid=0
+function draw_segs2d(segs,pos,c)
+  local verts={}
   local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
   
   -- to cam space + clipping flags
   for i,seg in ipairs(segs) do
     local v0=seg[1]
-    local v=v_cache[v0]
-    if not v then
-      local code,x,z=2,v0[1],v0[2]
-      local ax,az=
-        m1*x+m3*z+m4,
-        m9*x+m11*z+m12
-      if(az>_znear) code=0
-      if(az>_zfar) code|=1
-      -- fov adjustment
-      if(-2*ax>az) code|=4
-      if(2*ax>az) code|=8
-      
-      local w=128/az
-      v={ax,m8,az,outcode=code,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
-      v_cache[v0]=v
-    end
-    v.seg=seg
+    local x,z=v0[1],v0[2]
+    local ax,az=
+      m1*x+m3*z+m4,
+      m9*x+m11*z+m12
+    
+    local w=128/az
+    local v={ax,m8,az,seg=seg,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
     verts[i]=v
-    local code=v.outcode
-    outcode&=code
-    nearclip+=(code&2)
   end
-  -- out of screen?
-  if outcode==0 then
-    if(nearclip!=0) verts=z_poly_clip(_znear,verts)
-    if #verts>2 then
-      local sector=segs.sector
-      local light=max(sector.lightlevel,_ambientlight)
-      -- no texture = sky/background
-      if(sector.floortex and sector.floor+m8<0) polyfill(verts,sector.tx or 0,sector.floor,sector.floortex,light)
-      if(sector.ceiltex and sector.ceil+m8>0) polyfill(verts,0,sector.ceil,sector.ceiltex,light)
 
-      -- walls
-      draw_walls(segs,verts,light)
+  if #verts>2 then
+    
+    if(segs.sessionid==_sessionid) polyfill(verts, 2)
 
-      -- draw things (if any) in this convex space
-      local things=setmetatable({},depth_cls)
-      for thing,_ in pairs(segs.things) do
-        -- todo: cache thing projection
-        local x,y=thing[1],thing[2]
-        local ax,az=m1*x+m3*y+m4,m9*x+m11*y+m12
-        -- todo: take radius into account 
-        if az>_znear and az<_zfar and ax<az and -ax<az then
-          -- h: thing offset+cam offset
-          local w,h=128/az,thing[3]+m8
-          local x,y=63.5+ax*w,63.5-h*w
-          -- get start of linked list
-          local head=things[1]
-          -- empty list case
-          local prev=head
-          while head and head.w<w do
-            -- swap/advance
-            prev,head=head,head.next
-          end
-          -- insert new thing
-          prev.next={thing=thing,x=x,y=y,w=w,next=prev.next}
-        end
-      end
-      -- things are sorted, draw them
-      local head,pal0=things[1].next
-      while head do
-        local thing,x0,y0,w0=head.thing,head.x,head.y,head.w
-        -- get image from current state
-        local frame=thing.state
-        local side,_,flipx,bright,sides=0,unpack(frame)
-        -- use frame brightness level
-        local pal1=bright and 8 or (light*min(15,w0<<5))\1
-        if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1            
-        -- pick side (if any)
-        if sides>1 then
-          local angle=((atan2(-thing[1]+_plyr[1],thing[2]-_plyr[2])-thing.angle+0.0625)%1+1)%1
-          side=(sides*angle)\1
-          flipx=flipx&(1<<side)!=0
-        else
-          flipx=nil
-        end
-        vspr(frame[side+5],x0,y0,w0<<5,flipx)
-        -- thing:draw_vm(x0,y0)
-        -- print(thing.angle,x0,y0,8)
-        head=head.next
-      end
+    local v0=verts[#verts]
+    local x0,y0,w0=cam_to_screen2d(v0)
+    for i=1,#verts do
+      local v1=verts[i]
+      local x1,y1,w1=cam_to_screen2d(v1)
+      
+      line(x0,y0,x1,y1,v0.seg.hit and 8 or 5)
+
+      if(segs.id==1 and v0.seg.txt) print(v0.seg.txt,(x0+x1)/2,(y0+y1)/2,7)
+
+      x0,y0=x1,y1
+      v0=v1
     end
   end
+  
+  --[[
+  local v0=verts[#verts]
+  local x0,y0,w0=cam_to_screen2d(v0)
+  local xc,yc=0,0
+  for i=1,#verts do
+    local v1=verts[i]
+    local x1,y1,w1=cam_to_screen2d(v1)
+    xc+=x1
+    yc+=y1
+    line(x0,y0,x1,y1,5)
+    --if(v0.seg.c) line(x0,y0,x1,y1,rnd(15))
+    -- if(v0.seg.msg) print(v0.seg.sector.id,(x0+x1)/2,(y0+y1)/2,7)
+    x0,y0=x1,y1
+    v0=v1
+  end
+  if(txt) print(segs.sector.id,xc/#verts,yc/#verts,10)
+  ]]
+  --[[
+  local x0,y0=cam_to_screen2d(_cam:project(pfix))
+  pset(x0,y0,15)
+  ]]
 end
+
+-->8
+-- bsp functions
 -- traverse and renders bsp in back to front order
 -- calls 'visit' function
 function visit_bsp(node,pos,visitor)
@@ -487,64 +375,175 @@ function find_sub_sector(node,pos)
   end
 end
 
-function add_thing(thing)
-  register_thing_subs(_bsp,thing,thing.actor.radius/2)
-  add(_things,thing)
-end
 
-function del_thing(thing)
-  do_async(function()
-    unregister_thing_subs(thing)
-    del(_things,thing) 
-  end)
-end
-
-function unregister_thing_subs(thing)
-  -- remove self from sectors
-  for ss,_ in pairs(thing.subs) do
-    ss.things[thing]=nil
+function find_ssector_thick(node,pos,radius,res)
+  local dist,d=v2_dot(node,pos),node[3]
+  local side,otherside=dist<=d-radius,dist<=d+radius
+  -- leaf?
+  if node.leaf[side] then
+    res[node[side]]=true
+  else
+    find_ssector_thick(node[side],pos,radius,res)
+  end
+  -- straddling?
+  if side!=otherside then
+    if node.leaf[otherside] then
+      res[node[otherside]]=true
+    else
+      find_ssector_thick(node[otherside],pos,radius,res)
+    end
   end
 end
 
-function register_thing_subs(node,thing,radius)
+-- http://web.archive.org/web/20111112060250/http://www.devmaster.net/articles/quake3collision/
+local _epsilon,min_distance=1>>16,1
+function ClosestPtSegmentSegment(p1, q1, p2, q2)
+  local scale=8
+  local d1,d2=v2_make(p1,q1,scale),v2_make(p2,q2,scale)
+  local r=v2_make(p2,p1,scale)
+
+  local a,e,f=v2_dot(d1,d1),v2_dot(d2,d2),v2_dot(d2,r)
+  
+  -- Check if either or both segments degenerate into points
+  if a <= _epsilon and e <= _epsilon then
+    -- Both segments degenerate into points
+    return 0,0
+  end
+
+  local s,t=0,0
+  if a <= _epsilon then
+    -- First segment degenerates into a point
+    t = mid(f / e,0,1) -- s = 0 => t = (b*s + f) / e = f / e
+  else
+    local c = v2_dot(d1, r)
+    if e <= _epsilon then
+      -- Second segment degenerates into a point
+      s = mid(-c / a, 0, 1) -- t = 0 => s = (b*t - c) / a = -c / a
+    else
+      -- The general nondegenerate case starts here
+      local b = v2_dot(d1, d2)
+      local denom = a*e-b*b -- Always nonnegative
+      -- If segments not parallel, compute closest point on L1 to L2 and
+      -- clamp to segment S1. Else pick arbitrary s (here 0)
+      if denom != 0 then
+        s = mid((b*f - c*e) / denom, 0, 1)
+      else
+        s = 0
+      end
+      -- Compute point on L2 closest to S1(s) using
+      -- t = Dot((P1 + D1*s) - P2,D2) / Dot(D2,D2) = (b*s + f) / e
+      t = (b*s + f) / e;
+      -- If t in [0,1] done. Else clamp t, recompute s for the new value
+      -- of t using s = Dot((P2 + D2*t) - P1,D1) / Dot(D1,D1)= (t*b - c) / a
+      -- and clamp s to [0, 1]
+      if t < 0 then
+        t = 0
+        s = mid(-c / a, 0, 1)
+      elseif t > 1 then
+        t = 1
+        s = mid((b - c) / a, 0, 1)
+      end
+    end
+  end
+  return s,t
+end
+
+function checkleaf(segs,tmin,tmax,a,b,offset,res)
+  local a_out,b_out,t_out,t_in,ti
+  
+  local ab_n=v2_normal(v2_make(a,b))
+  -- ortho
+  ab_n={-ab_n[2],ab_n[1]}
+  local an_d=v2_dot(ab_n,a)
+
+  -- visited
+  segs.sessionid=_sessionid
+
+  local s0=segs[#segs]
+  local v0=s0[1]
+  for _,s1 in ipairs(segs) do
+    local v1=s1[1]
+    local side0,side1=v2_dot(ab_n,v0)<=an_d-offset,v2_dot(ab_n,v1)<=an_d+offset
+    if (side0!=side1) and s0.line then
+      -- segment normal & distance
+      local n,d=s0[5],s0[6]-offset
+      local a_dist,b_dist=v2_dot(n,a)-d,v2_dot(n,b)-d
+
+      -- printh(tmin.."<"..tmax.." : "..a_dist.." / "..b_dist)
+      --s0.txt=(a_dist>0 and "out" or "in").."|"..(b_dist>0 and "out" or "in")
+      --s0.txt=(v2_dot(ab_n,s0[1])-(an_d-offset)).."\n"..(v2_dot(ab_n,s1[1])-(an_d+offset))
+      -- s0.txt=s0.line and "---" or "..."
+      --
+      -- s0.txt=side0!=side1 and "true" or "false" --(side0 and "out" or "in").."\n"..(side01 and "out" or "in")
+      --s0.txt=nil
+
+      s0.hit=nil
+      --s0.txt=(a_dist>0 and "out" or "in").."|"..(b_dist>0 and "out" or "in")
+      s0.txt=tmin.."\n"..tmax
+      --s0.txt=side0!=side1 and "true" or "false" 
+
+      if a_dist<b_dist and (a_dist>0 or b_dist0) then
+        local t=a_dist/(a_dist-b_dist)
+        s0.txt=t--a_dist.."\n"..b_dist
+        --if t>=tmin and t<=tmax then
+          s0.hit=true
+          local ti=-(a_dist-min_distance)/(a_dist-b_dist)
+          add(res,{t=t,ti=mid(ti,0,1),n=n,seg=s0,id=segs.id})      
+        --end
+      end
+    end
+    s0=s1
+    v0=v1
+  end
+end
+
+function checknode(root,tmin,tmax,a,b,offset,res)
   -- leaf?
-  if node.pvs then
-    -- thing -> sector
-    thing.subs[node]=true
-    -- reverse
-    node.things[thing]=true
+  if root.pvs then
+    --add(res,{id=root.id,tmin=tmin,tmax=tmax})
+    checkleaf(root,tmin,tmax,a,b,offset,res)
     return
   end
 
-  local dist,d=v2_dot(node,thing),node[3]
-  local side,otherside=dist<=d-radius,dist<=d+radius
-  
-  register_thing_subs(node[side],thing,radius)
-  
-  -- straddling?
-  if side!=otherside then
-    register_thing_subs(node[otherside],thing,radius)
+  local d=root[3]
+  local a_dist,b_dist=v2_dot(root,a)-d,v2_dot(root,b)-d
+  -- front of plane
+  if a_dist>=offset and b_dist>=offset then
+    checknode(root[false],tmin,tmax,a,b,offset,res)
+  elseif a_dist<-offset and b_dist<-offset then
+    checknode(root[true],tmin,tmax,a,b,offset,res)
+  else
+    -- stradling
+    local side,t1,t2,dist=true,1,0,a_dist-b_dist
+    if a_dist<b_dist then
+      side=false
+      t1=(a_dist-_epsilon)/dist
+      t2=(a_dist-_epsilon)/dist
+    elseif b_dist<a_dist then
+      t1=(a_dist+_epsilon)/dist
+      t2=(a_dist+_epsilon)/dist
+    end
+    checknode(root[not side],tmin,mid(t1,0,1),a,b,offset,res)
+
+    checknode(root[side],mid(t2,0,1),tmax,a,b,offset,res)
   end
 end
 
 -- http://geomalgorithms.com/a13-_intersect-4.html
--- returns an array of hits
--- t: impact depth (to fix velocity)
--- ti: impact on velocity vector
-function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
-  local intersectid,_tmax,px,pz,dx,dz,othersector=_intersectid,tmax,p[1],p[2],d[1],d[2]
+function intersect_sub_sector(segs,p,d,tmin,tmax,res,skipthings)
+  local _tmax=tmax
+  local px,pz,dx,dz,tmax_seg=p[1],p[2],d[1],d[2]
 
   if not skipthings then
     -- hitting things?
     local things_hits={t=-32000}
-    for thing,_ in pairs(segs.things) do
+    for _,thing in pairs(_things) do
       local actor=thing.actor
-      -- not already "hit"
       -- not a missile
       -- not dead
-      if thing.intersectid!=intersectid and actor.flags&0x4==0 and not thing.dead then
+      if actor.flags&0x4==0 and not thing.dead and thing.subs[segs] then
         -- overflow 'safe' coordinates
-        local m,r={(px-thing[1])>>8,(pz-thing[2])>>8},(actor.radius+radius)>>8
+        local m,r={(px-thing[1])>>8,(pz-thing[2])>>8},actor.radius>>8
         local b,c=v2_dot(m,d),v2_dot(m,m)-r*r
 
         -- check distance and ray direction vs. circle
@@ -554,7 +553,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
             -- convert back to world units
             local t=(-b-sqrt(discr))<<8
             -- if t is negative, ray started inside sphere so clamp t to zero 
-            if(t<tmin) t=tmin
+            -- if(t<tmin) t=tmin
             -- record hit
             if t>=tmin and t<tmax then
               -- empty list case
@@ -564,12 +563,10 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
                 prev,head=head,head.next
               end
               -- insert new thing
-              prev.next={ti=t,t=(radius-t)/radius,thing=thing,next=prev.next}
+              prev.next={t=t,thing=thing,next=prev.next}
             end
           end
         end
-        -- avoid duplicate hits
-        thing.intersectid=intersectid
       end
     end
     -- add sorted things intersections
@@ -582,46 +579,38 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
 
   for _,s0 in ipairs(segs) do
     local n=s0[5]
-    local denom,dist_a=v2_dot(n,d),s0[6]-v2_dot(n,p)
+    local denom,dist=v2_dot(n,d),s0[6]-v2_dot(n,p)
     if denom==0 then
       -- parallel and outside
-      if(dist_a<0) return
+      if(dist<0) return
     else
-      local t=dist_a/denom
+      local t=dist/denom
       -- within seg?
       local pt={
         px+t*dx,
         pz+t*dz
       }
       local d=v2_dot(s0[2],pt)-s0[3]
-      -- extended segment
-      if d>=-radius and d<s0[4]+radius then
-        -- moving away
+      if d>=0 and d<s0[4] then
         if denom<0 then
           if(t>tmin) tmin=t
           if(tmin>tmax) return
-        else -- moving in
-          local dist_b=s0[6]-v2_dot(n,{px+_tmax*dx,pz+_tmax*dz})
-          if s0.line and (dist_a<radius or dist_b<radius) then
-            add(res,{ti=t,t=mid((dist_a-1/32)/(dist_a-dist_b),0,1),seg=s0,n=n})
-          end
-          -- exact segment
-          if d>=0 and d<s0[4] then
-            if(t<tmax) tmax=t othersector=s0.partner
-            if(tmax<tmin) return 
-          end
+        else
+          if(t<tmax) tmax=t tmax_seg=s0
+          if(tmax<tmin) return 
         end
       end 
     end
   end
 
-  if tmin<=tmax and tmax<_tmax and othersector then
+  if tmin<=tmax and tmax_seg then
+    -- don't record node compiler lines
+    if(tmax_seg.line) add(res,{t=tmax,seg=tmax_seg,n=tmax_seg[5]})
     -- any remaining segment to check?
-    intersect_sub_sector(othersector,p,d,tmax,_tmax,radius,res,skipthings)
+    if(tmax<_tmax and tmax_seg.partner) intersect_sub_sector(tmax_seg.partner,p,d,tmax,_tmax,res,skipthings)
   end
 end
 
--- returns distance and normal to target (if visible)
 function line_of_sight(thing,otherthing,maxdist)
   local n,d=v2_normal(v2_make(thing,otherthing))
   -- in radius?
@@ -629,23 +618,44 @@ function line_of_sight(thing,otherthing,maxdist)
   if d<maxdist then
     -- line of sight?
     local h,hits,blocking=thing[3]+24,{}
-    _intersectid+=1
-    intersect_sub_sector(thing.ssector,thing,n,0,d,0,hits,true)
+    intersect_sub_sector(thing.ssector,thing,n,0,d,hits,true)
     for _,hit in pairs(hits) do
-      if intersect_line(hit.seg,h,0,0,true) then
-        return n
-      end
+      -- bsp hit?
+      local ldef=hit.seg.line
+      local otherside=ldef[not hit.seg.side]
+      if otherside==nil or 
+        h>otherside.sector.ceil or 
+        h<otherside.sector.floor then
+        -- blocking wall
+        return
+      end 
     end
     -- normal and distance to hit
     return n,d
   end
-  return n
 end
+
+local depth_cls={
+  __index=function(t,k)
+    -- head of stack
+    local head={w=0}
+    t[k]=head
+    return head
+  end
+}
+local depthsorted_cls={
+  __index=function(t,k)
+    local s=setmetatable({},depth_cls)
+    t[k]=s
+    return s
+  end
+}
 
 function make_thing(actor,x,y,z,angle)
    -- all sub-sectors that thing touches
   -- used for rendering and collision detection
-  local pos={x,y}
+  local subs,pos={},{x,y}
+  find_ssector_thick(_bsp,pos,actor.radius,subs)
   -- default height & sector specs
   local ss=find_sub_sector(_bsp,pos)
   -- attach instance properties to new thing
@@ -653,11 +663,10 @@ function make_thing(actor,x,y,z,angle)
     -- z: altitude
     x,y,ss.sector.floor,
     angle=angle,
+    subs=subs,
     sector=ss.sector,
-    ssector=ss,
-    subs={}
+    ssector=ss
   })
-  
   if actor.flags&0x2>0 then
     -- shootable
     thing=with_physic(with_health(thing))
@@ -670,44 +679,22 @@ local _sector_dmg={
   [71]=5,
   [69]=10,
   [80]=20,
-  [84]=5,
   -- instadeath
   [115]=-1
 }
 
-function intersect_line(seg,h,height,clearance,is_missile,is_monster)
-  local ldef=seg.line
-  local otherside=ldef[not seg.side]
-
-  return otherside==nil or 
-    -- impassable
-    (not is_missile and ldef.flags&0x40>0) or
-    h+height>otherside.sector.ceil or 
-    h+clearance<otherside.sector.floor or 
-    -- avoid monster jumping off cliffs
-    (is_monster and h-otherside.sector.floor>clearance)
-end
-
-function intersect_thing(otherthing,h,radius)
-  local otheractor=otherthing.actor
-  return otheractor.flags&0x1>0 and
-    h>=otherthing[3]-radius and 
-    h<otherthing[3]+otheractor.height+radius
-end
-
--- attach physic behavior
 function with_physic(thing)
   local actor=thing.actor
   -- actor properties
-  local height,radius,mass,is_missile,is_player,is_monster=actor.height,actor.radius,2*actor.mass,actor.flags&0x4>0,actor.id==1,actor.flags&0x8>0
+  local height,radius,mass,is_missile,is_player=actor.height,actor.radius,2*actor.mass,actor.flags&0x4==4,actor.id==1
   local ss,friction=thing.ssector,is_missile and 0.9967 or 0.9062
   -- init inventory
   local forces,velocity={0,0},{0,0,0}
   return setmetatable({
     apply_forces=function(self,x,y)
-      -- todo: review 96 arbitrary factor...
-      forces[1]+=64*x/mass
-      forces[2]+=64*y/mass
+      -- todo: revisit force vs. impulse
+      forces[1]+=96*x/mass
+      forces[2]+=96*y/mass
     end,
     update=function(self)
       -- integrate forces
@@ -720,95 +707,108 @@ function with_physic(thing)
       
       -- check collision with world
       local move_dir,move_len,hits=v2_normal(velocity)
-      
-      -- cancel small moves
-      if move_len>1/16 then
-        local h,stair_h=self[3],is_missile and 0 or 24
-        hits={}
 
-        unregister_thing_subs(self)
+      if v2_len(velocity)>1/32 then
+        local h=self[3]
+        hits={t=0}
         
-        -- check intersection with actor radius
-        _intersectid+=1
-        intersect_sub_sector(ss,self,move_dir,0,move_len,radius,hits)    
-        -- fix position
-        for _,hit in ipairs(hits) do
-          local otherthing,fix_move=hit.thing
-          if hit.seg then
-            fix_move=intersect_line(hit.seg,h,height,stair_h,is_missile,is_monster) and hit
-            -- cross special?
-            -- todo: supports monster activated triggers
-            local ldef=hit.seg.line
-            if is_player and ldef.trigger and ldef.flags&0x10>0 then
-              ldef.trigger(self)
-            end
-          else
-            if is_player and otherthing.pickup then
-              -- avoid reentrancy
-              otherthing.pickup=nil
-              -- jump to pickup state
-              otherthing:jump_to(10)
-              otherthing.actor.pickup(otherthing,self)
-            elseif self.owner!=otherthing then -- avoid projectile intersect with owner
-              fix_move=intersect_thing(otherthing,h,radius) and hit
-            end
-          end
+        -- player: check intersection w/ additional contact radius
+        _sessionid+=1
 
-          if fix_move then
-            if is_missile then
-              -- fix position & velocity
-              v2_add(self,move_dir,fix_move.t)
-              velocity={0,0,0}
-              -- explosion sound (if any)
-              if(actor.deathsound) sfx(actor.deathsound)
-              -- death state
-              self:jump_to(5)
-              -- hit thing
-              if(otherthing and otherthing.hit) otherthing:hit(actor.damage,move_dir,self.owner)
-              -- stop at first wall/thing
-              break
-            else
-              local n=fix_move.n or v2_normal(v2_make(self,otherthing))
-              local fix=-fix_move.t*v2_dot(n,velocity)
-              -- avoid being pulled toward prop/wall
-              if fix<0 then
-                -- apply impulse (e.g. fix velocity)
-                v2_add(velocity,n,fix)
+        checknode(_bsp,0,1,self,{self[1]+velocity[1],self[2]+velocity[2]},radius,hits)    
+        -- fix position
+        local stair_h=is_missile and 0 or 24
+        for _,hit in ipairs(hits) do
+          -- skip "front colliders"
+          --if hit.t<move_len+radius then
+            local fix_move
+            if hit.seg then
+              -- bsp hit?
+              local ldef=hit.seg.line
+              local otherside=ldef[not hit.seg.side]
+
+              if otherside==nil or 
+                -- impassable
+                (not is_missile and ldef.flags&0x40>0) or
+                h+height>otherside.sector.ceil or 
+                h+stair_h<otherside.sector.floor then
+                fix_move=hit
+              end
+            elseif hit.thing!=self then
+              -- thing hit?
+              local otherthing=hit.thing
+              local otheractor=otherthing.actor
+              if is_player and otherthing.pickup then
+                -- avoid reentrancy
+                otherthing.pickup=nil
+                -- jump to pickup state
+                otherthing:jump_to(10)
+                otheractor.pickup(otherthing,self)
+              elseif otheractor.flags&0x1>0 then
+                -- solid actor?
+                fix_move=hit
+                fix_move.n=v2_normal(v2_make(self,otherthing))
+              end
+            end
+
+            if fix_move then
+              if is_missile then
+                -- fix position & velocity
+                v2_add(self,move_dir,fix_move.t-radius)
+                velocity={0,0,0}
+                -- death state
+                self:jump_to(5)
+                -- hit thing
+                local otherthing=fix_move.thing
+                if(otherthing and otherthing.hit) otherthing:hit(actor.damage,move_dir,self.owner)
+                -- stop at first wall/thing
+                break
+              else
+                local n=fix_move.n
+                local fix=-fix_move.ti*v2_dot(n,velocity)
+                -- avoid being pulled toward prop/wall
+                if fix<0 then
+                  -- apply impulse (e.g. fix velocity)
+                  v2_add(velocity,n,fix)
+                end
               end
             end
           end
-        end
-              
+        
+
         -- apply move
         v2_add(self,velocity)
-
+              
         -- refresh sector after fixed collision
         ss=find_sub_sector(_bsp,self)
         self.sector=ss.sector
         self.ssector=ss
 
         -- refresh overlapping sectors
-        self.subs={}
-        register_thing_subs(_bsp,self,radius/2)
+        local subs={}
+        find_ssector_thick(_bsp,self,radius,subs)
+        self.subs=subs
       else
         velocity[1]=0
         velocity[2]=0
       end
-
+    
+        --v2_add(self,velocity)
       -- triggers?
       -- check triggers/bumps/...
       if is_player then
-        --if not hits then
+        if not hits then
+          local angle=self.angle
           hits={}
-          intersect_sub_sector(ss,self,{cos(self.angle),-sin(self.angle)},0,radius+24,0,hits,true)    
-        --end
+          intersect_sub_sector(ss,self,{cos(angle),-sin(angle)},0,radius+24,hits)    
+        end
         for _,hit in ipairs(hits) do
           if hit.seg then
             local ldef=hit.seg.line
             -- buttons
             if ldef.trigger and ldef.flags&0x8>0 then
               -- use special?
-              if btnp(🅾️) then
+              if btn(🅾️) then
                 ldef.trigger()
               else
                 _msg="press 🅾️ to activate"
@@ -833,7 +833,8 @@ function with_physic(thing)
           -- sector damage (if any)
           self:hit_sector(_sector_dmg[sector.special])
 
-          velocity[3],h=0,sector.floor
+          velocity[3]=0
+          h=sector.floor
         end
         self[3]=h
       end
@@ -853,6 +854,7 @@ function with_health(thing)
     -- death state
     self:jump_to(5)
   end
+  -- base health (for gibs effect)
   return setmetatable({
     hit=function(self,dmg,dir,instigator)
       -- avoid reentrancy
@@ -897,7 +899,8 @@ end
 
 function attach_plyr(thing,actor,skill)
   local dmg_factor=({0.5,1,1,2})[skill]
-  local bobx,boby,speed,da,wp,wp_slot,wp_yoffset,wp_y,hit_ttl,wp_switching=0,0,actor.speed,0,thing.weapons,thing.active_slot,0,0,0
+  local speed,da,wp,wp_slot,wp_yoffset,wp_y,hit_ttl,wp_switching=actor.speed,0,thing.weapons,thing.active_slot,0,0,0
+  local bobx,boby=0,0
 
   local function wp_switch(slot)
     if(wp_switching) return
@@ -910,50 +913,50 @@ function attach_plyr(thing,actor,skill)
       wp_switching=nil
     end)
   end
-
+  local function try_switch(inc)
+    local i=wp_slot+inc
+    while not wp[i] do
+      i+=inc
+      -- wrap
+      if(i>10) i=1
+      if(i<1) i=10
+      -- no weapon to switch to
+      if(i==wp_slot) return
+    end
+    wp_switch(i)
+  end
 
   return setmetatable({
     update=function(self,...)
       thing.update(self,...)
-      hit_ttl=max(hit_ttl-1)
+      hit_ttl-=1
     end,
     control=function(self)
       wp_y=lerp(wp_y,wp_yoffset,0.3)
 
       local dx,dz=0,0
+      -- cursor: fwd+rotate
+      -- cursor+x: weapon switch+rotate
+      -- wasd: fwd+strafe
+      -- o: fire
+      if btn(🅾️) then
+        if(btn(0)) dx=1
+        if(btn(1)) dx=-1
 
-      if wp_hud then
-        wp_hud=not btn(6)
-        for i=1,4 do
-          if btnp(i-1) then
-            -- only switch if we have the weapon and it's not the current weapon
-            wp_hud,btns=(wp_slot!=i and wp[i]) and wp_switch(i) or nil,{}
-          end
-        end
+        -- todo: check weapon ready state
+        if(btn(2)) try_switch(-1)
+        if(btn(3)) try_switch(1)
       else
-        -- cursor: fwd+rotate
-        -- cursor+x: weapon switch+rotate
-        -- wasd: fwd+strafe
-        -- o: fire
-        if btn(🅾️) then
-          if(btns[1]) dx=1
-          if(btns[2]) dx=-1
-        else
-          if(btns[1]) da-=1
-          if(btns[2]) da+=1
-        end
-        if(btns[3]) dz=1
-        if(btns[4]) dz=-1
-
-        wp_hud=btn(6)
-        poke(0x5f30,1)
-
-        -- wasd
-        if(btn(0,1)) dx=1
-        if(btn(1,1)) dx=-1
-        if(btn(2,1)) dz=1
-        if(btn(3,1)) dz=-1
+        if(btn(0)) da-=1
+        if(btn(1)) da+=1
+        if(btn(2)) dz=1
+        if(btn(3)) dz=-1
       end
+      -- wasd
+      if(btn(0,1)) dx=1
+      if(btn(1,1)) dx=-1
+      if(btn(2,1)) dz=1
+      if(btn(3,1)) dz=-1
 
       self.angle-=da/256
       local ca,sa=cos(self.angle),-sin(self.angle)
@@ -966,7 +969,7 @@ function attach_plyr(thing,actor,skill)
       -- update weapon vm
       wp[wp_slot].owner=self
       wp[wp_slot]:tick()
-      
+
       -- weapon bobing
       bobx,boby=lerp(bobx,2*da,0.3),lerp(boby,cos(time()*3)*abs(dz)*speed*2,0.2)
     end,
@@ -987,48 +990,14 @@ function attach_plyr(thing,actor,skill)
       wp_switch(slot)
     end,
     hud=function(self)
-      
-      local active_wp=wp[wp_slot]
-      local frame,light=active_wp.state,self.sector.lightlevel
-      
-      -- sector light affects weapon sprite
-      light=frame[3] and 8 or min((light*15)\1,15)
-      memcpy(0x5f00,0x4300|light<<4,16)          
-
-      -- draw current weapon (single) frame      
-      vspr(frame[5],64-bobx,132-wp_y+boby,16)
-
-      pal()
-      local ammotype=active_wp.actor.ammotype
-      printb(ammotype.icon..self.inventory[ammotype],106,120,9)
-      printb("♥"..self.health,2,110,12)
-      printb("웃"..self.armor,2,120,3)
-
-      -- keys
-      for item,amount in pairs(self.inventory) do
-        if amount>0 and item.slot then
-          printb(item.icon,106,120-item.slot*10,item.hudcolor)
-        end
-      end
-
-      -- display weapon selection hud
-      if wp_hud then
-        local uit={}
-        for i=1,#_wp_ui do
-            uit[chr((i-1)%7+97)]=_wp_ui[i]
-            if(i%7==0 and wp[uit.a])_ui_funcs[uit.b](uit.c,uit.d,uit.e,uit.f,uit.g)
-        end
-      end
-
-      -- set "pain" palette (defaults to screen palette if normal)
-      memcpy(0x5f10,0x4400|hit_ttl<<4,16)
     end,
     hit=function(self,dmg,...)
       -- call parent function
       -- + skill adjustment
       local hp=thing.hit(self,dmg_factor*dmg,...)
-      if hp>0 then
-        hit_ttl=min(ceil(hp),15)
+      if hp>5 then
+        hit_ttl=min(hp\2,8)
+        _cam:shake()
       end
     end
   },{__index=thing})
@@ -1041,37 +1010,103 @@ function draw_bsp()
   -- 
   local pvs,v_cache=_plyr.ssector.pvs,{}
 
+  local sorted_things=setmetatable({},depthsorted_cls)
+  local m1,m2,m3,m4,m5,m6,m7=unpack(_cam.m)
+  for _,thing in pairs(_things) do
+    -- visible?
+    local viz
+    for sub,_ in pairs(thing.subs) do
+      local id=sub.id
+      if(band(pvs[id\32],0x0.0001<<(id&31))!=0) viz=true break
+    end
+    if viz then
+      local x,y=thing[1],thing[2]
+      local ax,az=m1*x+m2*y+m3,m5*x+m6*y+m7
+      if az>_znear and 2*ax<az and -2*ax<az then
+        -- h: thing offset+cam offset
+        local w,h=128/az,thing[3]+m4
+        local x,y=63.5+ax*w,63.5-h*w
+        -- insertion sort into each sub
+        for sub,_ in pairs(thing.subs) do
+          -- get start of linked list
+          local head=sorted_things[sub][1]
+          -- empty list case
+          local prev=head
+          while head and head.w<w do
+            -- swap/advance
+            prev,head=head,head.next
+          end
+          -- insert new thing
+          prev.next={thing=thing,x=x,y=y,w=w,next=prev.next}
+        end
+      end
+    end
+  end
+
   -- visit bsp
   visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
-    side=not side
     if node.leaf[side] then
       local subs=node[side]
-      -- potentially visible?
-      local id=subs.id
-      -- use band to support gaps (nil) in pvs hashmap
-      if band(pvs[id\32],0x0.0001<<(id&31))!=0 then
-        draw_flats(v_cache,subs)
-      end
-    elseif _cam:is_visible(node.bbox[side]) then
+      local id,c=subs.id,5
+      if(band(pvs[id\32],0x0.0001<<(id&31))!=0) c=2
+      draw_segs2d(subs,pos,c)
+    else
       visit_bsp(node[side],pos,visitor)
+
+      -- draw hyperplane	
+      --[[
+      local v0={node[3]*node[1],node[3]*node[2]}	
+      local v1=_cam:project({v0[1]-1280*node[2],v0[2]+1280*node[1]})	
+      local v2=_cam:project({v0[1]+1280*node[2],v0[2]-1280*node[1]})	
+      local x0,y0=cam_to_screen2d(v1)	
+      local x1,y1=cam_to_screen2d(v2)	
+      if not side then	
+        line(x0,y0,x1,y1,8)	
+        -- print(angle,(x0+x1)/2,(y0+y1)/2,7)	
+      end	
+      ]]
     end
   end)
+
+  -- hit testing
+
+  local ca,sa=cos(_plyr.angle),-sin(_plyr.angle)
+  local tgt={_plyr[1]+256*ca,_plyr[2]+256*sa}
+  local x0,y0=cam_to_screen2d(_cam:project(tgt))
+  line(64,64,x0,y0,1)
+
+  local hits={t=1}
+  checknode(_bsp,0,1,_plyr,tgt,20,hits)
+  --checkleaf(_plyr.ssector,0,1,_plyr,tgt,0,hits)
+
+  for i,hit in ipairs(hits) do
+    if hit.t then
+      local x0,y0=cam_to_screen2d(_cam:project(v2_lerp(_plyr,tgt,hit.t)))
+      line(x0-1,y0,x0+1,y0,7)
+      print(hit.id.."("..i..")",x0+3-(i%2)*20,y0-2,7)
+    else
+      local x0,y0=cam_to_screen2d(_cam:project(v2_lerp(_plyr,tgt,hit.tmin)))
+      local x1,y1=cam_to_screen2d(_cam:project(v2_lerp(_plyr,tgt,hit.tmax)))
+      line(x0+i,y0,x1+i,y1,1+i)
+      print(hit.tmin.." | "..hit.tmax,(x0+x1)/2+2,(y0+y1)/2,7)
+    end
+    -- print(hit.id,x0+6*i+1,y0,8)
+  end
+  
+  pset(64,64,8)
+
 end
 
 -->8
 -- game states
 function next_state(fn,...)
-  btns,wp_hud={}
   local u,d,i=fn(...)
-  -- ensure update/draw pair is consistent
-  _update_state=function()
-    -- init function (if any)
+  do_async(function()
+    -- init function?
+    -- usefull for "breaking" state transitions
     if(i) i()
-    -- 
     _update_state,_draw_state=u,d
-    -- actually run the update
-    u()
-  end
+  end)
 end
 
 -- level selection
@@ -1080,27 +1115,8 @@ function levelmenu_state()
     "wHICH ePISODE?:",
     _maps_label,
     function(map_id)
-      next_state(skillmenu_state,map_id)
+      next_state(play_state,1,map_id)
     end)
-end
-
--- skill selection
-function skillmenu_state(map_id)
-  return make_menu(
-  "sELECT sKILL lEVEL:",
-  {
-    "i AM TOO YOUNG TO DIE",
-    "hEY, NOT TOO ROUGH",
-    "hURT ME PLENTY",
-    "uLTRA-vIOLENCE"
-  },function(skill)
-    do_async(function()
-      -- clear seed
-      memset(0x7fc0,0,64)
-      wait_async(20)
-      next_state(play_state,skill,map_id)
-    end)
-  end)
 end
 
 function make_menu(title,options,fn)
@@ -1111,9 +1127,6 @@ function make_menu(title,options,fn)
     [8]=2,
     [2]=1,
     [1]=0},1
-  
-  -- stop music (if any)
-  music(-1,250)
   
   return 
     -- update
@@ -1162,7 +1175,7 @@ function make_menu(title,options,fn)
 end
 
 function play_state(skill,map_id)
-  cls()  
+  cls()
   printb("loading...",44,120,6,5)
   flip()
 
@@ -1170,15 +1183,13 @@ function play_state(skill,map_id)
   if not _actors then
     _actors,_sprite_cache=unpack_actors()
   end
-  -- fix garbage sprites when loading 2nd map
   _sprite_cache:clear()
-
-  -- reset misc things
-  _ambientlight,_things,_plyr,_bsp=0,{}
 
   -- ammo scaling factor
   _ammo_factor=split"2,1,1,1"[skill]
   _bsp,thingdefs=unpack_map(skill,_actors,_maps_cart[map_id],_maps_offset[map_id])
+  -- reset active things
+  _things,_plyr={}
 
   -- attach behaviors to things
   for _,thingdef in pairs(thingdefs) do 
@@ -1187,16 +1198,13 @@ function play_state(skill,map_id)
     if actor.id==1 then
       _plyr=attach_plyr(thing,actor,skill)
       thing=_plyr
+      -- register only player
+      add(_things,thing)
     end
-    -- 
-    add_thing(thing)
   end
   assert(_plyr,"missing player in level")
 
   _cam=make_camera()
-
-  -- start level music (if any)
-  music(_maps_music[map_id],0,14)
 
   return 
     -- update
@@ -1206,11 +1214,14 @@ function play_state(skill,map_id)
       end
 
       _cam:track(_plyr,_plyr.angle,_plyr[3]+45)
+      _cam:update()
     end,
     -- draw
     function()
       draw_bsp()
-      _plyr:hud()
+
+      -- player
+      pset(64,64,7)
 
       if(_msg) print(_msg,64-#_msg*2,120,15)
 
@@ -1218,7 +1229,7 @@ function play_state(skill,map_id)
       local cpu=stat(1).."|"..stat(0)
     
       print(cpu,2,3,3)
-      print(cpu,2,2,15)    
+      print(cpu,2,2,8)    
     end
 end
 
@@ -1235,6 +1246,7 @@ function gameover_state(pos,angle,target,h)
         angle=lerp(shortest_angle(target_angle,angle),target_angle,0.08)
       end
       _cam:track(pos,angle,pos[3]+h)
+      _cam:update()
 
       if btnp(4) or btnp(5) then
         next_state(slicefade_state,levelmenu_state)
@@ -1243,10 +1255,6 @@ function gameover_state(pos,angle,target,h)
     -- draw
     function()
       draw_bsp()
-
-      -- set screen palette
-      -- pal({140,1,139,3,4,132,133,7,6,134,5,8,2,9,10},1)
-      memcpy(0x5f10,0x4400,16)
     end
 end
 
@@ -1287,11 +1295,6 @@ function _init()
 end
 
 function _update()
-  -- get btn states and suppress pressed buttons until btnp occurs
-  for i=1,6 do
-    btns[i]=btnp(i-1) or btns[i]!=nil and btn(i-1) or nil
-  end
-
   -- any futures?
   local tmp={}
 	for k,f in pairs(_futures) do
@@ -1414,13 +1417,14 @@ function unpack_special(special,line,sectors,actors)
     return function(thing)
       -- need lock?
       if actorlock then
-        -- keep key in inventory (for reusable locked doors)
-        if not thing.inventory[actorlock] then 
+        local inventory=thing.inventory
+        if not inventory[actorlock] or inventory[actorlock]==0 then
           _msg="need key"
-          -- play "err" sound
-          sfx(62)
+          -- todo: err sound
           return
         end
+        -- consume item
+        inventory[actorlock]=0
       end
 
       -- backup trigger
@@ -1450,9 +1454,6 @@ function unpack_special(special,line,sectors,actors)
     end)
     local speed,kind,delay,lock=mpeek(),mpeek(),mpeek(),unpack_variant()
     local function move_async(to,speed)
-      -- play open/close sound
-      sfx(63)
-
       -- take current values
       local ceils={}
       for _,sector in pairs(doors) do
@@ -1495,10 +1496,7 @@ function unpack_special(special,line,sectors,actors)
     -- backup initial height
     local orig_floor=sector.floor
     local function move_async(from,to)
-      -- todo: configurable wait time
       wait_async(30)
-      -- play open/close sound
-      sfx(63)
       for i=0,speed do
         sector.floor=lerp(from,to,smoothstep(i/speed))
         yield()
@@ -1560,7 +1558,7 @@ function unpack_actors()
   reload(0,0,0x4300,mod_name.."_"..cart_id..".p8")
   
   -- sprite index
-	local actors,frames,tiles={},{},{}
+	local frames,tiles={},{}
   unpack_array(function()
     -- packed:
     -- width/transparent color
@@ -1581,6 +1579,7 @@ function unpack_actors()
   end)
   
   -- inventory & things
+  local actors={}
   local unpack_actor_ref=function()
     return actors[unpack_variant()]
   end
@@ -1597,7 +1596,6 @@ function unpack_actors()
       -- 0x1: solid
       -- 0x2: shootable
       -- 0x4: missile
-      -- 0x8: monster
       flags=mpeek(),
       -- attach actor to this thing
       attach=function(self,thing)
@@ -1628,7 +1626,7 @@ function unpack_actors()
 ::loop::
               local state=states[i]
               -- stop (or end of vm instructions)
-              if(not state or state.jmp==-1) del_thing(self) return
+              if(not state or state.jmp==-1) do_async(function() del(_things,self) end) return
               -- loop or goto
               if(state.jmp) self:jump_to(state.jmp) goto loop
 
@@ -1733,7 +1731,7 @@ function unpack_actors()
 
         target:attach_weapon(thing)
         -- remove from things
-        del_thing(thing)
+        do_async(function() del(_things,thing) end)
       end
     elseif kind==3 then
       -- health pickup
@@ -1763,29 +1761,47 @@ function unpack_actors()
           owner=owner.owner or owner
           for i=1,bullets do
             local angle=owner.angle+(rnd(2*xspread)-xspread)/360
+            local hits,move_dir={},{cos(angle),-sin(angle)}
+            intersect_sub_sector(owner.ssector,owner,move_dir,owner.actor.radius/2,1024,hits)    
             -- todo: get from actor properties
-            local h,hits,move_dir=owner[3]+32,{},{cos(angle),-sin(angle)}
-            _intersectid+=1
-            intersect_sub_sector(owner.ssector,owner,move_dir,owner.actor.radius/2,1024,0,hits)    
+            local h=owner[3]+32
             for _,hit in ipairs(hits) do
-              local otherthing,fix_move=hit.thing
+              local fix_move
               if hit.seg then
-                fix_move=intersect_line(hit.seg,h,0,0,true) and hit
-              elseif otherthing!=owner and intersect_thing(otherthing,h,0) then
-                fix_move=hit
+                -- bsp hit?
+                local ldef=hit.seg.line
+                local otherside=ldef[not hit.seg.side]
+    
+                if otherside==nil or 
+                  h>otherside.sector.ceil or 
+                  h<otherside.sector.floor then
+                  fix_move=hit
+                end              
+              elseif hit.thing!=owner then
+                -- thing hit?
+                local otherthing=hit.thing
+                local otheractor=otherthing.actor
+                -- within height?
+                if otheractor.flags&0x1>0 and 
+                  h>otherthing[3] and 
+                  h<otherthing[3]+otheractor.height then
+                  -- solid actor?
+                  fix_move=hit
+                end
               end
     
               if fix_move then
                 -- actual hit position
                 local pos={owner[1],owner[2],h}
-                v2_add(pos,move_dir,fix_move.ti)
+                v2_add(pos,move_dir,fix_move.t)
                 local puffthing=make_thing(puff,pos[1],pos[2],0,angle)
                 -- todo: get height from properties
                 -- todo: improve z setting
                 puffthing[3]=h
-                add_thing(puffthing)
+                add(_things,puffthing)
       
                 -- hit thing
+                local otherthing=fix_move.thing
                 if(otherthing and otherthing.hit) otherthing:hit(dmg,move_dir,owner)
                 break
               end
@@ -1806,22 +1822,22 @@ function unpack_actors()
         return function(owner)
           -- find 'real' owner
           owner=owner.owner or owner
-          -- fire at 1/2 edge of owner radius (ensure collision when close to walls)
           local angle,speed,radius=owner.angle,projectile.speed,owner.actor.radius/2
           local ca,sa=cos(angle),-sin(angle)
+          -- fire at edge of owner radius
           local thing=with_physic(make_thing(projectile,owner[1]+radius*ca,owner[2]+radius*sa,0,angle))
           thing.owner=owner
           -- todo: get height from properties
           -- todo: improve z setting
           thing[3]=owner[3]+32
           thing:apply_forces(speed*ca,speed*sa)         
-          add_thing(thing)
+          add(_things,thing)
         end
       end,
       -- A_WeaponReady
       function()
         return function(weapon)
-          if not wp_hud and btn(❎) then
+          if btn(❎) then
             local inventory=weapon.owner.inventory
             local newqty=inventory[item.ammotype]-item.ammouse
             if newqty>=0 then
@@ -1851,7 +1867,7 @@ function unpack_actors()
       function()
         local speed=mpeek()/255
         return function(thing)
-          -- nothing to face to?
+          -- nothing to face to
           local otherthing=thing.target
           if(not otherthing) return
           local target_angle=atan2(-thing[1]+otherthing[1],thing[2]-otherthing[2])
@@ -1981,14 +1997,6 @@ function unpack_map(skill,actors,map_cart_id,map_cart_offset)
           wait_async(rnd(15))
         end
       end)
-    elseif special==84 then
-      sector.tx=rnd(32)
-      do_async(function()
-        while true do 
-          sector.tx+=1/32
-          yield()
-        end
-      end)
     end
   end)
 
@@ -2024,7 +2032,7 @@ function unpack_map(skill,actors,map_cart_id,map_cart_offset)
   -- convex sub-sectors
   unpack_array(function(i)
     -- register current sub-sector in pvs
-    local segs={id=i,pvs={},things={}}
+    local segs={id=i,pvs={}}
     unpack_array(function()
       local s=add(segs,{
         -- 1: vertex
@@ -2075,7 +2083,6 @@ function unpack_map(skill,actors,map_cart_id,map_cart_offset)
     end
     add(sub_sectors,segs)
   end)
-
   -- fix seg -> sub-sector link (e.g. portals)
   for _,seg in pairs(all_segs) do
     seg.partner=sub_sectors[seg.partner]

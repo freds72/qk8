@@ -3,10 +3,13 @@ import os
 import re
 import io
 import math
+import logging
+import argparse
 from collections import namedtuple
 from udmf_reader import UDMF
 from textures_reader import TextureReader
 from decorate_reader import DecorateReader
+from mapinfo_reader import MapinfoReader
 from decorate_reader import ACTOR_KIND
 from dotdict import dotdict
 from python2pico import pack_int
@@ -23,13 +26,10 @@ from image_reader import ImageReader
 from colormap_reader import ColormapReader, std_palette
 from wad_stream import WADStream
 from file_stream import FileStream
-from lzw import lzw_encode
 from PIL import Image
 
 # debug/draw
-import sys, pygame
-
-local_dir = os.path.dirname(os.path.realpath(__file__))
+import sys
 
 # helper funcs
 def get_at_or_default(list, index, defaults):
@@ -251,7 +251,7 @@ def pack_special(line, lines, sides, sectors):
   s = "{:02x}".format(special)
   # door open
   if special==202:
-    print("Special: door open/close")
+    logging.info("Linedef special: door open/close")
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
     s += pack_sectors_by_tag(sector_ids)
     # speed
@@ -263,7 +263,7 @@ def pack_special(line, lines, sides, sectors):
     # lock
     s += pack_variant(line.get('arg4',0))
   elif special==64:
-    print("Special: platform up/stay/down")
+    logging.info("Linedef special: platform up/stay/down")
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
     if len(sector_ids)>1:
       raise Exception("Not supported - multiple elevators for 1 trigger")
@@ -284,8 +284,11 @@ def pack_special(line, lines, sides, sectors):
     s += "{:02x}".format(line.arg0)
     # arg1
     s += "{:02x}".format(line.arg1)
+  elif special==243:
+    # exit level
+    logging.info("Linedef special: exit level")
   elif special==112:
-    print("Special: set light level")
+    logging.info("Linedef special: set light level")
     # set lightlevel
     sector_ids = find_sectors_by_tag(line.arg0, sectors)
     s += pack_sectors_by_tag(sector_ids)
@@ -377,6 +380,7 @@ def pack_zmap(map, textures, actors):
     s += "{:02x}".format(flags)
     s += special_data
   
+  sub_sectors_len = len(map.sub_sectors)
   s += pack_variant(len(map.sub_sectors))
   for i in range(len(map.sub_sectors)):
     s += pack_segs(map.sub_sectors[i])
@@ -386,6 +390,7 @@ def pack_zmap(map, textures, actors):
     s += pack_variant(i + 1)
     for sub_id in pvs:
       s += pack_variant(sub_id + 1)
+    logging.info("Packing sub-sectors - completion: {:.2%}".format((i+1)/len(map.sub_sectors)))
 
   s += pack_variant(len(map.nodes))
   for node in map.nodes:
@@ -424,16 +429,20 @@ def pack_zmap(map, textures, actors):
     s+= pack_texture(texture)
     # get pair or self
     s+= pack_texture(texture_pairs.get(name, texture))
-
+  
   # things
   things = []
   actors = [actor.get('id',-1) for actor in actors.values()]
+  if 1 not in actors:
+    raise Exception("Missing player start location in WAD")
   for thing in map.things:
     if thing.type not in actors:
-      print("WARNING - Thing: {} references unknown actor: {} - skipping".format(thing, thing.type))
+      logging.warning("Thing: {} references unknown actor: {} - skipping".format(thing, thing.type))
     else:
       things.append(thing)
   
+  logging.info("Packing: {} things".format(len(things)))
+
   s += pack_variant(len(things))
   for thing in things:
     s += pack_thing(thing)
@@ -461,12 +470,14 @@ def pack_actors(image_reader, actors):
       for frame in [frame for frame in frames if frame[1]==False]:
         images.append(image_reader.read(frame[0]))
   
+  logging.info("Found {} sprites".format(len(images)))
+  
   s += pack_variant(len(images))
   # export frame metadata
   tiles_count = 0
   sprites = {}
   for i,image_data in enumerate(images):
-    print("Packing sprite: {}".format(image_data.name))
+    logging.debug("Packing sprite: {}".format(image_data.name))
     sprites[image_data.name] = i
     s += "{:02x}".format(image_data.width|image_data.background<<4)
     s += pack_short(image_data.xoffset)
@@ -481,7 +492,7 @@ def pack_actors(image_reader, actors):
   if tiles_count>32763-32:
     # exceeded pico8 array size?
     raise Exception("Tiles count ({}) exceeds PICO8 table size - not yet supported".format(tiles_count))
-  print("Packing {} 16x16 tiles".format(tiles_count))
+  logging.info("Packing {} 16x16 tiles".format(tiles_count))
   image_s = pack_variant(tiles_count)
   for image_bytes in [img.data for img in images]:
     for b in image_bytes:
@@ -515,7 +526,7 @@ def pack_actors(image_reader, actors):
     s += pack_fixed(actor.radius)
     s += pack_fixed(actor.height)
     # behavior flags
-    flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2
+    flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2 | pack_flag(actor, 'ismonster')<<3
     s += "{:02x}".format(flags)
     
     ################## properties
@@ -573,6 +584,18 @@ def pack_actors(image_reader, actors):
     if actor.get('mass'):
       properties |= 0x800
       properties_data += pack_variant(actor.mass)      
+    if actor.get('pickupsound'):
+      properties |= 0x1000
+      properties_data += pack_variant(actor.pickupsound)      
+    if actor.get('attacksound'):
+      properties |= 0x2000
+      properties_data += pack_variant(actor.attacksound)      
+    if actor.get('hudcolor'):
+      properties |= 0x4000
+      properties_data += pack_variant(actor.hudcolor)      
+    if actor.get('deathsound'):
+      properties |= 0x8000
+      properties_data += pack_variant(actor.deathsound)      
     s += pack_int32(properties)
     s += properties_data
   
@@ -702,15 +725,29 @@ def pack_menu(stream, palette):
   # convert to pico image
   return pack_image(img, palette)
 
-def to_gamecart(name,width,map_data,gfx_data,gfx_label,gfx_menu,palette):
+def to_gamecart(carts_path, name, maps, width,map_data,gfx_data,gfx_label,gfx_menu,palette):
     cart="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
--- poom
+-- {0}
 -- @freds72
+-- *********************************
+-- generated code - do not edit
+-- *********************************
+mod_name="{0}"
+_maps_label=split"{1}"
+_maps_cart=split"{2}"
+_maps_offset=split"{3}"
+_maps_music=split"{4}"
 #include main.lua
-"""
+""".format(
+  name, 
+  ",".join(["{}".format(m.label) for m in maps]),
+  ",".join(["{}".format(m.cart_id) for m in maps]),
+  ",".join(["{}".format(m.cart_offset) for m in maps]),
+  ",".join(["{}".format(m.music) for m in maps]))
+
     # transpose gfx
     gfx_data=[pack_sprite(data) for data in gfx_data]
 
@@ -764,10 +801,28 @@ __lua__
       cart += re.sub("(.{128})", "\\1\n", s, 0, re.DOTALL)
       cart += "\n"
 
-    cart_path = os.path.join(local_dir, "..", "carts", "{}.p8".format(name))
-    f = open(cart_path, "w")
-    f.write(cart)
-    f.close()
+    # music and sfx (from external cart)
+    music_path = os.path.join(carts_path, "music.p8")    
+    if os.path.isfile(music_path):
+      logging.info("Found music&sfx cart: {}".format(music_path))
+
+      copy = False
+      with open(music_path, "r") as f:
+        for line in f:
+          line = line.rstrip("\n\r")
+          if line in ["__music__","__sfx__"]:
+            copy = True
+          elif re.match("__([a-z]+)__",line):
+            # any other section
+            copy = False
+          if copy:
+            cart += line
+            cart += "\n"
+
+    cart_path = os.path.join(carts_path, "{}.p8".format(name))
+    with open(cart_path, "w") as f:
+      f.write(cart)
+
 
 def load_WAD(stream, mapname):
   with stream.open(mapname) as file:
@@ -775,7 +830,7 @@ def load_WAD(stream, mapname):
     header_data = file.read(struct.calcsize(fmt_WADHeader))
     header = WADHeader._make(struct.unpack(fmt_WADHeader, header_data))
 
-    print("Packing map: {} - WAD type: {}".format(mapname, header.type))
+    logging.debug("Map: {} WAD type: {}".format(mapname, header.type))
 
     # go to directory
     file.seek(header.dir_ofs)
@@ -792,15 +847,25 @@ def load_WAD(stream, mapname):
       i += 1
   raise Exception("No entry matching E[0-9]M[0-9] found in WAD: {}".format(mapname))
 
-def pack_archive(root, modname, mapname):
+def pack_archive(pico_path, carts_path, root, modname, mapname):
   # resource readers
-  maps_stream = FileStream(os.path.join(root, modname, "maps"))
-  file_stream = FileStream(os.path.join(root, modname))
-  graphics_stream = FileStream(os.path.join(root, modname, "graphics"))
+  maps_stream = FileStream(os.path.join(root, "maps"))
+  file_stream = FileStream(os.path.join(root))
+  graphics_stream = FileStream(os.path.join(root, "graphics"))
 
-  # extract map + things
-  zmap = load_WAD(maps_stream, mapname)
-  
+  maps = []
+  if mapname=="":
+    # all maps
+    logging.info("Packing all mod maps")
+    maps = MapinfoReader(file_stream).read()
+  else:    
+    logging.info("Packing single map: {}".format(mapname))
+    maps = [dotdict({
+      'name': mapname,
+      'label': mapname,
+      'music': -1
+    })]
+
   # extract palette
   colormap = ColormapReader(file_stream)
   gradients = colormap.read("PLAYPAL", use_palette=True) + colormap.read("PAINPAL")
@@ -816,12 +881,27 @@ def pack_archive(root, modname, mapname):
   # decode menu
   menu = pack_menu(graphics_stream, std_palette())
   title = pack_title(graphics_stream, std_palette())
-  # pack map
-  data = pack_actors(image_reader, actors) + pack_zmap(zmap, textures, actors)
 
-  last_cart_id = to_multicart(data, modname)
+  # pack actors (shared by all maps)
+  data = pack_actors(image_reader, actors)
 
-  to_gamecart(modname, textures.width, textures.map, textures.gfx, title, menu, gradients)
+  # extract map + things
+  cart_len = 2*0x4300
+  for m in maps:
+    # locate maps in multicarts
+    cart_id = int(len(data)/cart_len)
+    cart_offset = int((len(data)%cart_len)/2)
+    m.cart_id = cart_id
+    m.cart_offset = cart_offset
+    logging.info("Packing map: {} - cart id: {}".format(m.name,cart_id))
+    zmap = load_WAD(maps_stream, m.name)  
+    data += pack_zmap(zmap, textures, actors)
+
+  # export data carts
+  last_cart_id = to_multicart(data, pico_path, carts_path, modname)
+  
+  # export game cart
+  to_gamecart(carts_path, modname, maps, textures.width, textures.map, textures.gfx, title, menu, gradients)
 
   export_cmd=""
   for i in range(0,last_cart_id+1):
@@ -832,35 +912,15 @@ def pack_archive(root, modname, mapname):
 def to_float(n):
   return float((n-0x100000000)/65535.0) if n>0x7fffffff else float(n/65535.0)
 
-def project(v):
-  return (v[0]/4+320,320-v[1]/4)
-
-black = 0, 0, 0
-white = (255, 255, 255)
-grey = (128, 128, 128)
-red = (255, 0, 0)
-dark_red = (128, 0 , 0)
-yellow = (255, 0, 255)
-blue = (0,0,255)
-light_blue = (128, 128, 255)
-
-def draw_plane(surface, v0, v1, color):
-  pygame.draw.line(surface, color, project(v0), project(v1), 2)
-  x = (v0[0]+v1[0])/2
-  y = (v0[1]+v1[1])/2
-  n = normal(ortho(v0,v1))
-  n = (x + 8*n[0], y + 8*n[1])
-  pygame.draw.line(surface, light_blue, project((x,y)), project(n), 2)
-
-
 def get_PVS(zmap, sub_id):
   vertices = zmap.vertices + [(to_float(v[0]),to_float(v[1])) for v in zmap.other_vertices]
 
-  # init PVS for sector 6
+  # init PVS for sector
   pvs = set()
   # already processed portal pairs
   pairs = set()
   portals = []
+  # starting sub sector
   sub0 = zmap.sub_sectors[sub_id]
   s0 = sub0[len(sub0)-1]
   for i in range(len(sub0)):
@@ -887,7 +947,7 @@ def get_PVS(zmap, sub_id):
               'dst':portal1,
               'sub_id':os0.partner
             }))
-            pairs.add("{}:{}".format( s0.partner, os0.partner))
+            pairs.add("{}-{}:{}-{}".format(portal0.v0, portal0.v1, portal1.v0, portal1.v1))
             # print("portal: {}:{} -> {}".format(0, s0.partner, os0.partner))
         os0 = os1
     s0 = s1
@@ -896,6 +956,7 @@ def get_PVS(zmap, sub_id):
   # clip portals
   while len(portals)>0:
     portal = portals.pop()
+    # antipenumbra region
     clip0 = Polygon(v0=portal.dst.v1,v1=portal.src.v0, vertices=vertices)
     clip1 = Polygon(v0=portal.src.v1,v1=portal.dst.v0, vertices=vertices)
 
@@ -915,7 +976,8 @@ def get_PVS(zmap, sub_id):
             # anything remains?
             pvs.add(portal.sub_id)
             # is seg connected?
-            next_portal = "{}:{}".format(portal.sub_id, s0.partner)
+            # next_portal = "{}:{}".format(portal.sub_id, s0.partner)
+            next_portal = "{}-{}:{}-{}".format(portal.src.v0, portal.src.v1, front.v0, front.v1)
             if s0.partner!=-1 and next_portal not in pairs:
               portals.append(dotdict({
                 'src': portal.src,
@@ -923,95 +985,28 @@ def get_PVS(zmap, sub_id):
                 'sub_id': s0.partner
               }))
               pairs.add(next_portal)
-              #print("*portal*: {}:{} -> {}".format(0, portal.sub_id, s0.partner))
+              #print("*portal*: {}".format(next_portal))
       s0 = s1
-
+      
   #print("pvs: {}".format(pvs))
   # remove self from PVS
   if sub_id in pvs: pvs.remove(sub_id)
   return (pvs, clips, vertices)
 
-def display_WAD(filepath,mapname):
-  with open(filepath, 'rb') as file:
-    # read file header
-    header_data = file.read(struct.calcsize(fmt_WADHeader))
-    header = WADHeader._make(struct.unpack(fmt_WADHeader, header_data))
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument("--pico-home", required=True, type=str, help="full path to PICO8 folder")
+  parser.add_argument("--carts-path", required=True,type=str, help="path to carts folder where game is exported")
+  parser.add_argument("--mod-name", required=True,type=str, help="game cart name (ex: poom)")
+  parser.add_argument("--map", type=str, default="", required=False, help="map name to compile (ex: E1M1)")
+  args = parser.parse_args()
 
-    maps = {}
-    # go to directory
-    file.seek(header.dir_ofs)
-    i = 0
-    while i<header.dir_size:
-      entry_data = file.read(struct.calcsize(fmt_WADDirectory))
-      entry = WADDirectory._make(struct.unpack(fmt_WADDirectory, entry_data))
-      lump_name = entry.lump_name.decode('ascii').rstrip('\x00')
-      # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_glnodes.cpp
-      # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_setup.cpp
-      if re.match("E[0-9]M[0-9]",lump_name):
-        # read UDMF
-        map_dir = MAPDirectory(file, lump_name, entry)
-        maps[lump_name] = map_dir
-        # skip map entries + ENDMAP
-        i += len(map_dir.lumps) + 1
-      i += 1
+  logging.basicConfig(level=logging.INFO)
 
-    # pick map
-    zmap = maps[mapname].read(file)
-    
-    pvs, clips, vertices = get_PVS(zmap, 38)
+  print(args)
+  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map)
+  logging.info('DONE')
 
-    #  debug display
-    pygame.init()
-
-    size = width, height = 640, 640
-    screen = pygame.display.set_mode(size)
-    my_font = pygame.font.SysFont("Courier", 16)
-    my_bold_font = pygame.font.SysFont("Courier", 16, bold=1)
-
-    while 1:
-      for event in pygame.event.get():
-        if event.type == pygame.QUIT: sys.exit()
-
-      screen.fill(black)
-
-      # draw segments
-      for k in range(len(zmap.sub_sectors)):
-        segs = zmap.sub_sectors[k]
-        n = len(segs)
-        s0 = segs[n-1]
-        v0 = vertices[s0.v1]
-        xc = 0
-        yc = 0
-        
-        for i in range(n):
-          s1 = segs[i]
-          v1 = vertices[s1.v1]
-          xc += v1[0]
-          yc += v1[1]
-          r = 2
-          c = dark_red
-          pygame.draw.line(screen, s0.partner==-1 and grey or c, project(v0), project(v1), r)
-          s0 = s1
-          v0 = v1
-        xc /= n
-        yc /= n
-        font = my_font
-        if k in pvs:
-          font = my_bold_font
-        the_text = font.render("{}".format(k), True, grey)
-        screen.blit(the_text, project((xc, yc)))
-      # portals
-      #for portal in portals:
-      #  # draw frustrum
-      #  draw_plane(screen, vertices[portal.dst.v1], vertices[portal.src.v0], yellow)
-      #  draw_plane(screen, vertices[portal.src.v1], vertices[portal.dst.v0], yellow)
-
-      for portal in clips:
-        # draw frustrum
-        pygame.draw.line(screen, blue, project(vertices[portal.v0]), project(vertices[portal.v1]), 2)
-
-      pygame.display.flip()
-
-pack_archive(os.path.join(local_dir,"..","mods"), "poom", "E1M1")
-#display_WAD("C:\\Users\\fsouchu\\Documents\\e1m1.wad", "E1M1")
+if __name__ == '__main__':
+    main()
 

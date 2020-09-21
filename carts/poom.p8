@@ -3,6 +3,13 @@ version 29
 __lua__
 -- poom
 -- @freds72
+-- *********************************
+-- generated code - do not edit
+-- *********************************
+mod_name="poom"
+_maps_label=split"Hangar,Docks"
+_maps_cart=split"4,5"
+_maps_offset=split"13966,8567"
 #include main.lua
 __gfx__
 00000000bb77bbbbbbbb77bb27bbbbbb27bbbbbbbbbbbbbbeeee0000bbbbbbbbddccdccc22222222bbbbbbbb6767676677777777999999994333334433333333
