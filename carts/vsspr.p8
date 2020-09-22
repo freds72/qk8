@@ -1,29 +1,34 @@
 pico-8 cartridge // http://www.pico-8.com
 version 27
 __lua__
+#include lzs.lua
+
 local _sprite_cache
 local _frames,_tiles
 function _init()
+	-- multicart peek global function
+	mpeek=decompress("vsspr")
 	_frames,_tiles=unpack_sprites()
-	_sprite_cache=make_sprite_cache(32)
+	_sprite_cache=make_sprite_cache(_tiles,32)
 end
 
-function vspr(sx,sy,angle,scale,flipx)
-	--palt(3,true)
-	local frame=_frames[flr(angle*#_frames)+1]
-	local w,h,tiles=unpack(frame)
-	--local scale=16--((abs(cos(time()/4))+2)<<4)\1+1
-	local sw,xscale=w*scale>>1,flipx and -scale or scale
-	sx-=sw
-	if(flipx) sx+=sw  
-	sy-=h*scale
+function vspr(frame,sx,sy,scale,flipx)
+  -- faster equivalent to: palt(0,false)
+  poke(0x5f00,0)
+  local w,xoffset,yoffset,tc,tiles=unpack(frame)
+  palt(tc,true)
+  local sw,xscale=xoffset*scale,flipx and -scale or scale
+  sx-=sw
+  -- todo: bug?
+  if(flipx) sx+=sw  
+	sy-=yoffset*scale
 	for i,tile in pairs(tiles) do
-		local ssx,ssy=_sprite_cache:use(tile,_tiles)
-		local dx,dy=sx+(i%w)*xscale,sy+(i\w)*scale
-		sspr(ssx,ssy,16,16,dx,dy,scale+dx%1,scale+dy%1,flipx)
-		-- print(tile,(i%w)*16,(i\w)*16,7)
-	end
-	pset(sx,sy,8)
+    local dx,dy,ssx,ssy=sx+(i%w)*xscale,sy+(i\w)*scale,_sprite_cache:use(tile)
+    -- scale sub-pixel fix 
+    sspr(ssx,ssy,16,16,dx,dy,scale+dx%1,scale+dy%1,flipx)
+    -- print(tile,(i%w)*16,(i\w)*16,7)
+  end
+  palt()
 end
 
 local angle,scale=0,16
@@ -41,7 +46,8 @@ function _draw()
 	--spr(0,0,64,16,8)
 	palt(0,false)
 	--for i=16,96,32 do
-		vspr(32,96,angle,scale,btn(4))
+		local frame=_frames[flr(angle*#_frames)+1]
+		vspr(frame,32,96,scale,btn(4))
 
 		--vspr2(96,96,angle,scale,btn(4))
 
@@ -58,9 +64,10 @@ function _draw()
 end
 -->8
 -- https://github.com/luapower/linkedlist/blob/master/linkedlist.lua
-function make_sprite_cache(maxlen)
+function make_sprite_cache(tiles,maxlen)
 	local len,index,first,last=0,{}
 
+  -- note: keep multiline assignments, they are *faster*
 	local function remove(t)
 		if t._next then
 			if t._prev then
@@ -85,7 +92,7 @@ function make_sprite_cache(maxlen)
 	end
 	
 	return {
-		use=function(self,id,tiles)
+    use=function(self,id)
 			local entry=index[id]
 			if entry then
 				-- existing item?
@@ -94,17 +101,16 @@ function make_sprite_cache(maxlen)
 			else
 				-- allocate a new 16x16 entry
 				-- todo: optimize
-				local sx,sy=(len<<4)&127,((len<<4)\128)<<4
+				local sx,sy=(len<<4)&127,64+(((len<<4)\128)<<4)
 				-- list too large?
 				if len+1>maxlen then
 					local old=remove(first)
 					-- reuse cache entry
-					sx,sy=old[1],old[2]
-					index[old.id]=nil
+					sx,sy,index[old.id]=old[1],old[2]
 				end
 				-- new (or relocate)
 				-- copy data to sprite sheet
-				local mem=(sx\2)|sy<<6
+				local mem=sx\2|sy<<6
 				for j=0,31 do
 					poke4(mem|(j&1)<<2|(j\2)<<6,tiles[id+j])
 				end		
@@ -131,48 +137,11 @@ function make_sprite_cache(maxlen)
 			len+=1
 			-- return sprite sheet coords
 			return entry[1],entry[2]
-		end,
-		print=function(self,x,y,c)
-		 color(c)
-			local head=first
-			while head do
-			 print(head.id.." "..head.t,x,y)
-			 y+=6
-				head=head._next
-			end
-		end,
-		draw=function(self,sy)
-			local t,head=time(),first
-			while head do
-			 local slot=head.slot
-				pset(slot%128,sy+slot\128,15*head.t/t)
-				head=head._next
-			end			
 		end
 	}
 end
 
 -->8
--- unpack data
-local cart_id,mem
-local cart_progress=0
-function mpeek()
-	if mem==0x4300 then
-		cart_progress=0
-    cart_id+=1
-		reload(0,0,0x4300,"vsspr_"..cart_id..".p8")
-		mem=0
-	end
-	local v=peek(mem)
-	if mem%779==0 then
-		cart_progress+=1
-		rectfill(0,120,shl(cart_progress,4),127,cart_id%2==0 and 1 or 7)
-		flip()
-  end
-	mem+=1
-	return v
-end
-
 -- w: number of bytes (1 or 2)
 function unpack_int(w)
   w=w or 1
@@ -196,32 +165,36 @@ end
 
 -- unpack an array of bytes
 function unpack_array(fn)
-	for i=1,unpack_variant() do
+	local n=unpack_variant()
+	printh("array:"..n)
+	for i=1,n do
 		fn(i)
 	end
 end
 
 function unpack_sprites()
-  -- jump to data cart
-  cart_id,mem=0,0
-  reload(0,0,0x4300,"vsspr_"..cart_id..".p8")
-
 	local frames,tiles={},{}
-	unpack_array(function()
-		-- width/height
-		local w,h=mpeek(),mpeek()
-		local frame=add(frames,{w,h,{}})
+  unpack_array(function()
+    -- packed:
+    -- width/transparent color
+    -- xoffset/yoffset in tiles unit (16x16)
+    local wtc=mpeek()
+		local frame=add(frames,{wtc&0xf,(mpeek()-128)/16,(mpeek()-128)/16,flr(wtc>>4),{}})
 		unpack_array(function()
-			-- tile index
-			frame[3][mpeek()]=unpack_variant()
-		end)
-	end)
+			-- tiles index
+			frame[5][mpeek()]=unpack_variant()
+    end)
+  end)
+  -- sprite tiles
 	unpack_array(function()
 		-- 16 rows of 2*8 pixels
 		for k=0,31 do
 			add(tiles,unpack_fixed())
 		end
-	end)
+  end)
+	printh("frames#:"..#frames)
+	printh("tiles#:"..#tiles)
+
 	-- restore spritesheet
 	reload()
 	return frames,tiles
