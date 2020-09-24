@@ -27,6 +27,7 @@ from colormap_reader import ColormapReader, std_palette
 from wad_stream import WADStream
 from file_stream import FileStream
 from PIL import Image
+from lzs import *
 
 # debug/draw
 import sys
@@ -205,6 +206,7 @@ def pack_segs(segs):
   return s
 
 def pack_texture(texture):
+
   return "{:02x}{:02x}{:02x}{:02x}".format(texture.my,texture.mx,texture.height,texture.width)
 
 def pack_named_texture(owner, textures, name):
@@ -322,6 +324,29 @@ def pack_thing(thing):
 
 def pack_flag(owner, name):
   return owner.get(name,False) and 1 or 0
+
+# return active textures/flats from map
+def get_zmap_textures(map):
+  textures = set()
+  for sector in map.sectors:
+    textures.add(sector.get('textureceiling',None))
+    textures.add(sector.get('texturefloor',None))
+            
+  for side in map.sides:
+    textures.add(side.get('texturetop',None))
+    textures.add(side.get('texturemiddle',None))
+    textures.add(side.get('texturebottom',None))
+  textures.remove(None)
+
+  # make sure on/off textures are included
+  onoff_textures=set()
+  for name in textures:
+    if '_ON' in name:
+      onoff_textures.add(name.replace('_ON','_OFF'))
+    elif '_OFF' in name:
+      onoff_textures.add(name.replace('_OFF','_ON'))
+
+  return textures|onoff_textures
 
 def pack_zmap(map, textures, actors):
   # shortcut to wall textures
@@ -725,8 +750,8 @@ def pack_menu(stream, palette):
   # convert to pico image
   return pack_image(img, palette)
 
-def to_gamecart(carts_path, name, maps, width,map_data,gfx_data,gfx_label,gfx_menu,palette):
-    cart="""\
+def to_gamecart(carts_path, name, group_name, maps, width,map_data,gfx_data,gfx_label,gfx_menu,palette,compress=False):
+  cart="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
@@ -736,92 +761,94 @@ __lua__
 -- generated code - do not edit
 -- *********************************
 mod_name="{0}"
-_maps_label=split"{1}"
+mod_map="{1}"
 _maps_cart=split"{2}"
 _maps_offset=split"{3}"
 _maps_music=split"{4}"
+{5}
 #include main.lua
 """.format(
-  name, 
-  ",".join(["{}".format(m.label) for m in maps]),
+  name,
+  group_name,
   ",".join(["{}".format(m.cart_id) for m in maps]),
   ",".join(["{}".format(m.cart_offset) for m in maps]),
-  ",".join(["{}".format(m.music) for m in maps]))
+  ",".join(["{}".format(m.music) for m in maps]),
+  compress and "#include lzs.lua" or "#include plain.lua")
 
-    # transpose gfx
-    gfx_data=[pack_sprite(data) for data in gfx_data]
+  # transpose gfx
+  gfx_data=[pack_sprite(data) for data in gfx_data]
 
+  s = ""
+  rows = [""]*8
+  for i,img in enumerate(gfx_data):
+      # full row?
+      if i%16==0:
+          # collect
+          s += "".join(rows)
+          rows = [""]*8           
+      for j in range(8):
+          rows[j] += img[j]
+
+  # remaining tiles (+ padding)
+  s += "".join([row + "0" * (128-len(row)) for row in rows])
+  # fill until spritesheet 2
+  s += "0"*(128*64-len(s))
+
+  # palette (e.g. gradients or screen palettes)
+  #print("\n".join([" ".join(map("{:02x}".format,palette[i:i+16])) for i in range(0,len(palette),16)]))
+  tmp = "".join(map("{:02x}".format,palette))
+  # preserve byte orders
+  for i in range(0,len(tmp),2):
+    s += tmp[i+1:i+2] + tmp[i:i+1]
+  # fill until spritesheet 3
+  s += "0"*(128*80-len(s))
+
+  # title assets
+  for i in range(0,len(gfx_menu),2):
+    s += gfx_menu[i+1:i+2] + gfx_menu[i:i+1]
+
+  # convert to string
+  cart += "__gfx__\n"
+  cart += re.sub("(.{128})", "\\1\n", s, 0, re.DOTALL)
+  cart += "\n"
+
+  # pad map
+  map_data = ["".join(map("{:02x}".format,map_data[i:i+width] + [0]*(128-width))) for i in range(0,len(map_data),width)]
+  map_data = "".join(map_data)
+  cart += "__map__\n"
+  cart += re.sub("(.{256})", "\\1\n", map_data, 0, re.DOTALL)
+
+  # label image
+  if len(gfx_label)!=0:
     s = ""
-    rows = [""]*8
-    for i,img in enumerate(gfx_data):
-        # full row?
-        if i%16==0:
-            # collect
-            s += "".join(rows)
-            rows = [""]*8           
-        for j in range(8):
-            rows[j] += img[j]
+    for i in range(0,len(gfx_label),2):
+      s += gfx_label[i+1:i+2] + gfx_label[i:i+1]
 
-    # remaining tiles (+ padding)
-    s += "".join([row + "0" * (128-len(row)) for row in rows])
-    # fill until spritesheet 2
-    s += "0"*(128*64-len(s))
-
-    # palette (e.g. gradients or screen palettes)
-    #print("\n".join([" ".join(map("{:02x}".format,palette[i:i+16])) for i in range(0,len(palette),16)]))
-    tmp = "".join(map("{:02x}".format,palette))
-    # preserve byte orders
-    for i in range(0,len(tmp),2):
-      s += tmp[i+1:i+2] + tmp[i:i+1]
-    # fill until spritesheet 3
-    s += "0"*(128*80-len(s))
-
-    # title assets
-    for i in range(0,len(gfx_menu),2):
-      s += gfx_menu[i+1:i+2] + gfx_menu[i:i+1]
-
-    # convert to string
-    cart += "__gfx__\n"
+    cart += "__label__\n"
     cart += re.sub("(.{128})", "\\1\n", s, 0, re.DOTALL)
     cart += "\n"
 
-    # pad map
-    map_data = ["".join(map("{:02x}".format,map_data[i:i+width] + [0]*(128-width))) for i in range(0,len(map_data),width)]
-    map_data = "".join(map_data)
-    cart += "__map__\n"
-    cart += re.sub("(.{256})", "\\1\n", map_data, 0, re.DOTALL)
+  # music and sfx (from external cart)
+  music_path = os.path.join(carts_path, "music.p8")    
+  if os.path.isfile(music_path):
+    logging.info("Found music&sfx cart: {}".format(music_path))
 
-    # label image
-    if len(gfx_label)!=0:
-      s = ""
-      for i in range(0,len(gfx_label),2):
-        s += gfx_label[i+1:i+2] + gfx_label[i:i+1]
+    copy = False
+    with open(music_path, "r") as f:
+      for line in f:
+        line = line.rstrip("\n\r")
+        if line in ["__music__","__sfx__"]:
+          copy = True
+        elif re.match("__([a-z]+)__",line):
+          # any other section
+          copy = False
+        if copy:
+          cart += line
+          cart += "\n"
 
-      cart += "__label__\n"
-      cart += re.sub("(.{128})", "\\1\n", s, 0, re.DOTALL)
-      cart += "\n"
-
-    # music and sfx (from external cart)
-    music_path = os.path.join(carts_path, "music.p8")    
-    if os.path.isfile(music_path):
-      logging.info("Found music&sfx cart: {}".format(music_path))
-
-      copy = False
-      with open(music_path, "r") as f:
-        for line in f:
-          line = line.rstrip("\n\r")
-          if line in ["__music__","__sfx__"]:
-            copy = True
-          elif re.match("__([a-z]+)__",line):
-            # any other section
-            copy = False
-          if copy:
-            cart += line
-            cart += "\n"
-
-    cart_path = os.path.join(carts_path, "{}.p8".format(name))
-    with open(cart_path, "w") as f:
-      f.write(cart)
+  cart_path = os.path.join(carts_path, "{}_{}.p8".format(name, group_name))
+  with open(cart_path, "w") as f:
+    f.write(cart)
 
 
 def load_WAD(stream, mapname):
@@ -847,7 +874,13 @@ def load_WAD(stream, mapname):
       i += 1
   raise Exception("No entry matching E[0-9]M[0-9] found in WAD: {}".format(mapname))
 
-def pack_archive(pico_path, carts_path, root, modname, mapname):
+def compress_byte_str(s):
+  # LZSS compressor
+  cc = Codec(b_off = 8, b_len = 3) 
+  return "".join(map("{:02x}".format, cc.toarray(bytes.fromhex(s))))
+
+
+def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
   # resource readers
   maps_stream = FileStream(os.path.join(root, "maps"))
   file_stream = FileStream(os.path.join(root))
@@ -862,6 +895,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname):
     logging.info("Packing single map: {}".format(mapname))
     maps = [dotdict({
       'name': mapname,
+      'group' : mapname[:2],
       'label': mapname,
       'music': -1
     })]
@@ -869,10 +903,6 @@ def pack_archive(pico_path, carts_path, root, modname, mapname):
   # extract palette
   colormap = ColormapReader(file_stream)
   gradients = colormap.read("PLAYPAL", use_palette=True) + colormap.read("PAINPAL")
-
-  # decode textures
-  reader = TextureReader(file_stream, colormap.palette)
-  textures = reader.read()
 
   # decode actors & sprites
   image_reader = ImageReader(graphics_stream, colormap.palette)
@@ -885,29 +915,48 @@ def pack_archive(pico_path, carts_path, root, modname, mapname):
   # pack actors (shared by all maps)
   data = pack_actors(image_reader, actors)
 
+  to_multicart(compress and compress_byte_str(data) or data, pico_path, carts_path, modname)
+
   # extract map + things
   cart_len = 2*0x4300
-  for m in maps:
-    # locate maps in multicarts
-    cart_id = int(len(data)/cart_len)
-    cart_offset = int((len(data)%cart_len)/2)
-    m.cart_id = cart_id
-    m.cart_offset = cart_offset
-    logging.info("Packing map: {} - cart id: {}".format(m.name,cart_id))
-    zmap = load_WAD(maps_stream, m.name)  
-    data += pack_zmap(zmap, textures, actors)
+  map_groups = set(m.group for m in maps)
+  print(maps)
+  print(map_groups)
+  for map_group,maps in {mg:list(m for m in maps if m.group==mg) for mg in map_groups}.items():
+    logging.info("Packing map group: {}".format(map_group))
 
-  # export data carts
-  last_cart_id = to_multicart(data, pico_path, carts_path, modname)
-  
-  # export game cart
-  to_gamecart(carts_path, modname, maps, textures.width, textures.map, textures.gfx, title, menu, gradients)
+    active_textures = set()
+    for m in maps:
+      logging.info("Decoding map: {}".format(m.name))
+      zmap = load_WAD(maps_stream, m.name) 
+      m.zmap = zmap
+      active_textures |= get_zmap_textures(zmap)
 
-  export_cmd=""
-  for i in range(0,last_cart_id+1):
-    export_cmd += "{}_{}.p8 ".format(modname,i)
-  print("export index.html {} {}.p8".format(export_cmd,modname))
-  print("export {}.bin {} {}.p8".format(modname,export_cmd,modname))
+    # decode textures
+    reader = TextureReader(file_stream, colormap.palette)
+    textures = reader.read(active_textures)
+
+    data = ""
+    for m in maps:
+      # locate maps in multicarts
+      logging.info("Packing map: {}".format(m.name))
+      m.cart_id = int(len(data)/cart_len)
+      m.cart_offset = int((len(data)%cart_len)/2)    
+      # compress each map separately 
+      map_data = pack_zmap(m.zmap, textures, actors)
+      data += compress and compress_byte_str(map_data) or map_data
+    
+    # map data
+    to_multicart(data, pico_path, carts_path, modname + "_" + map_group)
+
+    # export map (game) cart
+    to_gamecart(carts_path, modname, map_group, maps, textures.width, textures.map, textures.gfx, title, menu, gradients, compress)
+
+  # export_cmd=""
+  # for i in range(0,last_cart_id+1):
+  #   export_cmd += "{}_{}.p8 ".format(modname,i)
+  # print("export index.html {} {}.p8".format(export_cmd,modname))
+  # print("export {}.bin {} {}.p8".format(modname,export_cmd,modname))
 
 def to_float(n):
   return float((n-0x100000000)/65535.0) if n>0x7fffffff else float(n/65535.0)
@@ -999,12 +1048,13 @@ def main():
   parser.add_argument("--carts-path", required=True,type=str, help="path to carts folder where game is exported")
   parser.add_argument("--mod-name", required=True,type=str, help="game cart name (ex: poom)")
   parser.add_argument("--map", type=str, default="", required=False, help="map name to compile (ex: E1M1)")
+  parser.add_argument("--compress", action='store_true', required=False, help="Enable compression (default: false)")
   args = parser.parse_args()
 
   logging.basicConfig(level=logging.INFO)
 
   print(args)
-  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map)
+  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress)
   logging.info('DONE')
 
 if __name__ == '__main__':

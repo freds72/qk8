@@ -63,12 +63,12 @@ class Codec(object):
         pos += 1
     return sched
   def toarray(self, blk): 
-    bs = Bitstream() 
+    bs = Bitstream()
     bs.append(4, self.b_off) 
     bs.append(4, self.b_len) 
     bs.append(2, self.M)
-    sched = self.compress(blk) 
     bs.append(32, len(blk)) 
+    sched = self.compress(blk) 
     for c in sched: 
       if type(c) is tuple: 
         (offset, l) = c 

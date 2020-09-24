@@ -13,37 +13,40 @@ from PIL import Image, ImageFilter
 import logging
 
 class TEXTURES(TEXTURESListener):
-  def __init__(self):
+  # filter contains the set of textures to include
+  def __init__(self, filter):
     self.flats = {}
     self.patches = set()
+    self.filter = filter
 
   def exitBlock(self, ctx):  
     name = ctx.name().getText().strip('"')
-    namespace = ctx.namespace().getText().lower()
-    logging.debug("Found texture: {}.{}".format(namespace, name))
-    if namespace == "sprite":
-      raise Exception("Texture sprite not supportted - {}: must be defined as lump entry.".format(name))
-    # get texture data
-    patch = ctx.patch()
+    if name in self.filter:
+      namespace = ctx.namespace().getText().lower()
+      logging.debug("Found texture: {}.{}".format(namespace, name))
+      if namespace == "sprite":
+        raise Exception("Texture sprite not supportted - {}: must be defined as a lump entry.".format(name))
+      # get texture data
+      patch = ctx.patch()
 
-    self.patches.add(patch.name().getText().lower().strip('"'))
+      self.patches.add(patch.name().getText().lower().strip('"'))
 
-    # texture size
-    width = int(ctx.width().getText())
-    height = int(ctx.height().getText())
+      # texture size
+      width = int(ctx.width().getText())
+      height = int(ctx.height().getText())
 
-    # offset in texture image
-    xoffset = -int(patch.xoffset().getText())
-    yoffset = -int(patch.yoffset().getText())
+      # offset in texture image
+      xoffset = -int(patch.xoffset().getText())
+      yoffset = -int(patch.yoffset().getText())
 
-    # convert to 8x8 map unit
-    texture = dotdict({
-      'width':width>>3,
-      'height':height>>3,
-      'mx':xoffset>>3,
-      'my':yoffset>>3
-    })
-    self.flats[name] = texture
+      # convert to 8x8 map unit
+      texture = dotdict({
+        'width':width>>3,
+        'height':height>>3,
+        'mx':xoffset>>3,
+        'my':yoffset>>3
+      })
+      self.flats[name] = texture
   
 # Converts a TEXTURE file definition into a set of unique tiles + map index
 class TextureReader(TEXTURESListener):
@@ -51,11 +54,12 @@ class TextureReader(TEXTURESListener):
     self.rgba_to_pico = {}
     for i,rgba in enumerate(palette):
       self.rgba_to_pico[rgba] = i
-    # forced transparency color
+    # forced transparency colors
     self.rgba_to_pico[(00,00,00,00)] = -1
+    self.rgba_to_pico[(255,255,255,00)] = -1
     self.stream = stream
     
-  def read(self):    
+  def read(self, texture_filter):    
     # get data
     data = self.stream.read("TEXTURES").decode('ascii')
 
@@ -65,12 +69,12 @@ class TextureReader(TEXTURESListener):
     tree = parser.textures()
     walker = ParseTreeWalker()
 
-    listener = TEXTURES()
+    listener = TEXTURES(texture_filter)
     walker.walk(listener, tree)
 
     # convert texture image to map/gfx
     if len(listener.patches)>1:
-      raise Exception("Multiple texture images not supported: {}".format(listener.patches))
+      raise Exception("Multiple tilesets not supported: {}".format(listener.patches))
 
     texture_name = listener.patches.pop()
     image_data = self.stream.read(texture_name)

@@ -15,7 +15,7 @@ import setuptools
 # >>
 setuptools.setup(
     name="wad_reader",
-    version="0.6",
+    version="0.7",
     author="https://twitter.com/FSouchu",
     description="POOM archive compiler for PICO8",
     url="https://github.com/freds72/qk8",
@@ -49,7 +49,8 @@ setuptools.setup(
       'udmfVisitor',
       'udmf_reader',
       'wad_reader',
-      'wad_stream'],
+      'wad_stream',
+      'lzs'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache 2.0 License",

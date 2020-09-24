@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 27
+version 29
 __lua__
 #include lzs.lua
 
@@ -7,8 +7,7 @@ local _sprite_cache
 local _frames,_tiles
 function _init()
 	-- multicart peek global function
-	mpeek=decompress("vsspr")
-	_frames,_tiles=unpack_sprites()
+	_frames,_tiles=decompress("vsspr",0,0,unpack_sprites)
 	_sprite_cache=make_sprite_cache(_tiles,32)
 end
 
