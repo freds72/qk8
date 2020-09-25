@@ -122,25 +122,28 @@ cstore(0, 0, 0x4300, "{}")
     cart_path = os.path.join(carts_path,"{}_tmp.p8".format(cart_name))
     with open(cart_path, "w") as f:
         f.write(cart.format(cart_name, sfx_data, cart_filename))
-        # run cart
-        exitcode, out, err = call([os.path.join(pico_path,"pico8.exe"),"-x",os.path.abspath(cart_path)])
-        if err:
-            raise Exception('Unable to process pico-8 cart: {}. Exception: {}'.format(cart_path,err))
-        if cart_code:
-            with open(os.path.join(carts_path,cart_filename),"r") as f:
-                cart = ""
-                for line in f:
-                    line = line.rstrip("\n\r")
+    # run cart
+    exitcode, out, err = call([os.path.join(pico_path,"pico8.exe"),"-x",os.path.abspath(cart_path)])
+    if err:
+        raise Exception('Unable to process pico-8 cart: {}. Exception: {}'.format(cart_path,err))
+    if cart_code:
+        cart = cart_code
+        with open(os.path.join(carts_path,cart_filename),"r") as f:
+            copy = False
+            for line in f:
+                line = line.rstrip("\n\r")
+                if line in ["__lua__"]:
+                    # skip code section
+                    copy = False
+                elif re.match("__([a-z]+)__",line):
+                    # any other section
+                    copy = True
+                if copy:
                     cart += line
                     cart += "\n"
-                    if line=="__lua__":
-                        # insert boot code
-                        cart += cart_code
-                        cart += "\n"     
-            with open(os.path.join(carts_path,cart_filename),"w") as f:                   
-                f.write(cart)
+        with open(os.path.join(carts_path,cart_filename),"w") as f:                   
+            f.write(cart)
     os.unlink(cart_path)
-
 
 def to_multicart(s,pico_path,carts_path,cart_name,boot_code=None):
   cart_id = 0
@@ -154,6 +157,6 @@ def to_multicart(s,pico_path,carts_path,cart_name,boot_code=None):
           cart_data = ""
   # remaining data?
   if len(cart_data)!=0:
-      to_cart(cart_data, pico_path, carts_path, cart_name, cart_id)
+      to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_id==0 and boot_code)
   return cart_id
 

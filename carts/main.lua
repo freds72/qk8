@@ -277,10 +277,12 @@ function polyfill(v,xoffset,yoffset,tex,light)
 
       x0+=dx
       w0+=dw
-    end			
-    x0=_x1
-    y0=_y1
-    w0=_w1
+    end		
+    -- "exploit" known bug: local decl is faster than assigns unless a sum(!!)
+    -- to be removed when: https://www.lexaloffle.com/bbs/?tid=39090 is fixed	
+    x0=_x1+0
+    y0=_y1+0
+    w0=_w1+0
   end
 end
 

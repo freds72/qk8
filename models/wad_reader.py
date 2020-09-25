@@ -756,7 +756,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
 -- {0}
--- @freds72
+-- @freds72 + @gamecactus
 -- *********************************
 -- generated code - do not edit
 -- *********************************
@@ -886,14 +886,14 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
   file_stream = FileStream(os.path.join(root))
   graphics_stream = FileStream(os.path.join(root, "graphics"))
 
-  maps = []
+  all_maps = []
   if mapname=="":
     # all maps
     logging.info("Packing all mod maps")
-    maps = MapinfoReader(file_stream).read()
+    all_maps = MapinfoReader(file_stream).read()
   else:    
     logging.info("Packing single map: {}".format(mapname))
-    maps = [dotdict({
+    all_maps = [dotdict({
       'name': mapname,
       'group' : mapname[:2],
       'label': mapname,
@@ -912,25 +912,10 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
   menu = pack_menu(graphics_stream, std_palette())
   title = pack_title(graphics_stream, std_palette())
 
-  # pack actors (shared by all maps)
-  data = pack_actors(image_reader, actors)
-
-  boot_code="""\
--- {0}
--- @freds72
--- *********************************
--- generated code - do not edit
--- *********************************
-mod_name="{0}"
-#include title.lua
-""".format(modname)
-
-  to_multicart(compress and compress_byte_str(data) or data, pico_path, carts_path, modname, boot_code=boot_code)
-
   # extract map + things
   cart_len = 2*0x4300
-  map_groups = set(m.group for m in maps)
-  for map_group,maps in {mg:list(m for m in maps if m.group==mg) for mg in map_groups}.items():
+  map_groups = set(m.group for m in all_maps)
+  for map_group,maps in {mg:list(m for m in all_maps if m.group==mg) for mg in map_groups}.items():
     logging.info("Packing map group: {}".format(map_group))
 
     active_textures = set()
@@ -945,11 +930,13 @@ mod_name="{0}"
     textures = reader.read(active_textures)
 
     data = ""
-    for m in maps:
+    for i,m in enumerate(maps):
       # locate maps in multicarts
       logging.info("Packing map: {}".format(m.name))
       m.cart_id = int(len(data)/cart_len)
-      m.cart_offset = int((len(data)%cart_len)/2)    
+      m.cart_offset = int((len(data)%cart_len)/2)
+      # map index (within game cart) 
+      m.map_id = i+1
       # compress each map separately 
       map_data = pack_zmap(m.zmap, textures, actors)
       data += compress and compress_byte_str(map_data) or map_data
@@ -957,8 +944,34 @@ mod_name="{0}"
     # map data
     to_multicart(data, pico_path, carts_path, modname + "_" + map_group)
 
-    # export map (game) cart
+    # export game cart (hub for maps from same group)
     to_gamecart(carts_path, modname, map_group, maps, textures.width, textures.map, textures.gfx, title, menu, gradients, compress)
+
+  # pack actors (shared by all maps)
+  data = pack_actors(image_reader, actors)
+
+  boot_code="""\
+pico-8 cartridge // http://www.pico-8.com
+version 29
+__lua__
+-- {0}
+-- by @freds72
+-- title cart
+-- *********************************
+-- generated code - do not edit
+-- *********************************
+mod_name="{0}"
+_maps_label=split"{1}"
+_maps_group=split"{2}"
+_maps_id=split"{3}"
+#include title.lua
+""".format(
+  modname,
+  ",".join(["{}".format(m.label) for m in all_maps]),
+  ",".join(["{}".format(m.group) for m in all_maps]),
+  ",".join(["{}".format(m.map_id) for m in all_maps]))
+
+  to_multicart(compress and compress_byte_str(data) or data, pico_path, carts_path, modname, boot_code=boot_code)
 
   # export_cmd=""
   # for i in range(0,last_cart_id+1):
