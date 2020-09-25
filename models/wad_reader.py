@@ -28,6 +28,7 @@ from wad_stream import WADStream
 from file_stream import FileStream
 from PIL import Image
 from lzs import *
+from tqdm import tqdm
 
 # debug/draw
 import sys
@@ -100,7 +101,7 @@ class MAPDirectory():
       lump_name = entry.lump_name.decode('ascii').rstrip('\x00')
       if lump_name == 'ENDMAP':
         break
-      print("{}: section: {}".format(name, lump_name))
+      logging.debug("Lump {}: section: {}".format(name, lump_name))
       lumps[lump_name] = entry
     self.lumps=lumps
   def read(self, file):
@@ -114,10 +115,10 @@ class MAPDirectory():
     file.seek(entry.lump_ofs)
     header_data =  file.read(struct.calcsize(fmt_ZNODESHeader))
     header = ZNODESHeader._make(struct.unpack(fmt_ZNODESHeader, header_data))
-    print("ZNODES type: {}".format(header.type))
+    logging.debug("ZNODES type: {}".format(header.type))
     header_data = file.read(struct.calcsize(fmt_VERTEXHeader))
     header = VERTEXHeader._make(struct.unpack(fmt_VERTEXHeader, header_data))
-    print("map verts: {} / extra verts: {}".format(header.verts_size, header.additional_verts_size))
+    logging.debug("map verts: {} / extra verts: {}".format(header.verts_size, header.additional_verts_size))
     # additional vertices
     vertices = []
     for i in range(0, header.additional_verts_size):
@@ -407,7 +408,7 @@ def pack_zmap(map, textures, actors):
   
   sub_sectors_len = len(map.sub_sectors)
   s += pack_variant(len(map.sub_sectors))
-  for i in range(len(map.sub_sectors)):
+  for i in tqdm(range(len(map.sub_sectors)), desc="Packing sub-sectors"):
     s += pack_segs(map.sub_sectors[i])
     # PVS
     pvs,clips,vert = get_PVS(map, i)
@@ -415,7 +416,6 @@ def pack_zmap(map, textures, actors):
     s += pack_variant(i + 1)
     for sub_id in pvs:
       s += pack_variant(sub_id + 1)
-    logging.info("Packing sub-sectors - completion: {:.2%}".format((i+1)/len(map.sub_sectors)))
 
   s += pack_variant(len(map.nodes))
   for node in map.nodes:
@@ -915,19 +915,27 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
   # pack actors (shared by all maps)
   data = pack_actors(image_reader, actors)
 
-  to_multicart(compress and compress_byte_str(data) or data, pico_path, carts_path, modname)
+  boot_code="""\
+-- {0}
+-- @freds72
+-- *********************************
+-- generated code - do not edit
+-- *********************************
+mod_name="{0}"
+#include title.lua
+""".format(modname)
+
+  to_multicart(compress and compress_byte_str(data) or data, pico_path, carts_path, modname, boot_code=boot_code)
 
   # extract map + things
   cart_len = 2*0x4300
   map_groups = set(m.group for m in maps)
-  print(maps)
-  print(map_groups)
   for map_group,maps in {mg:list(m for m in maps if m.group==mg) for mg in map_groups}.items():
     logging.info("Packing map group: {}".format(map_group))
 
     active_textures = set()
     for m in maps:
-      logging.info("Decoding map: {}".format(m.name))
+      logging.info("Reading map WAD: {}".format(m.name))
       zmap = load_WAD(maps_stream, m.name) 
       m.zmap = zmap
       active_textures |= get_zmap_textures(zmap)

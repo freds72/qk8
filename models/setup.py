@@ -59,6 +59,7 @@ setuptools.setup(
     install_requires=[
         'antlr4-python3-runtime>=4.8',
         'Pillow>=7.2.0',
+        'tqdm>=4.49.0'
     ],
     python_requires='>=3.6',
     entry_points = {

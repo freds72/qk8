@@ -510,40 +510,26 @@ function draw_flats(v_cache,segs,things)
     end
   end
 end
--- traverse and renders bsp in back to front order
--- calls 'visit' function
-function visit_bsp(node,pos,visitor)
-  local side=node[1]*pos[1]+node[2]*pos[2]<=node[3]
-  visitor(node,side,pos,visitor)
-  visitor(node,not side,pos,visitor)
-end
-
-function find_sub_sector(node,pos)
-  local side=v2_dot(node,pos)<=node[3]
-  if node.leaf[side] then
-    -- leaf?
-    return node[side]
-  else    
-    return find_sub_sector(node[side],pos)
-  end
-end
 
 function add_thing(thing)
   register_thing_subs(_bsp,thing,thing.actor.radius/2)
-  add(_things,thing)
+  _things[#_things+1]=thing
 end
 
 function del_thing(thing)
   do_async(function()
+    -- detach thing from sub-sector
     unregister_thing_subs(thing)
     del(_things,thing) 
   end)
 end
 
 function unregister_thing_subs(thing)
-  -- remove self from sectors
+  -- remove self from sectors (multiple)
+  local not_missile=thing.actor.flags&0x4==0
   for ss,_ in pairs(thing.subs) do
     ss.things[thing]=nil
+    if(not_missile) ss.sector.things-=1
   end
 end
 
@@ -554,6 +540,8 @@ function register_thing_subs(node,thing,radius)
     thing.subs[node]=true
     -- reverse
     node.things[thing]=true
+    -- don't count missile actors
+    if(thing.actor.flags&0x4==0) node.sector.things+=1
     return
   end
 
@@ -616,7 +604,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
     -- add sorted things intersections
     local head=things_hits.next
     while head do
-      add(res,head)
+      res[#res+1]=head
       head=head.next
     end
   end
@@ -624,10 +612,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
   for _,s0 in ipairs(segs) do
     local n=s0[5]
     local denom,dist_a=v2_dot(n,d),s0[6]-v2_dot(n,p)
-    if denom==0 then
-      -- parallel and outside
-      if(dist_a<0) return
-    else
+    if denom>0 then
       local t=dist_a/denom
       -- within seg?
       local pt={
@@ -688,7 +673,7 @@ function make_thing(actor,x,y,z,angle)
   -- used for rendering and collision detection
   local pos={x,y}
   -- default height & sector specs
-  local ss=find_sub_sector(_bsp,pos)
+  local ss=_bsp:find_sub_sector(pos)
   -- attach instance properties to new thing
   local thing=actor:attach({
     -- z: altitude
@@ -824,7 +809,7 @@ function with_physic(thing)
         v2_add(self,velocity)
 
         -- refresh sector after fixed collision
-        ss=find_sub_sector(_bsp,self)
+        ss=_bsp:find_sub_sector(self)
         self.sector=ss.sector
         self.ssector=ss
 
@@ -1082,7 +1067,7 @@ function draw_bsp()
   local pvs,v_cache=_plyr.ssector.pvs,{}
 
   -- visit bsp
-  visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
+  _bsp:visit(_plyr,function(node,side,pos,visitor)
     side=not side
     if node.leaf[side] then
       local subs=node[side]
@@ -1093,7 +1078,7 @@ function draw_bsp()
         draw_flats(v_cache,subs)
       end
     elseif _cam:is_visible(node.bbox[side]) then
-      visit_bsp(node[side],pos,visitor)
+      node[side]:visit(pos,visitor)
     end
   end)
 end
@@ -1412,6 +1397,13 @@ function unpack_special(special,line,sectors,actors)
       -- lerp from current values
       for i=0,speed do
         for _,sector in pairs(doors) do
+          if to=="close" then
+            while sector.things>0 do
+              -- wait 1 sec if door is blocked
+              wait_async(30)
+              sfx(63)
+            end
+          end
           sector.ceil=lerp(ceils[sector],sector[to],i/speed)
         end
         yield()
@@ -1913,7 +1905,9 @@ function unpack_map(skill,actors)
       ceiltex=unpack_texture(),
       floortex=unpack_texture(),
       -- rebase to 0-1
-      lightlevel=mpeek()/255
+      lightlevel=mpeek()/255,
+      -- number of things in sector
+      things=0
     })
     -- sector behaviors (if any)
     if special==65 then
@@ -1925,6 +1919,7 @@ function unpack_map(skill,actors)
         end
       end)
     elseif special==84 then
+      -- east scrolling
       sector.tx=rnd(32)
       do_async(function()
         while true do 
@@ -2031,7 +2026,23 @@ function unpack_map(skill,actors)
       -- distance to plane
       unpack_fixed(),
       bbox={},
-      leaf={}})
+      leaf={},
+      -- traverse and renders bsp in back to front order
+      -- calls 'visit' function
+      visit=function(self,pos,visitor)
+        local side=self[1]*pos[1]+self[2]*pos[2]<=self[3]
+        visitor(self,side,pos,visitor)
+        visitor(self,not side,pos,visitor)
+      end,
+      find_sub_sector=function(self,pos)
+        local side=v2_dot(self,pos)<=self[3]
+        if self.leaf[side] then
+          -- leaf?
+          return self[side]
+        end    
+        return self[side]:find_sub_sector(pos)
+      end
+    })
     local flags=mpeek()
     local function unpack_node(side,leaf)
       if leaf then

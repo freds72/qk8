@@ -82,7 +82,7 @@ def pack_double(x):
         raise Exception('Unable to convert: {} into a word: {}'.format(x,h))
     return h
 
-def to_cart(s,pico_path,carts_path,cart_name,cart_id):
+def to_cart(s,pico_path,carts_path,cart_name,cart_id,cart_code=None):
     cart="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
@@ -95,7 +95,7 @@ for i=1,#data,2 do
     poke(mem,tonum("0x"..sub(data,i,i+1)))
     mem+=1
 end
-cstore()
+cstore(0, 0, 0x4300, "{}")
 """
 
     tmp=s[:2*0x2000]
@@ -118,24 +118,38 @@ cstore()
 
     # save cart + export cryptic music+sfx part
     sfx_data=s[2*0x3100:2*0x4300]
-    cart_path = os.path.join(carts_path,"{}_{}.p8".format(cart_name,cart_id))
-    f = open(cart_path, "w")
-    f.write(cart.format(cart_name, sfx_data))
-    f.close()
+    cart_filename = "{}_{}.p8".format(cart_name,cart_id)
+    cart_path = os.path.join(carts_path,"{}_tmp.p8".format(cart_name))
+    with open(cart_path, "w") as f:
+        f.write(cart.format(cart_name, sfx_data, cart_filename))
+        # run cart
+        exitcode, out, err = call([os.path.join(pico_path,"pico8.exe"),"-x",os.path.abspath(cart_path)])
+        if err:
+            raise Exception('Unable to process pico-8 cart: {}. Exception: {}'.format(cart_path,err))
+        if cart_code:
+            with open(os.path.join(carts_path,cart_filename),"r") as f:
+                cart = ""
+                for line in f:
+                    line = line.rstrip("\n\r")
+                    cart += line
+                    cart += "\n"
+                    if line=="__lua__":
+                        # insert boot code
+                        cart += cart_code
+                        cart += "\n"     
+            with open(os.path.join(carts_path,cart_filename),"w") as f:                   
+                f.write(cart)
+    os.unlink(cart_path)
 
-    # run cart
-    exitcode, out, err = call([os.path.join(pico_path,"pico8.exe"),"-x",os.path.abspath(cart_path)])
-    if err:
-        raise Exception('Unable to process pico-8 cart: {}. Exception: {}'.format(cart_path,err))
 
-def to_multicart(s,pico_path,carts_path,cart_name):
+def to_multicart(s,pico_path,carts_path,cart_name,boot_code=None):
   cart_id = 0
   cart_data = ""
   for b in s:
       cart_data += b
       # full cart?
       if len(cart_data)==2*0x4300:
-          to_cart(cart_data, pico_path, carts_path, cart_name, cart_id)
+          to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_id==0 and boot_code)
           cart_id += 1
           cart_data = ""
   # remaining data?
