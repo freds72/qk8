@@ -1102,25 +1102,17 @@ function next_state(fn,...)
 end
 
 function play_state()
-  cls()  
-  printb("loading...",44,120,6,5)
-  flip()
-
-  -- todo: get from stat/title menu
-  skill=1 
-  map_id=1
-
   -- actor sprites
-  -- not already loaded?
   if not _actors then
+    -- not already loaded?
     _actors,_sprite_cache=decompress(mod_name,0,0,unpack_actors)
   end
   -- fix garbage sprites when loading 2nd map
   _sprite_cache:clear()  
 
   -- ammo scaling factor
-  _ammo_factor=split"2,1,1,1"[skill]
-  _bsp,thingdefs=decompress(mod_name.."_"..mod_map,_maps_cart[map_id],_maps_offset[map_id],unpack_map,skill,_actors)
+  _ammo_factor=split"2,1,1,1"[_skill]
+  _bsp,thingdefs=decompress(mod_name.."_"..mod_map,_maps_cart[_map_id],_maps_offset[_map_id],unpack_map,_skill,_actors)
 
   -- restore main data cart
   reload()
@@ -1131,7 +1123,7 @@ function play_state()
     local thing,actor=make_thing(unpack(thingdef))
     -- get direct access to player
     if actor.id==1 then
-      _plyr=attach_plyr(thing,actor,skill)
+      _plyr=attach_plyr(thing,actor,_skill)
       thing=_plyr
     end
     -- 
@@ -1184,7 +1176,8 @@ function gameover_state(pos,angle,target,h)
       _cam:track(pos,angle,pos[3]+h)
 
       if btnp(🅾️) then
-        next_state(slicefade_state,levelmenu_state)
+        -- back to title cart        
+        load(mod_name.."_0.p8")
       elseif btnp(❎) then
         next_state(slicefade_state,play_state)
       end
@@ -1234,6 +1227,10 @@ end
 -->8
 -- game loop
 function _init()
+  -- launch params
+  local p=split(stat(6))
+  _skill,_map_id=tonum(p[1]) or 2,tonum(p[2]) or 1
+
   next_state(play_state)
 end
 
@@ -1487,9 +1484,11 @@ function unpack_special(special,line,sectors,actors)
   elseif special==243 then
     -- exit level
     return trigger_async(function()
-      -- return to main menu
-      -- todo: go to next level or end game
-      next_state(slicefade_state,levelmenu_state)
+      -- return to main menu if reached last map from group
+      _map_id+=1
+      if(_map_id>#_maps_cart) load(mod_name.."_0.p8")
+      -- next map
+      next_state(slicefade_state,play_state)
     end)
   end
 end

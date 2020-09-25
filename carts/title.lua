@@ -3,7 +3,8 @@ gfx="000000000000000000000000000000000000000000000000000000000000000000000000000
 snd="36530600324c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060100003e0c3fa445d819c0158b1589158515841583158215811381138003800380538000000000000000000000000000000000000000000000000000000000000000000301000"
 p,pd={128,129,1,13,12,131,3,139,11,2,136,8,137,9,10,7},{0,0,0,9,10,2,9,10,11,1,2,9,10,10,11,11}
 
-menus,menu_i={{"wHICH ePISODE?",_maps_label,sel=1},
+menus,menu_i={
+{"wHICH ePISODE?",_maps_label,sel=1},
 {"sELECT sKILL lEVEL",
 {
   "i AM TOO YOUNG TO DIE",
@@ -43,8 +44,9 @@ function _update60()
   if load_ttl then
     load_ttl-=1
     if load_ttl==0 then
-      load(mod_name..".p8")
-      --run()
+      -- load game "group" cart
+      local sel=menus[1].sel
+      load(mod_name.."_".._maps_group[sel]..".p8",nil,menus[2].sel..",".._maps_id[sel])
     end
   else
     if menu_i>0 then
