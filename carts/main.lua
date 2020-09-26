@@ -6,7 +6,7 @@ __lua__
 local _bsp,_cam,_plyr,_things,_sprite_cache,_actors
 local _onoff_textures={}
 local _ambientlight,_znear,_zfar,_ammo_factor,_intersectid,_msg=0,8,854,1,0
-local _ui_funcs,_wp_ui={circfill,rectfill,print},split"1,1,63,90,12,2,0,1,2,19,86,49,94,0,1,3,⬅️,52,88,5,0,1,3,shotgun,21,88,11,0,2,2,77,86,111,94,0,2,3,➡️,68,88,5,0,2,3,chaingun,79,88,11,0,3,2,50,68,76,76,0,3,3,⬆️,60,80,5,0,3,3,rocket,52,70,11,0,4,2,50,104,76,112,0,4,3,⬇️,60,96,5,0,4,3,plasma,52,106,11,0,🅾️,66,88,5"
+local _ui_funcs,_wp_ui={circfill,rectfill,print},split"1,1,63,90,12,2,0,1,2,19,86,49,94,0,1,3,⬅️,52,88,5,0,1,3,shotgun,21,88,11,0,2,2,77,86,111,94,0,2,3,➡️,68,88,5,0,2,3,chaingun,79,88,11,0,3,2,50,68,76,76,0,3,3,⬆️,60,80,5,0,3,3,rocket,52,70,11,0,4,2,50,104,76,112,0,4,3,⬇️,60,96,5,0,4,3,plasma,52,106,11,0"
 
 --local k_far,k_near=0,2
 --local k_right,k_left=4,8
@@ -1197,7 +1197,7 @@ function play_state()
 end
 
 function gameover_state(pos,angle,target,h)
-  local idle_ttlppop,target_angle=90,angle
+  local idle_ttl,target_angle=90,angle
   return
     -- update
     function()
