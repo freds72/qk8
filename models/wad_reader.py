@@ -540,6 +540,7 @@ def pack_actors(image_reader, actors):
     'A_Look': dotdict({'id':7, 'args': []}),
     'A_Chase': dotdict({'id':8, 'args': []}),
     'A_Light': dotdict({'id':9, 'args': [pack_byte]}),
+    'A_MeleeAttack':dotdict({'id':10, 'args': [pack_byte, pack_variant]})
   })
 
   s += pack_variant(len(concrete_actors))
@@ -621,6 +622,12 @@ def pack_actors(image_reader, actors):
     if actor.get('deathsound'):
       properties |= 0x8000
       properties_data += pack_variant(actor.deathsound)      
+    if actor.get('meleerange'):
+      properties |= 0x10000
+      properties_data += pack_variant(actor.meleerange)      
+    if actor.get('maxtargetrange'):
+      properties |= 0x20000
+      properties_data += pack_variant(actor.maxtargetrange)      
     s += pack_int32(properties)
     s += properties_data
   

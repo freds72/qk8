@@ -6,7 +6,7 @@ __lua__
 local _bsp,_cam,_plyr,_things,_sprite_cache,_actors
 local _onoff_textures={}
 local _ambientlight,_znear,_zfar,_ammo_factor,_intersectid,_msg=0,8,854,1,0
-local _ui_funcs,_wp_ui={circfill,rectfill,print},split"1,1,63,90,12,2,0,1,2,19,86,49,94,0,1,3,⬅️,52,88,5,0,1,3,shotgun,21,88,11,0,2,2,77,86,111,94,0,2,3,➡️,68,88,5,0,2,3,chaingun,79,88,11,0,3,2,50,68,76,76,0,3,3,⬆️,60,80,5,0,3,3,rocket,52,70,11,0,4,2,50,104,76,112,0,4,3,⬇️,60,96,5,0,4,3,plasma,52,106,11,0"
+local _ui_funcs,_wp_ui={circfill,rectfill,print},split"1,1,63,90,12,2,0,1,2,19,86,49,94,0,1,3,⬅️,52,88,5,0,1,3,shotgun,21,88,11,0,2,2,77,86,111,94,0,2,3,➡️,68,88,5,0,2,3,chaingun,79,88,11,0,3,2,50,68,76,76,0,3,3,⬆️,60,80,5,0,3,3,rocket,52,70,11,0,4,2,50,104,76,112,0,4,3,⬇️,60,96,5,0,4,3,plasma,52,106,11,0,🅾️,66,88,5"
 
 --local k_far,k_near=0,2
 --local k_right,k_left=4,8
@@ -649,6 +649,36 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
   end
 end
 
+-- scan attack (e.g. will hit anything in range)
+function hitscan_attack(owner,angle,range,dmg,puff)
+  local h,hits,move_dir=owner[3]+32,{},{cos(angle),-sin(angle)}
+  _intersectid+=1
+  intersect_sub_sector(owner.ssector,owner,move_dir,owner.actor.radius/2,range,0,hits)    
+  for _,hit in ipairs(hits) do
+    local otherthing,fix_move=hit.thing
+    if hit.seg then
+      fix_move=intersect_line(hit.seg,h,0,0,true) and hit
+    elseif otherthing!=owner and intersect_thing(otherthing,h,0) then
+      fix_move=hit
+    end
+
+    if fix_move then
+      -- actual hit position
+      local pos={owner[1],owner[2],h}
+      v2_add(pos,move_dir,fix_move.ti)
+      local puffthing=make_thing(puff,pos[1],pos[2],0,angle)
+      -- todo: get height from properties
+      -- todo: improve z setting
+      puffthing[3]=h
+      add_thing(puffthing)
+
+      -- hit thing
+      if(otherthing and otherthing.hit) otherthing:hit(dmg,move_dir,owner)
+      return
+    end
+  end
+end
+
 -- returns distance and normal to target (if visible)
 function line_of_sight(thing,otherthing,maxdist)
   local n,d=v2_normal(v2_make(thing,otherthing))
@@ -792,7 +822,7 @@ function with_physic(thing)
               -- death state
               self:jump_to(5)
               -- hit thing
-              if(otherthing and otherthing.hit) otherthing:hit(actor.damage,move_dir,self.owner)
+              if(otherthing and otherthing.hit) otherthing:hit((1+rnd(7))*actor.damage,move_dir,self.owner)
               -- stop at first wall/thing
               break
             else
@@ -837,7 +867,7 @@ function with_physic(thing)
             if ldef.trigger and ldef.flags&0x8>0 then
               -- use special?
               if btnp(🅾️) then
-                ldef.trigger()
+                ldef.trigger(self)
               else
                 _msg="press 🅾️ to activate"
               end
@@ -953,7 +983,9 @@ function attach_plyr(thing,actor,skill)
       if wp_hud then
         wp_hud=not btn(6)
         for i=1,4 do
-          if btnp(i-1) then
+          if btnp(🅾️) then
+            wp_hud=wp_switch(10)
+          elseif btnp(i-1) then
             -- only switch if we have the weapon and it's not the current weapon
             wp_hud,btns=(wp_slot!=i and wp[i]) and wp_switch(i) or nil,{}
           end
@@ -967,8 +999,8 @@ function attach_plyr(thing,actor,skill)
           if(btns[1]) dx=1
           if(btns[2]) dx=-1
         else
-          if(btns[1]) da-=1
-          if(btns[2]) da+=1
+          if(btns[1]) da-=0.75
+          if(btns[2]) da+=0.75
         end
         if(btns[3]) dz=1
         if(btns[4]) dz=-1
@@ -1027,7 +1059,7 @@ function attach_plyr(thing,actor,skill)
 
       pal()
       local ammotype=active_wp.actor.ammotype
-      printb(ammotype.icon..self.inventory[ammotype],106,120,9)
+      if(ammotype) printb(ammotype.icon..self.inventory[ammotype],106,120,9)
       printb("♥"..self.health,2,110,12)
       printb("웃"..self.armor,2,120,3)
 
@@ -1045,6 +1077,8 @@ function attach_plyr(thing,actor,skill)
             uit[chr((i-1)%7+97)]=_wp_ui[i]
             if(i%7==0 and wp[uit.a])_ui_funcs[uit.b](uit.c,uit.d,uit.e,uit.f,uit.g)
         end
+        -- fist selection entry
+        print("🅾️",60,88,5)
       end
 
       -- set "pain" palette (defaults to screen palette if normal)
@@ -1110,6 +1144,8 @@ function play_state()
   -- fix garbage sprites when loading 2nd map
   _sprite_cache:clear()  
 
+  -- memory cleanup before loading a level
+  _things,_bsp={}
   -- ammo scaling factor
   _ammo_factor=split"2,1,1,1"[_skill]
   _bsp,thingdefs=decompress(mod_name.."_"..mod_map,_maps_cart[_map_id],_maps_offset[_map_id],unpack_map,_skill,_actors)
@@ -1118,7 +1154,6 @@ function play_state()
   reload()
 
   -- attach behaviors to things
-  _things={}
   for _,thingdef in pairs(thingdefs) do 
     local thing,actor=make_thing(unpack(thingdef))
     -- get direct access to player
@@ -1162,7 +1197,7 @@ function play_state()
 end
 
 function gameover_state(pos,angle,target,h)
-  local target_angle=angle
+  local idle_ttlppop,target_angle=90,angle
   return
     -- update
     function()
@@ -1174,12 +1209,16 @@ function gameover_state(pos,angle,target,h)
         angle=lerp(shortest_angle(target_angle,angle),target_angle,0.08)
       end
       _cam:track(pos,angle,pos[3]+h)
-
-      if btnp(🅾️) then
-        -- back to title cart        
-        load(mod_name.."_0.p8")
-      elseif btnp(❎) then
-        next_state(slicefade_state,play_state)
+      
+      idle_ttl-=1
+      -- avoid immediate button hit
+      if idle_ttl<0 then
+        if btnp(🅾️) then
+          -- back to title cart        
+          load(mod_name.."_0.p8")
+        elseif btnp(❎) then
+          next_state(slicefade_state,play_state)
+        end
       end
     end,
     -- draw
@@ -1459,16 +1498,6 @@ function unpack_special(special,line,sectors,actors)
         sector.moving=nil
       end)
     end
-  elseif special==80 then
-    local arg0,arg1=mpeek(),mpeek()
-    return trigger_async(function()
-      -- sfx(0)
-      -- todo: trigger action
-
-      do_async(function()
-        
-      end)
-    end)
   elseif special==112 then
     -- sectors
     local target_sectors={}
@@ -1555,8 +1584,8 @@ function unpack_actors()
           -- ****************** 
           -- decorate vm engine       
           -- goto vm label
-          jump_to=function(self,label)
-            i,ticks=state_labels[label],-2
+          jump_to=function(self,label,fallback)
+            i,ticks=state_labels[label] or (fallback and state_labels[fallback]),-2
           end,
           -- vm update
           tick=function(self)
@@ -1619,6 +1648,8 @@ function unpack_actors()
       {0x0.2000,"attacksound"},
       {0x0.4000,"hudcolor"},
       {0x0.8000,"deathsound"},
+      {0x1,"meleerange"},
+      {0x2,"maxtargetrange"},
       {0x0.0400,"",function()
         -- 
         unpack_array(function()
@@ -1692,7 +1723,7 @@ function unpack_actors()
       -- map label id to state command line number
       state_labels[mpeek()]=mpeek()
     end)
-
+    
     -- actors functions
     local function_factory={
       -- A_FireBullets
@@ -1703,33 +1734,7 @@ function unpack_actors()
           owner=owner.owner or owner
           for i=1,bullets do
             local angle=owner.angle+(rnd(2*xspread)-xspread)/360
-            -- todo: get from actor properties
-            local h,hits,move_dir=owner[3]+32,{},{cos(angle),-sin(angle)}
-            _intersectid+=1
-            intersect_sub_sector(owner.ssector,owner,move_dir,owner.actor.radius/2,1024,0,hits)    
-            for _,hit in ipairs(hits) do
-              local otherthing,fix_move=hit.thing
-              if hit.seg then
-                fix_move=intersect_line(hit.seg,h,0,0,true) and hit
-              elseif otherthing!=owner and intersect_thing(otherthing,h,0) then
-                fix_move=hit
-              end
-    
-              if fix_move then
-                -- actual hit position
-                local pos={owner[1],owner[2],h}
-                v2_add(pos,move_dir,fix_move.ti)
-                local puffthing=make_thing(puff,pos[1],pos[2],0,angle)
-                -- todo: get height from properties
-                -- todo: improve z setting
-                puffthing[3]=h
-                add_thing(puffthing)
-      
-                -- hit thing
-                if(otherthing and otherthing.hit) otherthing:hit(dmg,move_dir,owner)
-                break
-              end
-            end
+            hitscan_attack(owner,angle,1024,dmg,puff)
           end
         end
       end,
@@ -1762,10 +1767,11 @@ function unpack_actors()
       function()
         return function(weapon)
           if not wp_hud and btn(❎) then
-            local inventory=weapon.owner.inventory
-            local newqty=inventory[item.ammotype]-item.ammouse
+            local inventory,ammotype,newqty=weapon.owner.inventory,item.ammotype,0
+            -- handle "fist" (eg weapon without ammotype)
+            if(ammotype) newqty=inventory[item.ammotype]-item.ammouse
             if newqty>=0 then
-              inventory[item.ammotype]=newqty
+              if(ammotype) inventory[item.ammotype]=newqty
               -- play attack sound
               if(item.attacksound) sfx(item.attacksound)
               -- fire state
@@ -1776,13 +1782,13 @@ function unpack_actors()
       end,
       -- A_Explode
       function()
-        local dmg,maxdist=unpack_variant(),unpack_variant()
+        local dmg,maxrange=unpack_variant(),unpack_variant()
         return function(thing)
           -- todo: optimize lookup!!!
           for _,otherthing in pairs(_things) do
             if otherthing!=thing and otherthing.hit then
-              local n,d=line_of_sight(thing,otherthing,maxdist)
-              if(d) otherthing:hit(dmg*(1-d/maxdist),n)
+              local n,d=line_of_sight(thing,otherthing,maxrange)
+              if(d) otherthing:hit(dmg*(1-d/maxrange),n)
             end
           end
         end
@@ -1817,16 +1823,21 @@ function unpack_actors()
       end,
       -- A_Chase
       function()
-        local speed=item.speed
+        local speed,range,maxrange=item.speed,item.meleerange or 64,item.maxtargetrange or 1024 
         return function(self)
           -- still active target?
           local otherthing=self.target
           if otherthing and not otherthing.dead then
             -- in range/visible?
-            local n,d=line_of_sight(self,otherthing,1024)
-            if d and d<512 and rnd()<0.4 then
-              -- missile attack
-              self:jump_to(4)
+            local n,d=line_of_sight(self,otherthing,maxrange)
+            if d and rnd()<0.4 then
+              if d<range then
+                -- close range attack (if any)
+                self:jump_to(3,4)
+              else
+                -- ranged attack
+                self:jump_to(4)
+              end
             else
               -- zigzag toward target
               local nx,ny,dir=n[1]*0.5,n[2]*0.5,rnd{1,-1}
@@ -1839,7 +1850,7 @@ function unpack_actors()
           end
           -- lost/dead?
           self.target=nil
-          -- spawn
+          -- idle state
           self:jump_to(0)
         end
       end,
@@ -1849,7 +1860,16 @@ function unpack_actors()
         return function()
           _ambientlight=light
         end
-      end
+      end,
+      -- A_MeleeAttack
+      function()
+        local dmg,puff=mpeek(),unpack_actor_ref()
+        return function(owner)
+          -- find 'real' owner
+          owner=owner.owner or owner
+          hitscan_attack(owner,owner.angle,owner.meleerange or 64,dmg,puff)
+        end
+      end      
     }
     -- states & sprites
     unpack_array(function()

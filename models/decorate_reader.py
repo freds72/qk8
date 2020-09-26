@@ -127,7 +127,7 @@ class DecorateWalker(DECORATEListener):
         # note: flags are handled outside of regular properties (see below)
         if attribute in []:
           value = value=='true'
-        elif attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound']:
+        elif attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound','meleerange','maxtargetrange']:
           value = int(value)
         elif attribute in ['ammotype']:
           if value not in self.result:
