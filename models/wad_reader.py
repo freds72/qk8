@@ -498,20 +498,30 @@ def pack_actors(image_reader, actors):
   logging.info("Found {} sprites".format(len(images)))
   
   s += pack_variant(len(images))
-  # export frame metadata
+  # export frame metadata & prepare tileset
   tiles_count = 0
   sprites = {}
-  for i,image_data in enumerate(images):
+  unique_tiles = []
+  for image_index,image_data in enumerate(images):
     logging.debug("Packing sprite: {}".format(image_data.name))
-    sprites[image_data.name] = i
+    sprites[image_data.name] = image_index
     s += "{:02x}".format(image_data.width|image_data.background<<4)
     s += pack_short(image_data.xoffset)
     s += pack_short(image_data.yoffset)
     tiles = image_data.tiles
     s += pack_variant(len(tiles))
     for i,tile in tiles.items():
-      s += "{:02x}{}".format(i,pack_variant((tiles_count+tile)*32+1))
-    tiles_count += len(tiles)
+      tile_id = tiles_count
+      # find duplicates in already registered tiles
+      tile_data = image_data.data[tile]
+      if tile_data in unique_tiles:
+        # reuse global tile id
+        tile_id = unique_tiles.index(tile_data)
+      else:                  
+        # unique tile? register
+        unique_tiles.append(tile_data)
+        tiles_count += 1
+      s += "{:02x}{}".format(i,pack_variant(tile_id*32+1))
 
   # export all images bytes
   if tiles_count>32763-32:
@@ -519,7 +529,7 @@ def pack_actors(image_reader, actors):
     raise Exception("Tiles count ({}) exceeds PICO8 table size - not yet supported".format(tiles_count))
   logging.info("Packing {} 16x16 tiles".format(tiles_count))
   image_s = pack_variant(tiles_count)
-  for image_bytes in [img.data for img in images]:
+  for image_bytes in unique_tiles:
     for b in image_bytes:
       image_s += "{:02x}".format(b)
   s += image_s
@@ -670,6 +680,7 @@ def pack_actors(image_reader, actors):
           raise Exception("Invalid ticks value: {} at state: {} - ticks must be in [-1;127]".format(state.ticks,state))
         state_s += pack_short(state.ticks)
         pattern = "{}{}".format(state.image,state.variant)
+        # get frame information
         frames = frames_by_name[pattern]
         # flipped?
         flipbits = 0

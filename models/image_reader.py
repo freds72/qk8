@@ -71,7 +71,7 @@ class ImageReader():
     th = math.floor(height/16)
     # print("Processing: {} - {}x{} pix -> {}x{}".format(name,src_width,src_height,width,height))
 
-    data = bytes([])
+    data = []
     frame_tiles = {}
     tiles = 0
     for j in range(th):
@@ -98,10 +98,15 @@ class ImageReader():
             image_data += bytes(pixels[::-1])
         # skip fully transparent tile
         if not all(b==pico8_transparency|pico8_transparency<<4 for b in image_data):
-          data += image_data
+          # remove duplicates (unlikely but "cheap" optimization)
+          tile_id = tiles
+          if image_data in data:            
+            tile_id = data.index(image_data)
+          else:
+            data.append(image_data)
+            tiles += 1
           # reference to corresponding tiles
-          frame_tiles[j*tw+i] = tiles
-          tiles += 1
+          frame_tiles[j*tw+i] = tile_id
 
     if abs(xoffset)>127 or abs(yoffset)>127:
       raise Exception("Unsupported image offset: {}/{} - must be in [-127,127]".format(xoffset,yoffset))
