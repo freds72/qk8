@@ -96,7 +96,7 @@ class ThingWalker(udmfListener):
               value = float(value)
             elif attribute in ['skill1','skill2','skill3','skill4','skill5','dm','single','coop']:
               value = value == 'true'
-            elif attribute in ['type','angle']:
+            elif attribute in ['type','angle','special','arg0','arg1','arg2','arg3','arg4']:
               value = int(value)
             thing[attribute] = value
           self.result.append(thing)

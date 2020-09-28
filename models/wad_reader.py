@@ -235,10 +235,13 @@ def pack_aabb(aabb):
 def find_sectors_by_tag(tag, sectors):
   return [i for i,sector in enumerate(sectors) if 'id' in sector and sector.id==tag]
 
-def pack_sectors_by_tag(ids):
+def pack_sectors_by_tag(ids,extra=None):
   s = pack_variant(len(ids))
   for id in ids:
     s += pack_variant(id+1)
+    # extra sector data?
+    if extra:
+      s += extra[id]
   return s
 
 def find_other_sectors(id, lines, sides, sectors):
@@ -249,54 +252,130 @@ def find_other_sectors(id, lines, sides, sectors):
     raise Exception("Sector: {} missing reference sector".format(id))
   return other_sectors
 
-def pack_special(line, lines, sides, sectors):
-  special = line.special
-  s = "{:02x}".format(special)
-  # door open
+# helper for default args (or missing)
+def is_missing_or_zero(owner, arg):
+  return arg not in owner or owner[arg]==0
+
+def pack_special(owner, lines, sides, sectors):
+  special = owner.special
+  # use "generic" behavior
+  if special in [11,12,13]:
+    special=13
+  # use "generic" variants
+  if special == 62:
+    s = "{:02x}".format(64)  
+  else:
+    s = "{:02x}".format(special)
+
   if special==202:
-    logging.info("Linedef special: door open/close")
-    sector_ids = find_sectors_by_tag(line.arg0, sectors)
-    s += pack_sectors_by_tag(sector_ids)
+    logging.warning("Unsupported special: {}".format(special))
+  elif special==13:
+    # door open
+    logging.info("Special: Door_Open/Door_Raise/Door_LockedRaise")
+    sector_ids = []
+    if is_missing_or_zero(owner,'arg0'):
+      if 'sideback' not in owner:
+        raise Exception("Special trigger must be a linedef to use tag 0")
+      # find sector from line other side
+      sector_ids.append(sides[owner.sideback].sector)
+    else:
+      sector_ids = find_sectors_by_tag(owner.arg0, sectors)
+    # pack sector id + target ceiling height
+    target_heights = {}
+    for sector_id in sector_ids:
+      sector = sectors[sector_id]
+      other_sectors = find_other_sectors(sector_id, lines, sides, sectors)
+      # find lowest surrouding ceiling
+      target_height = min([other_sector.heightceiling for other_sector in other_sectors])
+      target_heights[sector_id]=pack_fixed(target_height-4)
+    s += pack_sectors_by_tag(sector_ids,target_heights)
     # speed
-    s += "{:02x}".format(line.arg1)
-    # door type
-    s += "{:02x}".format(line.get('arg2',0)) 
-    # delay
-    s += "{:02x}".format(line.get('arg3',10))
+    s += "{:02x}".format(owner.get('arg1',16))
+    # delay (can be larger than 256)
+    s += pack_variant(owner.get('arg2',90))
     # lock
-    s += pack_variant(line.get('arg4',0))
-  elif special==64:
-    logging.info("Linedef special: platform up/stay/down")
-    sector_ids = find_sectors_by_tag(line.arg0, sectors)
-    if len(sector_ids)>1:
-      raise Exception("Not supported - multiple elevators for 1 trigger")
-    sector_id = sector_ids[0]
-    sector = sectors[sector_id]
-    other_sectors = find_other_sectors(sector_id, lines, sides, sectors)
-    # find floor just above elevator floor
-    other_floor = min([other_sector.heightfloor for other_sector in other_sectors if other_sector.heightfloor>sector.heightfloor])
-    # elevator sector
-    s += pack_variant(sector_id + 1)
-    # target height
-    s += pack_fixed(other_floor)
+    s += pack_variant(owner.get('arg3',0))
+  elif special==10:
+    # door open
+    logging.info("Special: Door_Close")
+    sector_ids = []
+    if is_missing_or_zero(owner,'arg0'):
+      # find sector from line other side
+      if 'sideback' not in owner:
+        raise Exception("Special trigger must be a linedef to use tag 0")
+      sector_ids.append(sides[owner.sideback].sector)
+    else:
+      sector_ids = find_sectors_by_tag(owner.arg0, sectors)
+    # pack sector id + target floor height
+    target_heights = {}
+    for sector_id in sector_ids:
+      sector = sectors[sector_id]
+      target_heights[sector_id]=pack_fixed(sector.heightfloor)
+    s += pack_sectors_by_tag(sector_ids,target_heights)
     # speed
-    s += "{:02x}".format(line.arg1)
-  elif special==80:
-    # script execute
-    # function ID
-    s += "{:02x}".format(line.arg0)
-    # arg1
-    s += "{:02x}".format(line.arg1)
+    s += "{:02x}".format(owner.get('arg1',16))
+    # delay (not supported)
+    s += pack_variant(0)
+    # lock (not supported)
+    s += pack_variant(0)
+  elif special==64: 
+    logging.info("Sector: Plat_UpWaitDownStay")
+    sector_ids = []
+    if is_missing_or_zero(owner,'arg0'):
+      # find sector from line other side
+      if 'sideback' not in owner:
+        raise Exception("Special trigger must be a linedef to use tag 0")
+      sector_ids.append(sides[owner.sideback].sector)
+    else:
+      sector_ids = find_sectors_by_tag(owner.arg0, sectors)
+    target_heights = {}
+    for sector_id in sector_ids:
+      sector = sectors[sector_id]
+      other_sectors = find_other_sectors(sector_id, lines, sides, sectors)
+      # find floor just above elevator floor
+      other_floor = min([other_sector.heightfloor for other_sector in other_sectors if other_sector.heightfloor>sector.heightfloor])
+      target_heights[sector_id]=pack_fixed(other_floor)
+    s += pack_sectors_by_tag(sector_ids,target_heights)
+    # speed
+    s += "{:02x}".format(owner.get('arg1',16))
+    # delay
+    s += "{:02x}".format(owner.get('arg2',90))
+    # lock (not supported)
+    s += pack_variant(0)
+  elif special==62: 
+    logging.info("Special: Plat_DownWaitUpStay")
+    sector_ids = []
+    if is_missing_or_zero(owner,'arg0'):
+      # find sector from line other side
+      if 'sideback' not in owner:
+        raise Exception("Special trigger must be a linedef to use tag 0")
+      sector_ids.append(sides[owner.sideback].sector)
+    else:
+      sector_ids = find_sectors_by_tag(owner.arg0, sectors)
+    target_heights = {}
+    for sector_id in sector_ids:
+      sector = sectors[sector_id]
+      other_sectors = find_other_sectors(sector_id, lines, sides, sectors)
+      # find floor just below elevator floor
+      other_floor = min([other_sector.heightfloor for other_sector in other_sectors if other_sector.heightfloor<sector.heightfloor])
+      target_heights[sector_id]=pack_fixed(other_floor+8)
+    s += pack_sectors_by_tag(sector_ids,target_heights)
+    # speed
+    s += "{:02x}".format(owner.get('arg1',16))
+    # delay (default: 3s)
+    s += "{:02x}".format(owner.get('arg2',90))
+    # lock (not supported)
+    s += pack_variant(0)
   elif special==243:
     # exit level
-    logging.info("Linedef special: exit level")
+    logging.info("Special: exit level")
   elif special==112:
-    logging.info("Linedef special: set light level")
+    logging.info("Special: set light level")
     # set lightlevel
-    sector_ids = find_sectors_by_tag(line.arg0, sectors)
+    sector_ids = find_sectors_by_tag(owner.arg0, sectors)
     s += pack_sectors_by_tag(sector_ids)
     # light level
-    s += "{:02x}".format(line.get('arg1',0))
+    s += "{:02x}".format(owner.get('arg1',0))
   return s
 
 def get_skillmask(thing, skill):
@@ -468,9 +547,18 @@ def pack_zmap(map, textures, actors):
   
   logging.info("Packing: {} things".format(len(things)))
 
-  s += pack_variant(len(things))
-  for thing in things:
+  # split into 2 sets (with special/no special)
+  standard_things = [t for t in things if 'special' not in t]
+  s += pack_variant(len(standard_things))
+  for thing in standard_things:
     s += pack_thing(thing)
+  
+  special_things = [t for t in things if 'special' in t]
+  s += pack_variant(len(special_things))
+  for thing in special_things:
+    s += pack_thing(thing)
+    s += pack_special(thing, map.lines, map.sides, map.sectors)
+
   return s
 
 def pack_ratio(x):
@@ -1092,7 +1180,6 @@ def main():
 
   logging.basicConfig(level=logging.INFO)
 
-  print(args)
   pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress)
   logging.info('DONE')
 
