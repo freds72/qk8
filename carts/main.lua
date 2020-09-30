@@ -1398,7 +1398,7 @@ function unpack_special(special,trigger_async,sectors,actors)
     end)
     -- door speed: https://zdoom.org/wiki/Map_translator#Constants
     -- speed is signed (]-32;32[)
-    local moving_speed,delay,lock=(mpeek()-128)/4,unpack_variant(),unpack_variant()
+    local moving_speed,delay,lock=(mpeek()-128)/8,unpack_variant(),unpack_variant()
     local function move_sector_async(sector,to,speed,no_crush)
       -- play open/close sound
       sfx(63)
