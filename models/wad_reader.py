@@ -256,20 +256,26 @@ def find_other_sectors(id, lines, sides, sectors):
 def is_missing_or_zero(owner, arg):
   return arg not in owner or owner[arg]==0
 
+# clamp platform/door speed to supported
+def get_safe_speed(owner, arg):
+  speed = owner.get(arg,16)
+  if speed==0 or speed>127:
+    logging.warning("Clamping platform/door speed to: 1-127 (was: {})".format(speed))
+  return max(1, min(speed,127))
+
 def pack_special(owner, lines, sides, sectors):
   special = owner.special
-  # use "generic" behavior
-  if special in [11,12,13]:
-    special=13
   # use "generic" variants
   if special == 62:
     s = "{:02x}".format(64)  
+  elif special in [11,12,13]:
+    s = "{:02x}".format(13)
   else:
     s = "{:02x}".format(special)
 
   if special==202:
     logging.warning("Unsupported special: {}".format(special))
-  elif special==13:
+  elif special in [11,12,13]:
     # door open
     logging.info("Special: Door_Open/Door_Raise/Door_LockedRaise")
     sector_ids = []
@@ -290,13 +296,14 @@ def pack_special(owner, lines, sides, sectors):
       target_heights[sector_id]=pack_fixed(target_height-4)
     s += pack_sectors_by_tag(sector_ids,target_heights)
     # speed
-    s += "{:02x}".format(owner.get('arg1',16))
+    s += "{:02x}".format(128+get_safe_speed(owner,'arg1'))
     # delay (can be larger than 256)
-    s += pack_variant(owner.get('arg2',90))
+    # door_open(11): cannot reopen
+    s += pack_variant(special==11 and 0 or owner.get('arg2',90))
     # lock
     s += pack_variant(owner.get('arg3',0))
   elif special==10:
-    # door open
+    # door close
     logging.info("Special: Door_Close")
     sector_ids = []
     if is_missing_or_zero(owner,'arg0'):
@@ -313,7 +320,7 @@ def pack_special(owner, lines, sides, sectors):
       target_heights[sector_id]=pack_fixed(sector.heightfloor)
     s += pack_sectors_by_tag(sector_ids,target_heights)
     # speed
-    s += "{:02x}".format(owner.get('arg1',16))
+    s += "{:02x}".format(get_safe_speed(owner,'arg1'))
     # delay (not supported)
     s += pack_variant(0)
     # lock (not supported)
@@ -337,7 +344,7 @@ def pack_special(owner, lines, sides, sectors):
       target_heights[sector_id]=pack_fixed(other_floor)
     s += pack_sectors_by_tag(sector_ids,target_heights)
     # speed
-    s += "{:02x}".format(owner.get('arg1',16))
+    s += "{:02x}".format(128+get_safe_speed(owner,'arg1'))
     # delay
     s += "{:02x}".format(owner.get('arg2',90))
     # lock (not supported)
@@ -361,7 +368,7 @@ def pack_special(owner, lines, sides, sectors):
       target_heights[sector_id]=pack_fixed(other_floor+8)
     s += pack_sectors_by_tag(sector_ids,target_heights)
     # speed
-    s += "{:02x}".format(owner.get('arg1',16))
+    s += "{:02x}".format(get_safe_speed(owner,'arg1'))
     # delay (default: 3s)
     s += "{:02x}".format(owner.get('arg2',90))
     # lock (not supported)
