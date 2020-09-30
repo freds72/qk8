@@ -299,7 +299,10 @@ def pack_special(owner, lines, sides, sectors):
     s += "{:02x}".format(128+get_safe_speed(owner,'arg1'))
     # delay (can be larger than 256)
     # door_open(11): cannot reopen
-    s += pack_variant(special==11 and 0 or owner.get('arg2',90))
+    if special==11:
+      s += pack_variant(0)
+    else:  
+      s += pack_variant(owner.get('arg2',90))
     # lock
     s += pack_variant(owner.get('arg3',0))
   elif special==10:
