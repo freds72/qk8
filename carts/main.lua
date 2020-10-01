@@ -1643,38 +1643,35 @@ function unpack_actors()
       if(item.pickupsound) sfx(item.pickupsound)
     end
     
-    if kind==0 then
+    local pickup_factory={
       -- default inventory item (ex: lock)
-      item.pickup=function(thing,target)
+      [0]=function(_,target)
         pickup(target.inventory)
-      end
-    elseif kind==1 then
+      end,
       -- ammo family
-      item.pickup=function(thing,target)
+      function(_,target)
         pickup(target.inventory,item.ammotype,_ammo_factor*item.amount)
-      end
-    elseif kind==2 then
+      end,
       -- weapon
-      local ammotype=item.ammotype
-      item.pickup=function(thing,target)
+      function(thing,target)
+        local ammotype=item.ammotype
         pickup(target.inventory,ammotype,_ammo_factor*item.ammogive,ammotype.maxamount)
 
         target:attach_weapon(thing)
         -- remove from things
         del_thing(thing)
-      end
-    elseif kind==3 then
+      end,
       -- health pickup
-      item.pickup=function(thing,target)
+      function(_,target)
         pickup(target,"health")
-      end
-    elseif kind==4 then
+      end,
       -- armor pickup
-      item.pickup=function(thing,target)
+      function(_,target)
         pickup(target,"armor")
       end
-    end
-
+    }
+    item.pickup=pickup_factory[kind]
+    
     -- actor states
     unpack_array(function()
       -- map label id to state command line number
