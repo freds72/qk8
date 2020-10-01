@@ -1384,7 +1384,8 @@ function unpack_bbox()
   return {l,b,l,t,r,t,r,b}
 end
 
-function unpack_special(special,trigger_async,sectors,actors)
+function unpack_special(sectors,actors)
+  local special=mpeek()
   local function unpack_moving_sectors(what)
     -- sectors
     local moving_sectors={}
@@ -1430,11 +1431,12 @@ function unpack_special(special,trigger_async,sectors,actors)
       end
     end
 
-    return trigger_async(function()
+    return function()
       -- move to target
       for _,sector in pairs(moving_sectors) do
         -- kill any previous moving handler
         if(sector.action) sector.action[1]=nil
+        -- register an async routine
         sector.action=do_async(function()
           move_sector_async(sector,"target",moving_speed,special==13 and moving_speed<0)
           if delay>0 then
@@ -1446,7 +1448,7 @@ function unpack_special(special,trigger_async,sectors,actors)
       end
     end,
     -- lock id 0 is no lock
-    actors[lock]) 
+    actors[lock]
   end
 
   if special==13 then
@@ -1460,20 +1462,20 @@ function unpack_special(special,trigger_async,sectors,actors)
       add(target_sectors,sectors[unpack_variant()])
     end)
     local lightlevel=mpeek()/255
-    return trigger_async(function()
+    return function()
       for _,sector in pairs(target_sectors) do
         sector.lightlevel=lightlevel
       end
-    end)
+    end
   elseif special==243 then
     -- exit level
-    return trigger_async(function()
+    return function()
       -- return to main menu if reached last map from group
       _map_id+=1
       if(_map_id>#_maps_cart) load(mod_name.."_0.p8")
       -- next map
       next_state(slicefade_state,play_state)
-    end)
+    end
   end
 end
 
@@ -1932,46 +1934,38 @@ function unpack_map(skill,actors)
     if line.flags&0x2>0 then
       local function switch_texture()
         line[true].midtex=_onoff_textures[line[true].midtex]
-      end             
-      line.trigger=unpack_special(
-        mpeek(),
-        -- helper function - handles lock & repeat
-        function(fn,actorlock)
-          return function(thing)
-            -- need lock?
-            if actorlock then
-              -- keep key in inventory (for reusable locked doors)
-              if not thing.inventory[actorlock] then 
-                _msg="need key"
-                -- play "err" sound
-                sfx(62)
-                return
-              end
-            end
+      end
+      local special,actorlock=unpack_special(sectors,actors)             
+      line.trigger=function(thing)
+        -- need lock?
+        -- note: keep key in inventory (for reusable locked doors)
+        if actorlock and not thing.inventory[actorlock] then 
+          _msg="need key"
+          -- play "err" sound
+          sfx(62)
+          return
+        end
 
-            -- backup trigger
-            local trigger=line.trigger
-            -- avoid reentrancy
-            line.trigger=nil
-            --
+        -- backup trigger
+        local trigger=line.trigger
+        -- avoid reentrancy
+        line.trigger=nil
+        --
+        switch_texture()
+        -- do the action *outside* of a coroutine
+        special()
+        -- repeatable?
+        if line.flags&32>0 then
+          do_async(function()
+            -- avoid player hitting trigger/button right away
+            wait_async(30)
+            -- unlock (if repeatable)
+            line.trigger=trigger 
+            -- restore visual
             switch_texture()
-            -- do the action *outside* of a coroutine
-            fn()
-            -- repeatable?
-            if line.flags&32>0 then
-              do_async(function()
-                -- avoid player hitting trigger/button right away
-                wait_async(30)
-                -- unlock (if repeatable)
-                line.trigger=trigger 
-                -- restore visual
-                switch_texture()
-              end)
-            end
-          end
-        end,
-        sectors,
-        actors)
+          end)
+        end
+      end
     end
     add(lines,line)
   end)
@@ -2104,18 +2098,13 @@ function unpack_map(skill,actors)
   unpack_array(function()
     local thing=unpack_thing()
     if thing then
-      add(thing,unpack_special(
-        mpeek(),
-        function(fn)
-          return function(self)
-            -- avoid reentrancy
-            self.trigger=nil
-            --
-            fn()
-          end
-        end,
-        sectors,
-        actors))        
+      local special=unpack_special(sectors,actors) 
+      add(thing,function(self)
+          -- avoid reentrancy
+          self.trigger=nil
+          --
+          special()
+        end)
     end
   end)    
 
