@@ -1607,6 +1607,7 @@ function unpack_actors()
       {0x0.8000,"deathsound"},
       {0x1,"meleerange"},
       {0x2,"maxtargetrange"},
+      {0x4,"ammogive"},
       {0x0.0400,"",function()
         -- 
         unpack_array(function()
@@ -1649,15 +1650,14 @@ function unpack_actors()
       end
     elseif kind==1 then
       -- ammo family
-      local ammotype=unpack_actor_ref()
       item.pickup=function(thing,target)
-        pickup(target.inventory,ammotype,_ammo_factor*item.amount)
+        pickup(target.inventory,item.ammotype,_ammo_factor*item.amount)
       end
     elseif kind==2 then
       -- weapon
-      local ammogive,ammotype=unpack_variant(),item.ammotype
+      local ammotype=item.ammotype
       item.pickup=function(thing,target)
-        pickup(target.inventory,ammotype,_ammo_factor*ammogive,ammotype.maxamount)
+        pickup(target.inventory,ammotype,_ammo_factor*item.ammogive,ammotype.maxamount)
 
         target:attach_weapon(thing)
         -- remove from things

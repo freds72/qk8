@@ -736,17 +736,13 @@ def pack_actors(image_reader, actors):
     if actor.get('maxtargetrange'):
       properties |= 0x20000
       properties_data += pack_variant(actor.maxtargetrange)      
+    if actor.get('ammogive'):
+      properties |= 0x40000
+      properties_data += pack_variant(actor.ammogive)      
+
     s += pack_int32(properties)
     s += properties_data
   
-    # class properties
-    if actor.kind==ACTOR_KIND.WEAPON:
-      s += pack_variant(actor.ammogive)
-
-    if actor.kind==ACTOR_KIND.AMMO:
-      # ammo variants (normal, large) are tied to their parent type
-      s += pack_variant(actor.get('parent',actor.id))
-    
     ############ states
     # export state jump table
     s += pack_variant(len(actor._labels))

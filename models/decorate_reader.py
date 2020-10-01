@@ -151,6 +151,11 @@ class DecorateWalker(DECORATEListener):
         # else string
         properties[attribute] = value
       
+      if properties.kind==ACTOR_KIND.AMMO:
+        # ammo must have a "single" ammo type
+        # override anything from decorate
+        properties['ammotype']=properties.get('parent',properties.id)
+
       # flags
       for flag in ctx.flags():
         activated = flag.ENABLED().getText()
