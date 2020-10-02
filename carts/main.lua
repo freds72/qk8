@@ -82,7 +82,7 @@ local _futures={}
 -- returns a handle to the coroutine
 -- used to cancel a coroutine
 function do_async(fn)
-  return add(_futures,{cocreate(fn)})
+  return add(_futures,{co=cocreate(fn)})
 end
 -- wait until timer
 function wait_async(t,fn)
@@ -1147,7 +1147,7 @@ function play_state()
   _sprite_cache:clear()  
 
   -- memory cleanup before loading a level
-  _things,_plyr,_bsp={}
+  _things,_futures,_plyr,_bsp={},{}
   -- ammo scaling factor
   _ammo_factor=split"2,1,1,1"[_skill]
   local bsp,thingdefs=decompress(mod_name.."_"..mod_map,_maps_cart[_map_id],_maps_offset[_map_id],unpack_map,_skill,_actors)
@@ -1285,7 +1285,8 @@ function _update()
   -- any futures?
   local tmp={}
   for k,async_handle in pairs(_futures) do
-    local f=async_handle[1]
+    -- get actual coroutine
+    local f=async_handle.co
     -- still active?
     if f and costatus(f)=="suspended" then
       -- todo: remove assert for release
@@ -1435,7 +1436,7 @@ function unpack_special(sectors,actors)
       -- move to target
       for _,sector in pairs(moving_sectors) do
         -- kill any previous moving handler
-        if(sector.action) sector.action[1]=nil
+        if(sector.action) sector.action.co=nil
         -- register an async routine
         sector.action=do_async(function()
           move_sector_async(sector,"target",moving_speed,special==13 and moving_speed<0)
@@ -2075,7 +2076,7 @@ function unpack_map(skill,actors)
   local things={}
   local function unpack_thing()
     local flags,id,x,y=mpeek(),unpack_variant(),unpack_fixed(),unpack_fixed()
-    if flags&(0x10<<(skill-1))!=0 then
+    if flags&(0x10<<(skill-1))!=0 then    
       return add(things,{
         -- link to underlying actor
         actors[id],
