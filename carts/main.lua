@@ -708,7 +708,7 @@ function line_of_sight(thing,otherthing,maxdist)
     local h,hits,blocking=thing[3]+24,{}
     _intersectid+=1
     intersect_sub_sector(thing.ssector,thing,n,0,d,0,hits,true)
-    for _,hit in pairs(hits) do
+    for _,hit in ipairs(hits) do
       if intersect_line(hit.seg,h,0,0,true) then
         return n
       end
