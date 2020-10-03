@@ -695,7 +695,12 @@ end
 
 -- returns distance and normal to target (if visible)
 function line_of_sight(thing,otherthing,maxdist)
+  -- pvs check
+  local pvs,id=thing.ssector.pvs,otherthing.ssector.id
+
   local n,d=v2_normal(v2_make(thing,otherthing))
+  if(band(pvs[id\32],0x0.0001<<(id&31))==0) return n
+
   -- in radius?
   d=max(d-thing.actor.radius)
   if d<maxdist then
@@ -1194,8 +1199,6 @@ function play_state()
 
   -- start level music (if any)
   music(_maps_music[map_id],0,14)
-
-  local ttl=10
 
   return 
     -- update
