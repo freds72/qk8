@@ -329,7 +329,8 @@ actor PlasmaRifle : Weapon 2004
 			PLAS A 5 Bright
 			Loop
 		Fire:
-			PLSG A 3 A_FireProjectile("PlasmaBall");
+			PLSF A 2
+			PLSF A 1 A_FireProjectile("PlasmaBall");
 			PLSG B 20
 			Goto Ready
 		Ready:
@@ -396,10 +397,27 @@ actor ChainGun : Weapon 2002
 		Fire:
 			CHGG A 4 A_FireBullets(2,0,1,3,"BulletPuff");
 			CHGG B 4
-			Stop
+			Goto Ready
 		Ready:
 			CHGG A 1 A_WeaponReady;
 			Loop
+	}
+}
+
+actor Fist : Weapon 5000
+{
+	AmmoUse 0
+	AmmoGive 0
+	SlotNumber 10
+	States {
+		Ready:
+			PUNG A 1 A_WeaponReady
+			Loop
+		Fire:
+			PUNG B 4
+			PUNG C 4 A_MeleeAttack(20,"BulletPuff")
+			PUNG C 4
+    	Goto Ready
 	}
 }
 
@@ -410,10 +428,11 @@ actor PoomGuy: Player 1
 	Height 56
 	Armor 50
 	Speed 3
-	StartItem "ShotGun"
+	StartItem "Shotgun"
 	StartItem "Shell", 50
 	StartItem "PlasmaRifle"
 	StartItem "Cell", 100
+	StartItem "Fist"
 	
 	States
 	{
@@ -485,6 +504,8 @@ actor DoomImp: Monster 3001
 	Height 56
 	Speed 8
 	PainChance 200
+	MeleeRange 512
+	MaxTargetRange 800
 
 	States
 	{
@@ -496,7 +517,10 @@ actor DoomImp: Monster 3001
 			TROO B 2 
 			TROO B 1 A_Chase;
 			Loop
-		// Melee:
+		Melee:
+			TROO A 8 A_FaceTarget;
+			TROO G 4 A_FireProjectile("PlasmaBall");
+			Goto See
 		Missile:
 			TROO A 8 A_FaceTarget;
 			TROO G 6 A_FireProjectile("DoomImpBall");

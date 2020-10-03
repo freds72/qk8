@@ -222,7 +222,7 @@ def pack_named_texture(owner, textures, name):
 
   # no texture/blank texture
   if name not in textures: 
-    return "04080202"
+    return "00000000"
   return pack_texture(textures[name])
 
 def pack_lightlevel(owner, name):
@@ -862,7 +862,7 @@ def pack_menu(stream, palette):
   # convert to pico image
   return pack_image(img, palette)
 
-def to_gamecart(carts_path, name, group_name, maps, width,map_data,gfx_data,gfx_label,gfx_menu,palette,compress=False):
+def to_gamecart(carts_path, name, group_name, width, map_data, gfx_data, gfx_label, gfx_menu, palette, compress=False):
   cart="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
@@ -872,19 +872,11 @@ __lua__
 -- *********************************
 -- generated code - do not edit
 -- *********************************
-mod_name="{0}"
-mod_map="{1}"
-_maps_cart=split"{2}"
-_maps_offset=split"{3}"
-_maps_music=split"{4}"
-{5}
+#include atlas.lua
+{1}
 #include main.lua
 """.format(
   name,
-  group_name,
-  ",".join(["{}".format(m.cart_id) for m in maps]),
-  ",".join(["{}".format(m.cart_offset) for m in maps]),
-  ",".join(["{}".format(m.music) for m in maps]),
   compress and "#include lzs.lua" or "#include plain.lua")
 
   # transpose gfx
@@ -941,7 +933,11 @@ _maps_music=split"{4}"
     cart += "\n"
 
   # music and sfx (from external cart)
-  music_path = os.path.join(carts_path, "music.p8")    
+  # group cart?
+  music_path = os.path.join(carts_path, "music_{}.p8".format(group_name))    
+  if not os.path.isfile(music_path):
+    # generic cart?
+    music_path = os.path.join(carts_path, "music.p8")    
   if os.path.isfile(music_path):
     logging.info("Found music&sfx cart: {}".format(music_path))
 
@@ -1026,41 +1022,63 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
 
   # extract map + things
   cart_len = 2*0x4300
-  map_groups = set(m.group for m in all_maps)
-  for map_group,maps in {mg:list(m for m in all_maps if m.group==mg) for mg in map_groups}.items():
-    logging.info("Packing map group: {}".format(map_group))
+  map_groups = sorted(set(m.group for m in all_maps))
 
-    active_textures = set()
-    for m in maps:
-      logging.info("Reading map WAD: {}".format(m.name))
-      zmap = load_WAD(maps_stream, m.name) 
-      m.zmap = zmap
-      active_textures |= get_zmap_textures(zmap)
+  # export maps
+  for map_group in map_groups:
+      maps = list(m for m in all_maps if m.group==map_group)
+      logging.info("Packing map group: {}".format(map_group))
 
-    # decode textures
-    reader = TextureReader(file_stream, colormap.palette)
-    textures = reader.read(active_textures)
+      active_textures = set()
+      for m in maps:
+        logging.info("Reading map WAD: {}".format(m.name))
+        zmap = load_WAD(maps_stream, m.name) 
+        m.zmap = zmap
+        active_textures |= get_zmap_textures(zmap)
 
-    data = ""
-    for i,m in enumerate(maps):
-      # locate maps in multicarts
-      logging.info("Packing map: {}".format(m.name))
-      m.cart_id = int(len(data)/cart_len)
-      m.cart_offset = int((len(data)%cart_len)/2)
-      # map index (within game cart) 
-      m.map_id = i+1
-      # compress each map separately 
-      map_data = pack_zmap(m.zmap, textures, actors)
-      data += compress and compress_byte_str(map_data) or map_data
-    
-    # map data
-    to_multicart(data, pico_path, carts_path, modname + "_" + map_group)
+      # decode textures
+      reader = TextureReader(file_stream, colormap.palette)
+      textures = reader.read(active_textures)
 
-    # export game cart (hub for maps from same group)
-    to_gamecart(carts_path, modname, map_group, maps, textures.width, textures.map, textures.gfx, title, menu, gradients, compress)
+      data = ""
+      for i,m in enumerate(maps):
+        # locate maps in multicarts
+        logging.info("Packing map: {}".format(m.name))
+        m.cart_id = int(len(data)/cart_len)
+        m.cart_offset = int((len(data)%cart_len)/2)
+        # compress each map separately 
+        map_data = pack_zmap(m.zmap, textures, actors)
+        data += compress and compress_byte_str(map_data) or map_data
+      
+      # map data
+      to_multicart(data, pico_path, carts_path, modname + "_" + map_group)
+
+      # export game cart (hub for maps from same group)
+      to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, title, menu, gradients, compress)
 
   # pack actors (shared by all maps)
   data = pack_actors(image_reader, actors)
+
+  atlas_code="""
+-- *********************************
+-- generated code - do not edit
+-- *********************************
+mod_name="{0}"
+_maps_label=split"{1}"
+_maps_group=split"{2}"
+_maps_cart=split"{3}"
+_maps_offset=split"{4}"
+_maps_music=split"{5}"
+  """.format(
+  modname,
+  ",".join(["{}".format(m.label) for m in all_maps]),
+  ",".join(["{}".format(m.group) for m in all_maps]),
+  ",".join(["{}".format(m.cart_id) for m in all_maps]),
+  ",".join(["{}".format(m.cart_offset) for m in all_maps]),
+  ",".join(["{}".format(m.music) for m in all_maps]))
+
+  with open(os.path.join(carts_path, "atlas.lua"), "w") as f:
+    f.write(atlas_code)
 
   boot_code="""\
 pico-8 cartridge // http://www.pico-8.com
@@ -1072,16 +1090,9 @@ __lua__
 -- *********************************
 -- generated code - do not edit
 -- *********************************
-mod_name="{0}"
-_maps_label=split"{1}"
-_maps_group=split"{2}"
-_maps_id=split"{3}"
+#include atlas.lua
 #include title.lua
-""".format(
-  modname,
-  ",".join(["{}".format(m.label) for m in all_maps]),
-  ",".join(["{}".format(m.group) for m in all_maps]),
-  ",".join(["{}".format(m.map_id) for m in all_maps]))
+"""
 
   to_multicart(compress and compress_byte_str(data) or data, pico_path, carts_path, modname, boot_code=boot_code)
 

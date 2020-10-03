@@ -8,11 +8,11 @@ map E1M1 "Hangar"
 map E1M2 "Docks"
 {
 	levelnum = 2
-	next = "E2M1"
+	next = "E1M3"
 	music = 12
 }
 
-map E2M1 "Cell"
+map E1M3 "Test"
 {
 	levelnum = 3
 	next = "endgame"

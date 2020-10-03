@@ -321,7 +321,7 @@ function draw_walls(segs,v_cache,light)
       -- dual?
       local facingside,otherside,otop,obottom=ldef[seg.side],ldef[not seg.side]
       -- peg bottom?
-      local yoffset,toptex,midtex,bottomtex=bottom-top,facingside[2],facingside[3],facingside[4]
+      local yoffset,_,toptex,midtex,bottomtex=bottom-top,unpack(facingside)
       -- fix animated side walls (elevators)
       if ldef.flags&0x4!=0 then
         yoffset=0
@@ -1162,26 +1162,18 @@ function play_state()
   -- stop music (eg. restart game)
   music(-1)
 
-  -- actor sprites
-  if not _actors then
-    -- not already loaded?
-    _actors,_sprite_cache=decompress(mod_name,0,0,unpack_actors)
-  end
-  -- fix garbage sprites when loading 2nd map
-  _sprite_cache:clear()  
-
-  -- memory cleanup before loading a level
-  _things,_futures,_plyr,_bsp={},{}
+  _actors,_sprite_cache=decompress(mod_name,0,0,unpack_actors)
 
   -- ammo scaling factor
   _ammo_factor=split"2,1,1,1"[_skill]
-  local bsp,thingdefs=decompress(mod_name.."_"..mod_map,_maps_cart[_map_id],_maps_offset[_map_id],unpack_map,_skill,_actors)
+  local bsp,thingdefs=decompress(mod_name.."_".._maps_group[_map_id],_maps_cart[_map_id],_maps_offset[_map_id],unpack_map,_skill,_actors)
   _bsp=bsp
 
   -- restore main data cart
   reload()
 
   -- attach behaviors to things
+  _things={}
   for _,thingdef in pairs(thingdefs) do 
     local thing,actor=make_thing(unpack(thingdef))
     -- get direct access to player
@@ -1496,11 +1488,10 @@ function unpack_special(sectors,actors)
   elseif special==243 then
     -- exit level
     return function()
-      -- return to main menu if reached last map from group
+      -- load next map
+      -- todo: handle end game
       _map_id+=1
-      if(_map_id>#_maps_cart) load(mod_name.."_0.p8")
-      -- next map
-      next_state(slicefade_state,play_state)
+      load(mod_name.."_".._maps_group[_map_id]..".p8",nil,_skill..",".._map_id)
     end
   end
 end
