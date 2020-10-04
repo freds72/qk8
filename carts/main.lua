@@ -3,7 +3,7 @@ version 29
 __lua__
 
 -- globals
-local _bsp,_cam,_plyr,_things,_sprite_cache,_actors
+local _bsp,_cam,_plyr,_things,_sprite_cache,_actors,btns,wp_hud
 local _onoff_textures={[0]=0}
 local _ambientlight,_ammo_factor,_intersectid,_msg=0,1,0
 
@@ -1046,7 +1046,7 @@ function attach_plyr(thing,actor,skill)
       -- weapon bobing
       bobx,boby=lerp(bobx,2*da,0.3),lerp(boby,cos(time()*3)*abs(dz)*speed*2,0.2)
     end,
-    attach_weapon=function(self,weapon)
+    attach_weapon=function(self,weapon,switch)
       local slot=weapon.actor.slot
       -- got weapon already?
       if(wp[slot]) return
@@ -1060,7 +1060,7 @@ function attach_plyr(thing,actor,skill)
       weapon:tick()
 
       -- auto switch
-      wp_switch(slot)
+      if(switch) wp_switch(slot)
     end,
     hud=function(self)
       local active_wp=wp[wp_slot]
@@ -1104,6 +1104,37 @@ function attach_plyr(thing,actor,skill)
       if hp and hp>0 then
         hit_ttl=min(ceil(hp),15)
       end
+    end,
+    -- restore state
+    load=function(self,actors)
+      if dget(0)>0 then
+        self.health=dget(1)
+        self.armor=dget(2)
+        for i=1,5 do
+          local actor=actors[dget(i+2)]
+          if actor then
+            -- create thing
+            self:attach_weapon(actor:attach({}))
+            -- don't restore counters for ammoless weapons (ex: fist)
+            if(actor.ammotype) self.inventory[actor.ammotype]=dget(i+7)
+          end
+        end
+      end
+    end,
+    -- save state
+    save=function(self)
+      dset(0,1)
+      dset(1,self.health)
+      dset(2,self.armor)
+      -- iterate over weapon slots
+      for i=1,5 do
+        local w=wp[i]
+        dset(i+2,w and w.actor.id or -1)
+        if w then
+          local ammotype=w.actor.ammotype        
+          if(ammotype) dset(i+7,ammotype and self.inventory[ammotype] or -1)
+        end
+      end
     end
   },thing)
 end
@@ -1135,8 +1166,6 @@ end
 -->8
 -- game states
 function next_state(fn,...)
-  btns,wp_hud={}
-  
   local u,d,i=fn(...)
   -- ensure update/draw pair is consistent
   _update_state=function()
@@ -1150,6 +1179,8 @@ function next_state(fn,...)
 end
 
 function play_state()
+  btns,wp_hud={}
+  
   -- stop music (eg. restart game)
   music(-1)
 
@@ -1170,11 +1201,13 @@ function play_state()
     -- get direct access to player
     if actor.id==1 then
       _plyr=attach_plyr(thing,actor,_skill)
+      _plyr:load(_actors)
       thing=_plyr
     end
     -- 
     add_thing(thing)
   end
+  -- todo: release actors
 
   assert(_plyr,"missing player in level")
 
@@ -1275,6 +1308,8 @@ end
 -->8
 -- game loop
 function _init()
+  cartdata(mod_name)
+
   -- launch params
   local p=split(stat(6))
   _skill,_map_id=tonum(p[1]) or 2,tonum(p[2]) or 1
@@ -1468,6 +1503,9 @@ function unpack_special(sectors,actors)
   elseif special==243 then
     -- exit level
     return function()
+      -- save player's state
+      _plyr:save()
+
       -- load next map
       -- todo: handle end game
       _map_id+=1
@@ -1572,9 +1610,9 @@ function unpack_actors()
         if not wp_hud and btn(❎) then
           local inventory,ammotype,newqty=weapon.owner.inventory,item.ammotype,0
           -- handle "fist" (eg weapon without ammotype)
-          if(ammotype) newqty=inventory[item.ammotype]-item.ammouse
+          if(ammotype) newqty=inventory[ammotype]-item.ammouse
           if newqty>=0 then
-            if(ammotype) inventory[item.ammotype]=newqty
+            if(ammotype) inventory[ammotype]=newqty
             -- play attack sound
             if(item.attacksound) sfx(item.attacksound)
             -- fire state
@@ -1801,7 +1839,7 @@ function unpack_actors()
         local ammotype=item.ammotype
         pickup(target.inventory,ammotype,_ammo_factor*item.ammogive,ammotype.maxamount)
 
-        target:attach_weapon(thing)
+        target:attach_weapon(thing,true)
         -- remove from things
         del_thing(thing)
       end,
