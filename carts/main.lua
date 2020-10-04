@@ -4,7 +4,7 @@ __lua__
 
 -- globals
 local _bsp,_cam,_plyr,_things,_sprite_cache,_actors
-local _onoff_textures={}
+local _onoff_textures={[0]=0}
 local _ambientlight,_ammo_factor,_intersectid,_msg=0,1,0
 local _ui_funcs,_wp_ui={circfill,rectfill,print},split"1,1,63,90,12,2,0,1,2,19,86,49,94,0,1,3,⬅️,52,88,5,0,1,3,shotgun,21,88,11,0,2,2,77,86,111,94,0,2,3,➡️,68,88,5,0,2,3,chaingun,79,88,11,0,3,2,50,68,76,76,0,3,3,⬆️,60,80,5,0,3,3,rocket,52,70,11,0,4,2,50,104,76,112,0,4,3,⬇️,60,96,5,0,4,3,plasma,52,106,11,0"
 
@@ -24,6 +24,12 @@ local depth_cls={
   end
 }
 
+-- create a new instance with parent properties
+function inherit(t,parent)
+  return setmetatable(t,{__index=parent})
+end
+
+-- camera factory
 function make_camera()
   return {
     m=split"1,0,0,0,1,0",
@@ -61,10 +67,7 @@ end
 function lerp(a,b,t)
   return a*(1-t)+b*t
 end
-function smoothstep(t)
-	t=mid(t,0,1)
-	return t*t*(3-2*t)
-end
+
 -- return shortest angle to target
 function shortest_angle(target_angle,angle)
 	local dtheta=target_angle-angle
@@ -85,9 +88,8 @@ function do_async(fn)
   return add(_futures,{co=cocreate(fn)})
 end
 -- wait until timer
-function wait_async(t,fn)
+function wait_async(t)
 	for i=1,t do
-		if(fn) fn(i)
 		yield()
 	end
 end
@@ -149,9 +151,9 @@ end
 function make_sprite_cache(tiles,maxlen)
 	local len,index,first,last=0,{}
 
-  -- note: keep multiline assignments, they are *faster*
 	local function remove(t)
-		if t._next then
+    -- note: keep multiline assignments, they are *faster*
+    if t._next then
 			if t._prev then
 				t._next._prev = t._prev
 				t._prev._next = t._next
@@ -174,7 +176,6 @@ function make_sprite_cache(tiles,maxlen)
 	end
 	
 	return {
-    clear=function()  len,index,first,last=0,{} end,
     use=function(self,id)
 			local entry=index[id]
 			if entry then
@@ -230,7 +231,7 @@ end
 -- traverse and renders bsp in back to front order
 -- calls 'visit' function
 function visit_bsp(node,pos,visitor)
-  local side=node[1]*pos[1]+node[2]*pos[2]<=node[3]
+  local side=v2_dot(node,pos)<=node[3]
   visitor(node,side,pos,visitor)
   visitor(node,not side,pos,visitor)
 end
@@ -274,11 +275,10 @@ function polyfill(v,xoffset,yoffset,tex,light)
       if span then
       -- limit visibility
         if w0>0.15 then
-          -- collect boundaries
-          local a,b=x0,span
+          -- collect boundaries + color shitfint
+          local a,b,pal1=x0,span,(light*min(15,w0<<5))\1
           if(a>b) a=span b=x0
           -- color shifing
-          local pal1=(light*min(15,w0<<5))\1
           if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
 
           -- mode7 texturing
@@ -307,7 +307,6 @@ function draw_walls(segs,v_cache,light)
   local v0,top,bottom,pal0=v_cache[#v_cache],sector.ceil>>4,sector.floor>>4
   local x0,y0,w0=v0.x,v0.y,v0.w
 
-  -- todo: test ipairs
   for i,v1 in ipairs(v_cache) do
     local seg,x1,y1,w1=v0.seg,v1.x,v1.y,v1.w
     local _x1,ldef=x1,seg.line
@@ -322,74 +321,78 @@ function draw_walls(segs,v_cache,light)
       local facingside,otherside,otop,obottom=ldef[seg.side],ldef[not seg.side]
       -- peg bottom?
       local yoffset,_,toptex,midtex,bottomtex=bottom-top,unpack(facingside)
-      -- fix animated side walls (elevators)
-      if ldef.flags&0x4!=0 then
-        yoffset=0
-      end
-      if otherside then
-        -- visible other side walls?
-        otop=otherside[1].ceil>>4
-        obottom=otherside[1].floor>>4
-        -- offset animated walls (doors)
+      -- no need to draw untextured walls
+      if toptex|midtex|bottomtex!=0 then
+        -- fix animated side walls (elevators)
         if ldef.flags&0x4!=0 then
-          yoffset=otop-top
+          yoffset=0
         end
-        -- make sure bottom is not crossing this side top
-        obottom=min(top,obottom)
-        otop=max(bottom,otop)
-        if(top<=otop) otop=nil
-        if(bottom>=obottom) obottom=nil
-        -- kill top/bottom if no textures (eg 0)
-        otop=toptex!=0 and otop
-        obottom=bottomtex!=0 and obottom
-      end
-
-      local cx0,dy,du,dw=x0\1+1,(y1-y0)/dx,(v1[seg[9]]*w1-u0)/dx,((w1-w0)<<4)/dx
-      w0<<=4
-      local sx=cx0-x0    
-      if(x0<0) y0-=x0*dy u0-=x0*du w0-=x0*dw cx0=0 sx=0
-      y0+=sx*dy
-      u0+=sx*du
-      w0+=sx*dw
-      
-      if(x1>127) x1=127
-      for x=cx0,x1\1 do
-        if w0>2.4 then
-          -- top/bottom+color shifing
-          local t,b,pal1=y0-top*w0,y0-bottom*w0,(light*min(15,w0<<1))\1
-          if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
-
-          -- top wall side between current sector and back sector
-          local ct=t\1+1
-
-          if otop then
-            poke4(0x5f38,toptex)             
-            local ot=y0-otop*w0
-            tline(x,ct,x,ot,u0/w0,(ct-t)/w0+yoffset,0,1/w0)
-            -- new window top
-            t=ot
-            ct=ot\1+1
+        if otherside then
+          -- visible other side walls?
+          otop=otherside[1].ceil>>4
+          obottom=otherside[1].floor>>4
+          -- offset animated walls (doors)
+          if ldef.flags&0x4!=0 then
+            yoffset=otop-top
           end
-          -- bottom wall side between current sector and back sector     
-          if obottom then
-            poke4(0x5f38,bottomtex)             
-            local ob=y0-obottom*w0
-            local cob=ob\1+1
-            tline(x,cob,x,b,u0/w0,(cob-ob)/w0,0,1/w0)
-            -- new window bottom
-            b=ob
-          end
-  
-          -- middle wall?
-          if midtex!=0 then
-            -- texture selection
-            poke4(0x5f38,midtex)
-            tline(x,ct,x,b,u0/w0,(ct-t)/w0+yoffset,0,1/w0)
-          end
+          -- make sure bottom is not crossing this side top
+          obottom=min(top,obottom)
+          otop=max(bottom,otop)
+          -- not visible?
+          if(top<=otop) otop=nil
+          if(bottom>=obottom) obottom=nil
+          -- kill top/bottom if no textures (eg 0)
+          otop=toptex!=0 and otop
+          obottom=bottomtex!=0 and obottom
         end
-        y0+=dy
-        u0+=du
-        w0+=dw
+
+        local cx0,dy,du,dw=x0\1+1,(y1-y0)/dx,(v1[seg[9]]*w1-u0)/dx,((w1-w0)<<4)/dx
+        w0<<=4
+        local sx=cx0-x0    
+        if(x0<0) y0-=x0*dy u0-=x0*du w0-=x0*dw cx0=0 sx=0
+        y0+=sx*dy
+        u0+=sx*du
+        w0+=sx*dw
+        
+        if(x1>127) x1=127
+        for x=cx0,x1\1 do
+          if w0>2.4 then
+            -- top/bottom+color shifing
+            local t,b,pal1=y0-top*w0,y0-bottom*w0,(light*min(15,w0<<1))\1
+            if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
+
+            -- top wall side between current sector and back sector
+            local ct=t\1+1
+
+            if otop then
+              poke4(0x5f38,toptex)             
+              local ot=y0-otop*w0
+              tline(x,ct,x,ot,u0/w0,(ct-t)/w0+yoffset,0,1/w0)
+              -- new window top
+              t=ot
+              ct=ot\1+1
+            end
+            -- bottom wall side between current sector and back sector     
+            if obottom then
+              poke4(0x5f38,bottomtex)             
+              local ob=y0-obottom*w0
+              local cob=ob\1+1
+              tline(x,cob,x,b,u0/w0,(cob-ob)/w0,0,1/w0)
+              -- new window bottom
+              b=ob
+            end
+    
+            -- middle wall?
+            if midtex!=0 then
+              -- texture selection
+              poke4(0x5f38,midtex)
+              tline(x,ct,x,b,u0/w0,(ct-t)/w0+yoffset,0,1/w0)
+            end   
+          end
+          y0+=dy
+          u0+=du
+          w0+=dw
+        end
       end
     end
     v0=v1
@@ -435,9 +438,9 @@ function draw_flats(v_cache,segs,things)
     if #verts>2 then
       local sector=segs.sector
       local light=max(sector.lightlevel,_ambientlight)
-      -- no texture = sky/background
-      if(sector.floortex and sector.floor+m8<0) polyfill(verts,sector.tx or 0,sector.floor,sector.floortex,light)
-      if(sector.ceiltex and sector.ceil+m8>0) polyfill(verts,0,sector.ceil,sector.ceiltex,light)
+      -- not visible?
+      if(sector.floor+m8<0) polyfill(verts,sector.tx or 0,sector.floor,sector.floortex,light)
+      if(sector.ceil+m8>0) polyfill(verts,0,sector.ceil,sector.ceiltex,light)
 
       -- walls
       draw_walls(segs,verts,light)
@@ -641,7 +644,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
         -- moving away
         if denom<0 then
           if(t>tmin) tmin=t
-          if(tmin>tmax) return
+          --if(tmin>tmax) return
         else -- moving in
           local dist_b=s0[8]-v2_dot(n,{px+_tmax*dx,py+_tmax*dy})
           if s0.line and (dist_a<radius or dist_b<radius) then
@@ -650,7 +653,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
           -- exact segment
           if d>=0 and d<s0[5] then
             if(t<tmax) tmax=t othersector=s0.partner
-            if(tmax<tmin) return 
+            ---if(tmax<tmin) return 
           end
         end
       end 
@@ -720,11 +723,8 @@ function line_of_sight(thing,otherthing,maxdist)
 end
 
 function make_thing(actor,x,y,z,angle,special)
-   -- all sub-sectors that thing touches
-  -- used for rendering and collision detection
-  local pos={x,y}
   -- default height & sector specs
-  local ss=find_sub_sector(_bsp,pos)
+  local ss=find_sub_sector(_bsp,{x,y})
   -- attach instance properties to new thing
   local thing=actor:attach({
     -- z: altitude
@@ -781,7 +781,7 @@ function with_physic(thing)
   local ss,friction=thing.ssector,is_missile and 0.9967 or 0.9062
   -- init inventory
   local forces,velocity={0,0},{0,0,0}
-  return setmetatable({
+  return inherit({
     apply_forces=function(self,x,y)
       -- todo: review 96 arbitrary factor...
       forces[1]+=64*x/mass
@@ -876,10 +876,8 @@ function with_physic(thing)
       -- triggers?
       -- check triggers/bumps/...
       if is_player then
-        --if not hits then
-          hits={}
-          intersect_sub_sector(ss,self,{cos(self.angle),-sin(self.angle)},0,radius+24,0,hits,true)    
-        --end
+        hits={}
+        intersect_sub_sector(ss,self,{cos(self.angle),-sin(self.angle)},0,radius+24,0,hits,true)    
         for _,hit in ipairs(hits) do
           if hit.seg then
             local ldef=hit.seg.line
@@ -919,7 +917,7 @@ function with_physic(thing)
       -- reset forces
       forces={0,0}
     end
-  },{__index=thing})
+  },thing)
 end
 
 function with_health(thing)
@@ -933,7 +931,7 @@ function with_health(thing)
     -- death state
     self:jump_to(5)
   end
-  return setmetatable({
+  return inherit({
     hit=function(self,dmg,dir,instigator)
       -- avoid reentrancy
       if(dead) return
@@ -972,7 +970,7 @@ function with_health(thing)
         self:hit(dmg)
       end
     end
-  },{__index=thing})
+  },thing)
 end
 
 function attach_plyr(thing,actor,skill)
@@ -991,8 +989,7 @@ function attach_plyr(thing,actor,skill)
     end)
   end
 
-
-  return setmetatable({
+  return inherit({
     update=function(self,...)
       thing.update(self,...)
       hit_ttl=max(hit_ttl-1)
@@ -1110,11 +1107,11 @@ function attach_plyr(thing,actor,skill)
       -- call parent function
       -- + skill adjustment
       local hp=thing.hit(self,dmg_factor*dmg,...)
-      if hp>0 then
+      if hp and hp>0 then
         hit_ttl=min(ceil(hp),15)
       end
     end
-  },{__index=thing})
+  },thing)
 end
 
 function draw_bsp()
@@ -1152,7 +1149,7 @@ function next_state(fn,...)
     -- init function (if any)
     if(i) i()
     -- 
-    _update_state,_draw_state=u,d
+    _update_state,_draw=u,d
     -- actually run the update
     u()
   end
@@ -1166,7 +1163,7 @@ function play_state()
 
   -- ammo scaling factor
   _ammo_factor=split"2,1,1,1"[_skill]
-  local bsp,thingdefs=decompress(mod_name.."_".._maps_group[_map_id],_maps_cart[_map_id],_maps_offset[_map_id],unpack_map,_skill,_actors)
+  local bsp,thingdefs=decompress(_maps_group[_map_id],_maps_cart[_map_id],_maps_offset[_map_id],unpack_map,_skill,_actors)
   _bsp=bsp
 
   -- restore main data cart
@@ -1198,7 +1195,6 @@ function play_state()
       if _plyr.dead then
         next_state(gameover_state,_plyr,_plyr.angle,_plyr.target,45)
       end
-
       _cam:track(_plyr,_plyr.angle,_plyr[3]+45)
     end,
     -- draw
@@ -1254,8 +1250,7 @@ function gameover_state(pos,angle,target,h)
 end
 
 function slicefade_state(...)
-  local args=pack(...)
-  local ttl,r,h,rr=30,{},{},0
+  local args,ttl,r,h,rr=pack(...),30,{},{},0
   for i=0,127 do
     rr=lerp(rr,rnd(0.1),0.3)
     r[i],h[i]=0.1+rr,0
@@ -1296,7 +1291,7 @@ end
 function _update()
   -- get btn states and suppress pressed buttons until btnp occurs
   for i=1,6 do
-    btns[i]=btnp(i-1) or btns[i]!=nil and btn(i-1) or nil
+    btns[i]=btnp(i-1) or btns[i] and btn(i-1)
   end
 
   -- any futures?
@@ -1314,6 +1309,7 @@ function _update()
   _futures=tmp
 
   -- keep world running
+  _msg=nil
   for _,thing in pairs(_things) do
     if(thing.control) thing:control()
     thing:tick()
@@ -1322,11 +1318,6 @@ function _update()
 
   _update_state()
 
-end
-
-function _draw()
-  _draw_state()
-  _msg=nil
 end
 
 -->8
@@ -1369,12 +1360,7 @@ function z_poly_clip(v)
 end
 
 -->8
--- w: number of bytes (1 or 2)
-function unpack_int(w)
-  w=w or 1
-	local i=w==1 and mpeek() or mpeek()<<8|mpeek()
-  return i
-end
+-- data unpacking functions
 -- unpack 1 or 2 bytes
 function unpack_variant()
 	local h=mpeek()
@@ -1491,14 +1477,9 @@ function unpack_special(sectors,actors)
       -- load next map
       -- todo: handle end game
       _map_id+=1
-      load(mod_name.."_".._maps_group[_map_id]..".p8",nil,_skill..",".._map_id)
+      load(_maps_group[_map_id]..".p8",nil,_skill..",".._map_id)
     end
   end
-end
-
-function unpack_texture()
-  local tex=unpack_fixed()
-  return tex!=0 and tex
 end
 
 function unpack_actors()
@@ -1730,7 +1711,7 @@ function unpack_actors()
         local i,ticks=state_labels[0],-2
 
         -- extend properties
-        thing=setmetatable({
+        thing=inherit({
           actor=self,
           health=self.health,
           armor=self.armor,
@@ -1765,7 +1746,7 @@ function unpack_actors()
               if(state.fn) state.fn(self)
             end
           end
-        },{__index=thing})
+        },thing)
 
         -- clone startup inventory
         attach_array(inventory,thing,"inventory")
@@ -1814,7 +1795,7 @@ function unpack_actors()
     
     local pickup_factory={
       -- default inventory item (ex: lock)
-      [0]=function(_,target)
+      function(_,target)
         pickup(target.inventory)
       end,
       -- ammo family
@@ -1839,7 +1820,7 @@ function unpack_actors()
         pickup(target,"armor")
       end
     }
-    item.pickup=pickup_factory[kind]
+    item.pickup=pickup_factory[kind+1]
     
     -- actor states
     unpack_array(function()
@@ -1886,6 +1867,12 @@ function unpack_actors()
   return actors,make_sprite_cache(tiles,32)
 end
 
+-- linedefs
+function switch_texture(line)
+  -- flip midtex only
+  line[true][3]=_onoff_textures[line[true][3]]
+end
+
 -- unpack level data (geometry + things)
 function unpack_map(skill,actors)
   -- sectors
@@ -1896,10 +1883,10 @@ function unpack_map(skill,actors)
       -- sector attributes
       special=special,
       -- ceiling/floor height
-      ceil=unpack_int(2),
-      floor=unpack_int(2),
-      ceiltex=unpack_texture(),
-      floortex=unpack_texture(),
+      ceil=unpack_fixed(),
+      floor=unpack_fixed(),
+      ceiltex=unpack_fixed(),
+      floortex=unpack_fixed(),
       -- rebase to 0-1
       lightlevel=mpeek()/255,
       -- number of things in sector
@@ -1926,10 +1913,6 @@ function unpack_map(skill,actors)
     end
   end)
 
-  -- linedefs
-  local function switch_texture(line)
-    line[true][3]=_onoff_textures[line[true][3]]
-  end
   do
     local sides,verts,lines,all_segs={},{},{},{}
     -- sidedefs

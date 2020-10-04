@@ -447,8 +447,8 @@ def pack_zmap(map, textures, actors):
   for sector in map.sectors:
     # see: https://zdoom.org/wiki/Sector_specials
     s += "{:02x}".format(sector.special)
-    s += pack_int(sector.heightceiling)
-    s += pack_int(sector.heightfloor)
+    s += pack_fixed(sector.heightceiling)
+    s += pack_fixed(sector.heightfloor)
     # sector ceiling/floor textures
     s += pack_named_texture(sector, flats, 'textureceiling')
     s += pack_named_texture(sector, flats, 'texturefloor')
@@ -872,7 +872,7 @@ __lua__
 -- *********************************
 -- generated code - do not edit
 -- *********************************
-#include atlas.lua
+#include {0}_atlas.lua
 {1}
 #include main.lua
 """.format(
@@ -1072,12 +1072,12 @@ _maps_music=split"{5}"
   """.format(
   modname,
   ",".join(["{}".format(m.label) for m in all_maps]),
-  ",".join(["{}".format(m.group) for m in all_maps]),
+  ",".join(["{}".format("{}_{}".format(modname,m.group)) for m in all_maps]),
   ",".join(["{}".format(m.cart_id) for m in all_maps]),
   ",".join(["{}".format(m.cart_offset) for m in all_maps]),
   ",".join(["{}".format(m.music) for m in all_maps]))
 
-  with open(os.path.join(carts_path, "atlas.lua"), "w") as f:
+  with open(os.path.join(carts_path, "{}_atlas.lua".format(modname)), "w") as f:
     f.write(atlas_code)
 
   boot_code="""\
@@ -1090,9 +1090,9 @@ __lua__
 -- *********************************
 -- generated code - do not edit
 -- *********************************
-#include atlas.lua
+#include {0}_atlas.lua
 #include title.lua
-"""
+""".format(modname)
 
   to_multicart(compress and compress_byte_str(data) or data, pico_path, carts_path, modname, boot_code=boot_code)
 
