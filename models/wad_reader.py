@@ -1059,6 +1059,31 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
   # pack actors (shared by all maps)
   data = pack_actors(image_reader, actors)
 
+  # list of weapons
+  wp_anchors = [50,64,78,64,64]
+  wp_templates=[
+    "{0}|rectfill|{1},86,{2},94,0|{0}|print|⬅️,52,88,5|{0}|print|{3},{4},88,11",
+    "{0}|rectfill|{1},102,{2},110,0|{0}|print|⬇️,60,94,5|{0}|print|{3},{4},104,11",
+    "{0}|rectfill|{1},86,{2},94,0|{0}|print|➡️,68,88,5|{0}|print|{3},{4},88,11",
+    "{0}|rectfill|{1},70,{2},78,0|{0}|print|⬆️,60,82,5|{0}|print|{3},{4},72,11",
+    "{0}|print|🅾️,60,88,5"
+  ] 
+  wp_wheel_data = "-1|ovalfill|51,81,75,99,2"
+  for i,wp in enumerate(sorted([wp for wp in actors.values() if 'slotnumber' in wp and wp.kind==ACTOR_KIND.WEAPON], key=lambda wp: wp.slotnumber)):
+    name = wp.name
+    x0 = wp_anchors[i]
+    x1 = wp_anchors[i]
+    if i==0:
+      # left justified
+      x0 -= len(name)*4
+    elif i==2:
+      # right justified
+      x1 += len(name)*4
+    else:
+      x0 -= len(name)*2
+      x1 += len(name)*2
+    wp_wheel_data += "|" + wp_templates[i].format(wp.slotnumber,x0-1,x1-1,name,x0)
+
   atlas_code="""
 -- *********************************
 -- generated code - do not edit
@@ -1069,15 +1094,17 @@ _maps_group=split"{2}"
 _maps_cart=split"{3}"
 _maps_offset=split"{4}"
 _maps_music=split"{5}"
+_wp_wheel=split("{6}","|")
   """.format(
   modname,
   ",".join(["{}".format(m.label) for m in all_maps]),
   ",".join(["{}".format("{}_{}".format(modname,m.group)) for m in all_maps]),
   ",".join(["{}".format(m.cart_id) for m in all_maps]),
   ",".join(["{}".format(m.cart_offset) for m in all_maps]),
-  ",".join(["{}".format(m.music) for m in all_maps]))
+  ",".join(["{}".format(m.music) for m in all_maps]),
+  wp_wheel_data)
 
-  with open(os.path.join(carts_path, "{}_atlas.lua".format(modname)), "w") as f:
+  with open(os.path.join(carts_path, "{}_atlas.lua".format(modname)), "w", encoding='utf-8') as f:
     f.write(atlas_code)
 
   boot_code="""\

@@ -6,7 +6,6 @@ __lua__
 local _bsp,_cam,_plyr,_things,_sprite_cache,_actors
 local _onoff_textures={[0]=0}
 local _ambientlight,_ammo_factor,_intersectid,_msg=0,1,0
-local _ui_funcs,_wp_ui={circfill,rectfill,print},split"1,1,63,90,12,2,0,1,2,19,86,49,94,0,1,3,⬅️,52,88,5,0,1,3,shotgun,21,88,11,0,2,2,77,86,111,94,0,2,3,➡️,68,88,5,0,2,3,chaingun,79,88,11,0,3,2,50,68,76,76,0,3,3,⬆️,60,80,5,0,3,3,rocket,52,70,11,0,4,2,50,104,76,112,0,4,3,⬇️,60,96,5,0,4,3,plasma,52,106,11,0"
 
 --local k_far,k_near=0,2
 --local k_right,k_left=4,8
@@ -1001,12 +1000,10 @@ function attach_plyr(thing,actor,skill)
 
       if wp_hud then
         wp_hud=not btn(6)
-        for i=1,4 do
-          if btnp(🅾️) then
-            wp_hud=wp_switch(10)
-          elseif btnp(i-1) then
+        for i,k in pairs({0,3,1,2,4}) do
+          if btnp(k) then
             -- only switch if we have the weapon and it's not the current weapon
-            wp_hud,btns=(wp_slot!=i and wp[i]) and wp_switch(i) or nil,{}
+            wp_hud,btns=(wp_slot!=i and wp[i]) and wp_switch(i),{}
           end
         end
       else
@@ -1091,13 +1088,10 @@ function attach_plyr(thing,actor,skill)
 
       -- display weapon selection hud
       if wp_hud then
-        local uit={}
-        for i=1,#_wp_ui do
-            uit[chr((i-1)%7+97)]=_wp_ui[i]
-            if(i%7==0 and wp[uit.a])_ui_funcs[uit.b](uit.c,uit.d,uit.e,uit.f,uit.g)
+        for i=1,#_wp_wheel,3 do
+          local slot=_wp_wheel[i]
+          if(slot==-1 or wp[slot]) _ENV[_wp_wheel[i+1]](unpack(split(_wp_wheel[i+2])))
         end
-        -- fist selection entry
-        print("🅾️",60,88,5)
       end
 
       -- set "pain" palette (defaults to screen palette if normal)

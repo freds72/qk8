@@ -322,7 +322,7 @@ actor PlasmaRifle : Weapon 2004
 	AmmoUse 1
 	AmmoGive 40
 	AmmoType "Cell"
-	SlotNumber 3
+	SlotNumber 
 	States {
 		Spawn:
 			PLAS A 5
@@ -388,7 +388,7 @@ actor ChainGun : Weapon 2002
 	AmmoUse 1
 	AmmoGive 20
 	AmmoType "Clip"
-	SlotNumber 2
+	SlotNumber 3
 	States {
 		Spawn:
 			MGUN A 5
@@ -408,7 +408,7 @@ actor Fist : Weapon 5000
 {
 	AmmoUse 0
 	AmmoGive 0
-	SlotNumber 10
+	SlotNumber 5
 	States {
 		Ready:
 			PUNG A 1 A_WeaponReady
