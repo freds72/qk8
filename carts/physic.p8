@@ -1,6 +1,10 @@
 pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
+local velocity,plyr,hits={0,0},{0,0},{}
+local min_distance=1/32
+local _msg
+
 
 -- 2d vector functions
 function v2_dot(a,b)
@@ -44,7 +48,7 @@ local segments={
   {0,0},{32,32},
   {-50,-20},{45,0}}
 
-local EPSILON=1>>16
+local EPSILON=1>>8
 function ClosestPtSegmentSegment(p1, q1, p2, q2)
   local scale=8
   local d1,d2=v2_make(p1,q1,scale),v2_make(p2,q2,scale)
@@ -96,15 +100,46 @@ function ClosestPtSegmentSegment(p1, q1, p2, q2)
   return s,t
 end
 
+function intersect_sub_sectors(segs,p,d,tmin,tmax,radius,hits)
+  local _tmax,othersector=tmax
+  local px,py,dx,dy=p[1],p[2],d[1],d[2]
+  for _,s0 in ipairs(segs) do
+    local n=s0.n
+    s0.txt=nil
+    local denom,dist_a=v2_dot(n,d),s0.d-v2_dot(n,p)
+    if(dist_a<radius) _msg=dist_a
+    if denom>0 then
+      local t=dist_a/denom
+      -- within seg?
+      local pt={
+        px+t*dx,
+        py+t*dy
+      }
+      local d=v2_dot(s0.dir,pt)-s0.dir_d
+      -- extended segment
+      if d>=-radius and d<s0.len+radius then
+        local dist_b=s0.d-v2_dot(n,{px+_tmax*dx,py+_tmax*dy})
+        s0.txt=dist_a.."\n"..dist_b
+        if s0.line and (dist_a<radius or dist_b<radius) then
+          add(hits,{ti=t,t=mid((dist_a-1/8)/(dist_a-dist_b),0,1),dist=dist_a<radius and (radius-dist_a),seg=s0,n=n})
+        end
+        -- exact segment
+        if d>=0 and d<s0.len then
+          if(t<tmax) tmax=t othersector=s0.partner
+          --if(tmax<tmin) return 
+        end
+      end 
+    end
+  end
+end
+
 local walls={
-  {-30,0},
-  {30,30},
+  {-40,30,line=true},
+  {-10,30,line=true},
+  {30,30,line=true},
   {30,-30},
   {-30,-40}
 }
-
-local velocity,plyr,hits={0,0},{0,0},{}
-local min_distance=1/32
 
 function _update()
   local dx,dy=0,0
@@ -119,15 +154,18 @@ function _update()
   velocity[1]*=0.9
   velocity[2]*=0.9
 
+  _msg=nil
+
   hits={}
-  
-  if v2_len(velocity)>1/32 then
+  local move_dir,move_len=v2_normal(velocity)
+
+  if move_len>1/32 then
 
     local tgt={plyr[1]+velocity[1],plyr[2]+velocity[2]}
     local offset=5
 
     -- find intersection with walls
-    
+    --[[
     local w0=walls[#walls]
     for i,w1 in ipairs(walls) do
       w0.hit=nil
@@ -138,7 +176,7 @@ function _update()
         --w0.txt=a_dist>b_dist and "out" or "in"
         w0.txt=a_dist.."\n"..b_dist
 
-        if a_dist>0 or b_dist>0 then
+        if (a_dist>0 or b_dist>0) then
           local s,t=ClosestPtSegmentSegment(w0,w1,plyr,tgt)
 
           local c1,c2=v2_lerp(w0,w1,s),v2_lerp(plyr,tgt,t)
@@ -148,29 +186,36 @@ function _update()
             --w0.txt=dist
 
             -- impact point
-            if a_dist>b_dist then
-              local t=(a_dist)/(a_dist-b_dist)
-              local ti=(a_dist-min_distance)/(a_dist-b_dist)
-              add(hits,{t=t,ti=ti,n=w0.n,c=c1})
-              w0.hit=true
-              w0.txt=t
-            end 
+            local t=(a_dist-min_distance)/(a_dist-b_dist)
+            --if(abs(a_dist-b_dist)<EPSILON) t=1
+            --local ti=(a_dist-min_distance)/(a_dist-b_dist)
+            add(hits,{t=t,ti=mid(t,0,1),n=w0.n,c=c1})
+            w0.hit=true
+            w0.txt=t
           end
         end
       end
 
       w0=w1
     end
+    ]]
+
+    local hits={}
+    intersect_sub_sectors(walls,plyr,move_dir,0,move_len,8,hits)
 
     local frac=1
     for i,hit in ipairs(hits) do
-      local f=-hit.ti*v2_dot(hit.n,velocity)
+      local f=-hit.t*v2_dot(hit.n,velocity)
       if f<0 then
         v2_add(velocity,hit.n,f)
+      end
+      if hit.dist then
+        v2_add(plyr,hit.n,-hit.dist)
       end
     end
 
     v2_add(plyr,velocity)
+    
   else
     velocity={0,0}
   end
@@ -194,11 +239,15 @@ function _init()
   -- add normals to walls
   local w0=walls[#walls]
   for i,w1 in ipairs(walls) do
-    local n=v2_normal(v2_make(w0,w1))
+    local n,d=v2_normal(v2_make(w0,w1))
+    w0.len=d
+    w0.dir=n
+    w0.dir_d=v2_dot(n,w0)
     n={-n[2],n[1]}
     w0.n=n
     -- distance
     w0.d=v2_dot(n,w0)
+    -- 
     w0=w1
   end
 end
@@ -208,16 +257,18 @@ function _draw()
 
   local w0=walls[#walls]
   for i,w1 in ipairs(walls) do    
-    local x0,y0=project(w0)
-    local x1,y1=project(w1)
-    line(x0,y0,x1,y1,w0.hit and 8 or (i==1 and 0 or 5))
-    -- normal
-    local m={(w0[1]+w1[1])/2,(w0[2]+w1[2])/2}
-    local n={m[1]+8*w0.n[1],m[2]+8*w0.n[2]}
-    local x2,y2=project(n)
-    line((x0+x1)/2,(y0+y1)/2,x2,y2,3)
+    if w0.line then
+      local x0,y0=project(w0)
+      local x1,y1=project(w1)
+      line(x0,y0,x1,y1,w0.hit and 8 or 5)
+      -- normal
+      local m={(w0[1]+w1[1])/2,(w0[2]+w1[2])/2}
+      local n={m[1]+8*w0.n[1],m[2]+8*w0.n[2]}
+      local x2,y2=project(n)
+      line((x0+x1)/2,(y0+y1)/2,x2,y2,3)
 
-    if(w0.txt) print(w0.txt,(x0+x1)/2,(y0+y1)/2,6)
+      if(w0.txt) print(w0.txt,(x0+x1)/2,(y0+y1)/2,6)
+    end
     w0=w1
   end
 
@@ -242,7 +293,7 @@ function _draw()
   print("t",c2[1]+2,-c2[2],8)
   ]]
 
-  print(velocity[1].." / "..velocity[2],-62,-62,8)
+  print(velocity[1].." / "..velocity[2].."\n"..(_msg and _msg or ""),-62,-62,8)
 end
 
 
