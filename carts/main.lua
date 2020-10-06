@@ -883,8 +883,6 @@ function with_physic(thing)
               -- use special?
               if btnp(🅾️) then
                 ldef.trigger(self)
-              else
-                _msg="press 🅾️ to activate"
               end
               -- trigger/message only closest hit
               break
@@ -1336,7 +1334,6 @@ function _update()
   _futures=tmp
 
   -- keep world running
-  _msg=nil
   for _,thing in pairs(_things) do
     if(thing.control) thing:control()
     thing:tick()
@@ -1977,9 +1974,16 @@ function unpack_map(skill,actors)
           -- need lock?
           -- note: keep key in inventory (for reusable locked doors)
           if actorlock and not thing.inventory[actorlock] then 
-            _msg="need key"
-            -- play "err" sound
-            sfx(62)
+            -- avoid too much messages/reentrancy
+            if not line.locked then
+              line.locked=do_async(function()
+                _msg="locked"
+                wait_async(15)
+                _msg,line.locked=nil
+              end)
+              -- play "err" sound
+              sfx(62)
+            end
             return
           end
 
