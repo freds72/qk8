@@ -1070,7 +1070,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
   ] 
   wp_wheel_data = "-1|ovalfill|51,81,75,99,2"
   for i,wp in enumerate(sorted([wp for wp in actors.values() if 'slotnumber' in wp and wp.kind==ACTOR_KIND.WEAPON], key=lambda wp: wp.slotnumber)):
-    name = wp.name
+    name = wp.get('hudlabel',wp.name)
     x0 = wp_anchors[i]
     x1 = wp_anchors[i]
     if i==0:

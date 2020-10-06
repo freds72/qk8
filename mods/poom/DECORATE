@@ -323,6 +323,7 @@ actor PlasmaRifle : Weapon 2004
 	AmmoGive 40
 	AmmoType "Cell"
 	SlotNumber 2
+	HUDLabel "Plasma"
 	States {
 		Spawn:
 			PLAS A 5
