@@ -147,7 +147,7 @@ function vspr(frame,sx,sy,scale,flipx)
 end
 
 -- https://github.com/luapower/linkedlist/blob/master/linkedlist.lua
-function make_sprite_cache(tiles,maxlen)
+function make_sprite_cache(tiles)
 	local len,index,first,last=0,{}
 
 	local function remove(t)
@@ -183,10 +183,10 @@ function make_sprite_cache(tiles,maxlen)
 				remove(entry)
 			else
 				-- allocate a new 16x16 entry
-				-- todo: optimize
-				local sx,sy=(len<<4)&127,64+(((len<<4)\128)<<4)
-				-- list too large?
-				if len+1>maxlen then
+				local sx,sy=(len<<4)&127,64+((len\8)<<4)
+        -- list too large?
+        -- 32: cache max entry size
+				if len>31 then
 					local old=remove(first)
 					-- reuse cache entry
 					sx,sy,index[old.id]=old[1],old[2]
@@ -250,9 +250,7 @@ end
 function polyfill(v,xoffset,yoffset,tex,light)
   poke4(0x5f38,tex)
 
-  local ca,sa,cx,cy,cz=_cam.u,_cam.v,(_plyr[1]>>4)+xoffset,(-_cam.m[4]-yoffset)<<3,_plyr[2]>>4
-
-  local v0,spans,pal0=v[#v],{}
+  local v0,spans,ca,sa,cx,cy,cz,pal0=v[#v],{},_cam.u,_cam.v,(_plyr[1]>>4)+xoffset,(-_cam.m[4]-yoffset)<<3,_plyr[2]>>4
   local x0,w0=v0.x,v0.w
   local y0=v0.y-yoffset*w0
   for i,v1 in ipairs(v) do
@@ -261,8 +259,7 @@ function polyfill(v,xoffset,yoffset,tex,light)
     local _x1,_y1,_w1=x1,y1,w1
     if(y0>y1) x1=x0 y1=y0 w1=w0 x0=_x1 y0=_y1 w0=_w1
     local dy=y1-y0
-    local dx,dw=(x1-x0)/dy,(w1-w0)/dy
-    local cy0=y0\1+1
+    local cy0,dx,dw=y0\1+1,(x1-x0)/dy,(w1-w0)/dy
     local sy=cy0-y0
     if(y0<0) x0-=y0*dx w0-=y0*dw cy0=0 sy=0
     x0+=sy*dx
@@ -1891,7 +1888,7 @@ function unpack_actors()
     -- register
     actors[id]=item
   end)
-  return actors,make_sprite_cache(tiles,32)
+  return actors,make_sprite_cache(tiles)
 end
 
 -- linedefs
