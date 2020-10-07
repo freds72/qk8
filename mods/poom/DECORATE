@@ -330,7 +330,7 @@ actor PlasmaRifle : Weapon 2004
 			PLAS A 5 Bright
 			Loop
 		Fire:
-			PLSF A 2
+			PLSF A 2 A_Light(160)
 			PLSF A 1 A_FireProjectile("PlasmaBall");
 			PLSG B 20
 			Goto Ready
@@ -375,7 +375,7 @@ actor ShotGun : Weapon 2001
 		Fire:
 			SHTG A 3 A_Light(160)
 			SHTG A 5 A_FireBullets(2,0,3,3,"BulletPuff");
-			SHTG B 20 A_Light(0)
+			SHTG B 20
 			SHTG A 4
 			Goto Ready
 		Ready:

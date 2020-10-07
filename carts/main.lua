@@ -433,7 +433,7 @@ function draw_flats(v_cache,segs,things)
     if(nearclip!=0) verts=z_poly_clip(verts)
     if #verts>2 then
       local sector=segs.sector
-      local light=max(sector.lightlevel,_ambientlight)
+      local light,things=max(sector.lightlevel,_ambientlight),setmetatable({},depth_cls)
       -- not visible?
       if(sector.floor+m8<0) polyfill(verts,sector.tx or 0,sector.floor,sector.floortex,light)
       if(sector.ceil+m8>0) polyfill(verts,0,sector.ceil,sector.ceiltex,light)
@@ -442,7 +442,6 @@ function draw_flats(v_cache,segs,things)
       draw_walls(segs,verts,light)
 
       -- draw things (if any) in this convex space
-      local things=setmetatable({},depth_cls)
       for thing,_ in pairs(segs.things) do
         -- todo: cache thing projection
         -- done: not sure if faster (90% of things are single sub-sector...)
@@ -484,12 +483,10 @@ function draw_flats(v_cache,segs,things)
         -- todo: take radius into account 
         if az>8 and az<854 and ax<az and -ax<az then
           -- h: thing offset+cam offset
-          local w,h=128/az,thing[3]+m8
-          local x,y=63.5+ax*w,63.5-h*w
           -- get start of linked list
-          local head=things[1]
+          local w,h,head=128/az,thing[3]+m8,things[1]
           -- empty list case
-          local prev=head
+          local x,y,prev=63.5+ax*w,63.5-h*w,head
           while head and head[1]<w do
             -- swap/advance
             prev,head=head,head.next
@@ -510,8 +507,9 @@ function draw_flats(v_cache,segs,things)
         if(pal0!=pal1) memcpy(0x5f00,0x4300|min(pal1,15)<<4,16) pal0=pal1            
         -- pick side (if any)
         if sides>1 then
-          local angle=((atan2(-thing[1]+_plyr[1],thing[2]-_plyr[2])-thing.angle+0.0625)%1+1)%1
+          local angle=((atan2(_plyr[1]-thing[1],thing[2]-_plyr[2])-thing.angle+0.0625)%1+1)%1
           side=(sides*angle)\1
+          -- get flip bit from mask
           flipx=flipx&(1<<side)!=0
         else
           flipx=nil
@@ -1059,7 +1057,7 @@ function attach_plyr(thing,actor,skill)
       local active_wp=wp[wp_slot]
       local frame,light=active_wp.state,self.sector.lightlevel
       
-      -- sector light affects weapon sprite
+      -- sector light affects weapon sprite (unless bright)
       light=frame[3] and 8 or min((light*15)\1,15)
       memcpy(0x5f00,0x4300|light<<4,16)          
 
@@ -1081,6 +1079,10 @@ function attach_plyr(thing,actor,skill)
 
       -- display weapon selection hud
       if wp_hud then
+        -- structure:
+        -- slot number (or -1)
+        -- function
+        -- args (packed as a comma-separated string)
         for i=1,#_wp_wheel,3 do
           local slot=_wp_wheel[i]
           if(slot==-1 or wp[slot]) _ENV[_wp_wheel[i+1]](unpack(split(_wp_wheel[i+2])))
@@ -1094,6 +1096,7 @@ function attach_plyr(thing,actor,skill)
       -- call parent function
       -- + skill adjustment
       local hp=thing.hit(self,dmg_factor*dmg,...)
+      -- hp can be null if actor is dead
       if hp and hp>0 then
         hit_ttl=min(ceil(hp),15)
       end
@@ -1251,7 +1254,7 @@ function gameover_state(pos,angle,target,h)
       if idle_ttl<0 then
         if btnp(🅾️) then
           -- back to title cart        
-          load(mod_name.."_0.p8")
+          load(mod_name.."_0.p8",nil,"gameover")
         elseif btnp(❎) then
           next_state(slicefade_state,play_state)
         end
@@ -1306,6 +1309,8 @@ function _init()
   -- launch params
   local p=split(stat(6))
   _skill,_map_id=tonum(p[1]) or 2,tonum(p[2]) or 1
+  -- record max level reached so far
+  if(_map_id>dget(32)) dset(32,_map_id)
 
   next_state(play_state)
 end
@@ -1330,6 +1335,8 @@ function _update()
   end
   _futures=tmp
 
+  -- decay flash light
+  _ambientlight*=0.8
   -- keep world running
   for _,thing in pairs(_things) do
     if(thing.control) thing:control()
@@ -1498,9 +1505,14 @@ function unpack_special(sectors,actors)
       -- save player's state
       _plyr:save()
 
-      -- load next map
-      -- todo: handle end game
       _map_id+=1
+      -- end game?
+      if _map_id>#_maps_group then
+        -- records best skill completed
+        if(_skill>dget(33)) dset(33,_skill)
+        load(mod_name_.."0.p8",nil,"endgame")
+      end
+      -- load next map
       load(_maps_group[_map_id]..".p8",nil,_skill..",".._map_id)
     end
   end
