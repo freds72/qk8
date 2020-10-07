@@ -121,7 +121,8 @@ function intersect_sub_sectors(segs,p,d,tmin,tmax,radius,hits)
         local dist_b=s0.d-v2_dot(n,{px+_tmax*dx,py+_tmax*dy})
         s0.txt=dist_a.."\n"..dist_b
         if s0.line and (dist_a<radius or dist_b<radius) then
-          add(hits,{ti=t,t=mid((dist_a-1/8)/(dist_a-dist_b),0,1),dist=dist_a<radius and (radius-dist_a),seg=s0,n=n})
+          d=mid(d,0,s0.len)
+          add(hits,{ti=t,t=mid((dist_a-1/8)/(dist_a-dist_b),0,1),seg=s0,thing={s0[1]+d*s0.dir[1],s0[2]+d*s0.dir[2]}})
         end
         -- exact segment
         if d>=0 and d<s0.len then
@@ -162,17 +163,17 @@ function _update()
   if move_len>1/32 then
 
     local tgt={plyr[1]+velocity[1],plyr[2]+velocity[2]}
-    local offset=5
+    local radius=8
 
     -- find intersection with walls
-    --[[
+    
     local w0=walls[#walls]
     for i,w1 in ipairs(walls) do
       w0.hit=nil
       w0.txt=nil
       if i!=1 then
-        -- distance to plane (inc. offset)
-        local b_dist,a_dist=v2_dot(w0.n,plyr)-(w0.d-offset),v2_dot(w0.n,tgt)-(w0.d-offset)
+        -- distance to plane (inc. radius)
+        local b_dist,a_dist=v2_dot(w0.n,plyr)-(w0.d-radius),v2_dot(w0.n,tgt)-(w0.d-radius)
         --w0.txt=a_dist>b_dist and "out" or "in"
         w0.txt=a_dist.."\n"..b_dist
 
@@ -181,15 +182,15 @@ function _update()
 
           local c1,c2=v2_lerp(w0,w1,s),v2_lerp(plyr,tgt,t)
           local _,dist=v2_normal(v2_make(c1,plyr))
-          if dist<=offset then
+          if dist<=radius then
             -- collision
             --w0.txt=dist
 
             -- impact point
-            local t=(a_dist-min_distance)/(a_dist-b_dist)
+            local t=(a_dist+1/8)/(a_dist-b_dist)
             --if(abs(a_dist-b_dist)<EPSILON) t=1
             --local ti=(a_dist-min_distance)/(a_dist-b_dist)
-            add(hits,{t=t,ti=mid(t,0,1),n=w0.n,c=c1})
+            add(hits,{ti=t,t=mid(t,0,1),n=w0.n,c=c1,dist=(radius-dist)})
             w0.hit=true
             w0.txt=t
           end
@@ -198,21 +199,25 @@ function _update()
 
       w0=w1
     end
+
+    --[[
+    hits={}
+    intersect_sub_sectors(walls,plyr,move_dir,0,move_len,radius,hits)
     ]]
 
-    local hits={}
-    intersect_sub_sectors(walls,plyr,move_dir,0,move_len,8,hits)
 
     local frac=1
     for i,hit in ipairs(hits) do
-      local f=-hit.t*v2_dot(hit.n,velocity)
-      if f<0 then
-        v2_add(velocity,hit.n,f)
+      local n=v2_normal(v2_make(plyr,hit.c))
+      local f=-hit.t*v2_dot(n,velocity)
+      if f<-1/8 then
+        v2_add(velocity,n,f)
       end
-      if hit.dist then
-        v2_add(plyr,hit.n,-hit.dist)
+      if f>-1/8 and f<=0 and hit.dist then
+        v2_add(plyr,n,-hit.dist)
       end
     end
+    
 
     v2_add(plyr,velocity)
     
@@ -272,12 +277,15 @@ function _draw()
     w0=w1
   end
 
+  
   for i,hit in pairs(hits) do
     local x0,y0=project(hit.c)
-    local n={hit.c[1]+8*hit.n[1],hit.c[2]+8*hit.n[2]}
-    local x1,y1=project(n)
-    line(x0,y0,x1,y1,11)
+    --local n={hit.c[1]+8*hit.n[1],hit.c[2]+8*hit.n[2]}
+    --local x1,y1=project(n)
+    --line(x0,y0,x1,y1,11)
+    pset(x0,y0,11)
   end
+  
 
   local x0,y0=project(plyr)
   pset(x0,y0,8)
