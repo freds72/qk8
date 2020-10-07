@@ -719,7 +719,7 @@ function make_thing(actor,x,y,z,angle,special)
   -- default height & sector specs
   local ss=find_sub_sector(_bsp,{x,y})
   -- attach instance properties to new thing
-  local thing=actor:attach({
+  local thing=actor:attach{
     -- z: altitude
     x,y,ss.sector.floor,
     angle=angle,
@@ -727,7 +727,7 @@ function make_thing(actor,x,y,z,angle,special)
     ssector=ss,
     subs={},
     trigger=special
-  })
+  }
   
   if actor.flags&0x2>0 then
     -- shootable
@@ -996,7 +996,7 @@ function attach_plyr(thing,actor,skill)
 
       if wp_hud then
         wp_hud=not btn(6)
-        for i,k in pairs({0,3,1,2,4}) do
+        for i,k in pairs{0,3,1,2,4} do
           if btnp(k) then
             -- only switch if we have the weapon and it's not the current weapon
             wp_hud,btns=(wp_slot!=i and wp[i]) and wp_switch(i),{}
@@ -1110,7 +1110,7 @@ function attach_plyr(thing,actor,skill)
           local actor=actors[dget(i+2)]
           if actor then
             -- create thing
-            self:attach_weapon(actor:attach({}))
+            self:attach_weapon(actor:attach{})
             -- don't restore counters for ammoless weapons (ex: fist)
             if(actor.ammotype) self.inventory[actor.ammotype]=dget(i+7)
           end
@@ -1643,7 +1643,7 @@ function unpack_actors()
     -- A_Look
     function()
       return function(self)
-        for ptgt in all({self.target,_plyr}) do
+        for ptgt in all{self.target,_plyr} do
           if(ptgt and not ptgt.dead) otherthing=ptgt break
         end
         -- nothing to do?
@@ -1793,7 +1793,7 @@ function unpack_actors()
           -- weapon
           weapons=weapons or {}
           -- create a new "dummy" thing
-          local weapon_thing=startitem:attach({})
+          local weapon_thing=startitem:attach{}
           weapons[startitem.slot]=weapon_thing
           -- force 'ready' state
           weapon_thing:jump_to(7)
