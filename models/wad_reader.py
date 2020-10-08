@@ -1161,7 +1161,7 @@ def get_PVS(zmap, sub_id):
         # only double-sided segments are relevant
         if os0.partner!=-1:
           portal1 = Polygon(v0=os0.v1, v1=os1.v1, vertices=vertices)
-          if portal0.classify(portal1)==POLYGON_CLASSIFICATION.FRONT:
+          if portal0.classify(portal1)!=POLYGON_CLASSIFICATION.BACK:
             portals.append(dotdict({
               'src':portal0,
               'dst':portal1,
