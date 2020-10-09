@@ -108,26 +108,32 @@ def display_WAD(root, mapname, ssid):
         v0 = vertices[s0.v1]
         xc = 0
         yc = 0
-        
+        contour = []
+
         for i in range(n):
           s1 = segs[i]
           v1 = vertices[s1.v1]
           xc += v1[0]
           yc += v1[1]
-          r = 2
-          c = dark_red
-          pygame.draw.line(screen, s0.partner==-1 and grey or c, project(v0), project(v1), r)
+          contour.append(project(v0))
           s0 = s1
           v0 = v1
         xc /= n
         yc /= n
+        center = project((xc, yc))
+        if k==ssid:
+          pygame.draw.polygon(screen, red, contour)
+          pygame.draw.circle(screen, grey, (int(center[0]),int(center[1])), int(854*map_scale), 1)
+        else:
+          pygame.draw.aalines(screen, grey, True, contour)
+
         font = my_font
         color = grey
         if k in pvs:
           font = my_bold_font
           color = green
         the_text = font.render("{}".format(k), True, color)
-        screen.blit(the_text, project((xc, yc)))
+        screen.blit(the_text, center)
       # portals
       #for portal in portals:
       #  # draw frustrum

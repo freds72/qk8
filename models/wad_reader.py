@@ -502,6 +502,7 @@ def pack_zmap(map, textures, actors):
     # PVS
     pvs,clips,vert = get_PVS(map, i)
     s += pack_variant(len(pvs)+1)
+    # record current sub-sector id
     s += pack_variant(i + 1)
     for sub_id in pvs:
       s += pack_variant(sub_id + 1)
@@ -1186,8 +1187,9 @@ def get_PVS(zmap, sub_id):
     for i in range(len(sub0)):
       s1 = sub0[i]
       seg = Polygon(v0=s0.v1, v1=s1.v1, vertices=vertices)
-      # exclude coplanar segments
-      if seg.classify(portal.dst)==POLYGON_CLASSIFICATION.BACK:
+      # exclude front segments
+      classification = seg.classify(portal.dst)
+      if classification==POLYGON_CLASSIFICATION.BACK or classification==POLYGON_CLASSIFICATION.STRADDLING:
         front, back = seg.split(clip0)
         if front is not None:
           front, back = front.split(clip1)
