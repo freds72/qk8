@@ -64,7 +64,10 @@ function make_camera()
 end
 
 function lerp(a,b,t)
-  return a*(1-t)+b*t
+  -- todo: try a+t*(b-a)
+  -- faster by 1 cycle
+  -- return a*(1-t)+b*t
+  return a+t*(b-a)
 end
 
 -- return shortest angle to target
@@ -189,7 +192,7 @@ function make_sprite_cache(tiles)
 				if len>31 then
 					local old=remove(first)
 					-- reuse cache entry
-					sx,sy,index[old.id]=old[1],old[2]
+					sx,sy,index[old.id]=old.sx,old.sy
 				end
 				-- new (or relocate)
 				-- copy data to sprite sheet
@@ -198,7 +201,7 @@ function make_sprite_cache(tiles)
 					poke4(mem|(j&1)<<2|(j\2)<<6,tiles[id+j])
 				end		
 				--
-				entry={sx,sy,id=id}
+				entry={sx=sx,sy=sy,id=id}
 				-- reverse lookup
 				index[id]=entry
 			end
@@ -219,7 +222,7 @@ function make_sprite_cache(tiles)
 			end
 			len+=1
 			-- return sprite sheet coords
-			return entry[1],entry[2]
+			return entry.sx,entry.sy
 		end
 	}
 end
@@ -309,10 +312,6 @@ function draw_walls(segs,v_cache,light)
     -- logical split or wall?
     -- front facing?
     if x0<x1 and ldef then
-      -- span rasterization
-      -- pick correct texture "major"
-      local dx,u0=x1-x0,v0[seg[9]]*w0
-
       -- dual?
       local facingside,otherside,otop,obottom=ldef[seg.side],ldef[not seg.side]
       -- peg bottom?
@@ -341,7 +340,9 @@ function draw_walls(segs,v_cache,light)
           otop=toptex!=0 and otop
           obottom=bottomtex!=0 and obottom
         end
-
+        -- span rasterization
+        -- pick correct texture "major"
+        local dx,u0=x1-x0,v0[seg[9]]*w0
         local cx0,dy,du,dw=x0\1+1,(y1-y0)/dx,(v1[seg[9]]*w1-u0)/dx,((w1-w0)<<4)/dx
         w0<<=4
         local sx=cx0-x0    
@@ -1236,7 +1237,7 @@ function play_state()
 end
 
 function gameover_state(pos,angle,target,h)
-  local idle_ttl,target_angle=90,angle
+  local idle_ttl,target_angle=30,angle
   return
     -- update
     function()
@@ -1254,9 +1255,10 @@ function gameover_state(pos,angle,target,h)
       if idle_ttl<0 then
         if btnp(🅾️) then
           -- back to title cart        
-          load(mod_name.."_0.p8",nil,"gameover")
+          load(mod_name.."_0.p8",nil,_skill..",".._map_id..",1")
         elseif btnp(❎) then
-          next_state(slicefade_state,play_state)
+          -- todo: restart parameter
+          load(mod_name.."_0.p8",nil,_skill..",".._map_id..",1")
         end
       end
     end,
@@ -1272,33 +1274,9 @@ function gameover_state(pos,angle,target,h)
     end
 end
 
-function slicefade_state(...)
-  local args,ttl,r,h,rr=pack(...),30,{},{},0
-  for i=0,127 do
-    rr=lerp(rr,rnd(0.1),0.3)
-    r[i],h[i]=0.1+rr,0
-  end
-  return 
-    -- update
-    function()
-      ttl-=1
-      if ttl<0 or btnp(4) or btnp(5) then
-        next_state(unpack(args))
-      end
-    end,
-    -- draw
-    function()
-      cls()
-      for i,r in pairs(r) do
-        h[i]=lerp(h[i],129,r)
-        sspr(i,0,1,128,i,h[i],1,128)
-      end
-    end,
-    -- init
-    function()
-      -- copy screen to spritesheet
-      memcpy(0x0,0x6000,8192)
-    end
+
+function mainmenu()
+  load(mod_name.."_0.p8")
 end
 
 -->8
@@ -1306,6 +1284,8 @@ end
 function _init()
   cartdata(mod_name)
 
+  menuitem(1,"main menu",mainmenu)
+  
   -- launch params
   local p=split(stat(6))
   _skill,_map_id=tonum(p[1]) or 2,tonum(p[2]) or 1
@@ -1505,15 +1485,16 @@ function unpack_special(sectors,actors)
       -- save player's state
       _plyr:save()
 
-      _map_id+=1
+      --_map_id+=1
       -- end game?
-      if _map_id>#_maps_group then
+      --if _map_id>#_maps_group then
         -- records best skill completed
-        if(_skill>dget(33)) dset(33,_skill)
-        load(mod_name_.."0.p8",nil,"endgame")
-      end
+      --  if(_skill>dget(33)) dset(33,_skill)
+      --  load(mod_name_.."0.p8",nil,"endgame")
+      --end
       -- load next map
-      load(_maps_group[_map_id]..".p8",nil,_skill..",".._map_id)
+      --load(_maps_group[_map_id]..".p8",nil,_skill..",".._map_id)
+      load(mod_name.."_0.p8",nil,_skill..",".._map_id..",2")
     end
   end
 end
