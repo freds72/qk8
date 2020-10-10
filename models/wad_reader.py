@@ -23,7 +23,7 @@ from bsp_compiler import Polygon
 from bsp_compiler import POLYGON_CLASSIFICATION
 from bsp_compiler import normal,ortho
 from image_reader import ImageReader
-from colormap_reader import ColormapReader, std_palette
+from colormap_reader import ColormapReader, std_palette, AutoPalette
 from wad_stream import WADStream
 from file_stream import FileStream
 from PIL import Image
@@ -804,66 +804,54 @@ def pack_actors(image_reader, actors):
 def pack_sprite(arr):
     return ["".join(map("{:02x}".format,arr[i*4:i*4+4])) for i in range(8)]
 
+
 # remap image to given palette and export to byte string
-def pack_image(img, palette):
+# if palette is not given, produces a dynamic palette
+# raises an exception if #colors>16
+def pack_image(img, palette=None):
+  p = AutoPalette(palette=palette)
+
   s = ""
   for y in range(img.size[1]):
     for x in range(0,img.size[0],8):
       pixels = []
       for n in range(0,8,2):
         low = "0x{0[0]:02x}{0[1]:02x}{0[2]:02x}".format(img.getpixel((x + n, y)))
-        if low not in palette:
-          raise Exception("Invalid color: {} in image".format(low))
-        low = palette[low]
+        low = p.register(low)
         high = "0x{0[0]:02x}{0[1]:02x}{0[2]:02x}".format(img.getpixel((x + n + 1,y)))
-        if high not in palette:
-          raise Exception("Invalid color: {} in image".format(high))
-        high = palette[high]
-        if low==-1: low = 0
-        if high==-1: high = 0
-        s += "{:02x}".format(low|high<<4)
-  return s
+        high = p.register(high)
+        # uses pico8 "swapped" format
+        s += "{:02x}".format(low<<4|high)
+  return s, p.pal()
 
-# read G_TITLE image
-def pack_title(stream, palette):
+# conver image to pico8 format
+def pack_p8image(stream, asset, palette=None, swap=False, bigendian=False):
   src = None
   try:
-    src = Image.open(io.BytesIO(stream.read("G_TITLE")))
+    src = Image.open(io.BytesIO(stream.read(asset)))
   except:
-    # no label image
-    print("INFO - no cart label image - skipping")
-    return ""
+    # no image
+    logging.info("Optional image not found: {}".format(asset))
+    return None
   
-  print("Packing title image: G_TITLE")
+  logging.info("Packing image: {}".format(asset))
   img = Image.new('RGBA', (128,128), (0,0,0,0))
   img.paste(src)
-  return pack_image(img, palette)
+  data,autopalette = pack_image(img, palette)
+  if swap:
+    s = ""
+    for i in range(0,len(data),2):
+      s += data[i+1:i+2] + data[i:i+1]
+    data = s
+  if bigendian:
+    # convert to big endian
+    s = ""
+    for i in range(0,len(data),4):
+      s += data[i+2:i+4] + data[i:i+2]
+    data = s
+  return data, autopalette
 
-# read M_* images
-def pack_menu(stream, palette):
-  images = dotdict({
-    "M_TITLE":(128,32),
-    "M_SKULL1":(10,10),
-    "M_SKULL2":(10,10),
-    })
-  data = {}
-  for name,size in images.items():
-    img = Image.open(io.BytesIO(stream.read(name)))
-    if img.size!=size:
-      raise Exception("Menu image: {} size mismatch - Expected: {} Actual: {}".format(name, size, img.size))
-    data[name] = img
-  
-  print("Packing menu images")
-
-  img = Image.new('RGBA', (128,48), (0,0,0,0))
-  img.paste(data.get('M_TITLE'), (0,0))
-  img.paste(data.get('M_SKULL1'), (0,32))
-  img.paste(data.get('M_SKULL2'), (10,32))
-  
-  # convert to pico image
-  return pack_image(img, palette)
-
-def to_gamecart(carts_path, name, group_name, width, map_data, gfx_data, gfx_label, gfx_menu, palette, compress=False):
+def to_gamecart(carts_path, name, group_name, width, map_data, gfx_data, palette, compress=False):
   cart="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
@@ -905,33 +893,12 @@ __lua__
   # preserve byte orders
   for i in range(0,len(tmp),2):
     s += tmp[i+1:i+2] + tmp[i:i+1]
-  # fill until spritesheet 3
-  s += "0"*(128*80-len(s))
-
-  # title assets
-  for i in range(0,len(gfx_menu),2):
-    s += gfx_menu[i+1:i+2] + gfx_menu[i:i+1]
-
-  # convert to string
-  cart += "__gfx__\n"
-  cart += re.sub("(.{128})", "\\1\n", s, 0, re.DOTALL)
-  cart += "\n"
 
   # pad map
   map_data = ["".join(map("{:02x}".format,map_data[i:i+width] + [0]*(128-width))) for i in range(0,len(map_data),width)]
   map_data = "".join(map_data)
   cart += "__map__\n"
   cart += re.sub("(.{256})", "\\1\n", map_data, 0, re.DOTALL)
-
-  # label image
-  if len(gfx_label)!=0:
-    s = ""
-    for i in range(0,len(gfx_label),2):
-      s += gfx_label[i+1:i+2] + gfx_label[i:i+1]
-
-    cart += "__label__\n"
-    cart += re.sub("(.{128})", "\\1\n", s, 0, re.DOTALL)
-    cart += "\n"
 
   # music and sfx (from external cart)
   # group cart?
@@ -1017,9 +984,8 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
   image_reader = ImageReader(graphics_stream, colormap.palette)
   actors = DecorateReader(file_stream).actors
   
-  # decode menu
-  menu = pack_menu(graphics_stream, std_palette())
-  title = pack_title(graphics_stream, std_palette())
+  # cart label (optional)
+  title = pack_p8image(graphics_stream, "G_LABEL", std_palette())
 
   # extract map + things
   cart_len = 2*0x4300
@@ -1055,7 +1021,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
       to_multicart(data, pico_path, carts_path, modname + "_" + map_group)
 
       # export game cart (hub for maps from same group)
-      to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, title, menu, gradients, compress)
+      to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, gradients, compress)
 
   # pack actors (shared by all maps)
   data = pack_actors(image_reader, actors)
@@ -1084,6 +1050,20 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
       x0 -= len(name)*2
       x1 += len(name)*2
     wp_wheel_data += "|" + wp_templates[i].format(wp.slotnumber,x0-1,x1-1,name,x0)
+
+  # get loading game image
+  logging.info("Packing title images")
+  loadinggame_image,loadinggame_pal = pack_p8image(graphics_stream, "G_TITLE", swap=True, bigendian=True)
+  enggame_image = pack_p8image(graphics_stream, "G_END", colormap.palette, swap=True, bigendian=True)
+  image_code="""
+-- *********************************
+-- generated code - do not edit
+-- *********************************
+loadlevel_gfx="{}"
+endgame_gfx="{}"
+  """.format(loadinggame_image,enggame_image)
+  with open(os.path.join(carts_path, "{}_images.lua".format(modname)), "w", encoding='utf-8') as f:
+    f.write(image_code)
 
   atlas_code="""
 -- *********************************
@@ -1119,10 +1099,11 @@ __lua__
 -- generated code - do not edit
 -- *********************************
 #include {0}_atlas.lua
+#include {0}_images.lua
 #include title.lua
 """.format(modname)
 
-  to_multicart(compress and compress_byte_str(data) or data, pico_path, carts_path, modname, boot_code=boot_code)
+  to_multicart(compress and compress_byte_str(data) or data, pico_path, carts_path, modname, boot_code=boot_code, label=title)
 
   # export_cmd=""
   # for i in range(0,last_cart_id+1):

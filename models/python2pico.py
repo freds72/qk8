@@ -82,7 +82,7 @@ def pack_double(x):
         raise Exception('Unable to convert: {} into a word: {}'.format(x,h))
     return h
 
-def to_cart(s,pico_path,carts_path,cart_name,cart_id,cart_code=None):
+def to_cart(s,pico_path,carts_path,cart_name,cart_id,cart_code=None, label=None):
     cart="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
@@ -126,6 +126,7 @@ cstore(0, 0, 0x4300, "{}")
     exitcode, out, err = call([os.path.join(pico_path,"pico8.exe"),"-x",os.path.abspath(cart_path)])
     if err:
         raise Exception('Unable to process pico-8 cart: {}. Exception: {}'.format(cart_path,err))
+
     if cart_code:
         cart = cart_code
         with open(os.path.join(carts_path,cart_filename),"r") as f:
@@ -143,20 +144,33 @@ cstore(0, 0, 0x4300, "{}")
                     cart += "\n"
         with open(os.path.join(carts_path,cart_filename),"w") as f:                   
             f.write(cart)
+
+    # label image
+    if label:
+        cart = ""
+        with open(os.path.join(carts_path,cart_filename),"r") as f:
+            cart = f.read()
+        
+        cart += "\n__label__\n"
+        cart += re.sub("(.{128})", "\\1\n", label, 0, re.DOTALL)
+        cart += "\n"
+        with open(os.path.join(carts_path,cart_filename),"w") as f:                   
+            f.write(cart)
+    
     os.unlink(cart_path)
 
-def to_multicart(s,pico_path,carts_path,cart_name,boot_code=None):
+def to_multicart(s,pico_path,carts_path,cart_name,boot_code=None,label=None):
   cart_id = 0
   cart_data = ""
   for b in s:
       cart_data += b
       # full cart?
       if len(cart_data)==2*0x4300:
-          to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_id==0 and boot_code)
+          to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_code=cart_id==0 and boot_code, label=cart_id==0 and label)
           cart_id += 1
           cart_data = ""
   # remaining data?
   if len(cart_data)!=0:
-      to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_id==0 and boot_code)
+      to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_code=cart_id==0 and boot_code, label=cart_id==0 and label)
   return cart_id
 

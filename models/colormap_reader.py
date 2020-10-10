@@ -94,3 +94,29 @@ class ColormapReader():
       columns[c].append(p8)
     # flatten list
     return [item for sublist in columns for item in sublist]
+
+# helper class to check or build a new palette
+class AutoPalette:  
+  def __init__(self, palette=None):
+    self.auto = palette is None
+    self.palette = palette or {}
+  
+  def register(self, rgb):
+    # invalid color
+    if rgb not in rgb_to_pico8:
+      raise Exception("Invalid color: {} in image".format(rgb))
+    # returns a 0-15 value for image encoding
+    if rgb in self.palette: return self.palette[rgb]
+    # not found and auto-palette
+    if self.auto:
+      # already full?
+      count = len(self.palette)
+      if count==16:
+        raise Exception("Image uses too many colors (16+). New color: {} not allowed".format(rgb))
+      self.palette[rgb] = count
+      return count
+    return Exception("Color: {} not in palette".format(rgb))
+
+  # returns a list of hardware colors matching the palette
+  def pal(self):
+    return list(map(rgb_to_pico8.get,sorted(self.palette, key=self.palette.get)))
