@@ -893,7 +893,11 @@ __lua__
   # preserve byte orders
   for i in range(0,len(tmp),2):
     s += tmp[i+1:i+2] + tmp[i:i+1]
-
+  # convert to string
+  cart += "__gfx__\n"
+  cart += re.sub("(.{128})", "\\1\n", s, 0, re.DOTALL)
+  cart += "\n"
+  
   # pad map
   map_data = ["".join(map("{:02x}".format,map_data[i:i+width] + [0]*(128-width))) for i in range(0,len(map_data),width)]
   map_data = "".join(map_data)
