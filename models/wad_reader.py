@@ -19,6 +19,7 @@ from python2pico import pack_byte
 from python2pico import to_multicart
 from python2pico import pack_int32
 from python2pico import pack_short
+from python2pico import bytes_to_base255
 from bsp_compiler import Polygon
 from bsp_compiler import POLYGON_CLASSIFICATION
 from bsp_compiler import normal,ortho
@@ -816,26 +817,27 @@ def pack_image(img, palette=None):
     for x in range(0,img.size[0],8):
       pixels = []
       for n in range(0,8,2):
-        low = "0x{0[0]:02x}{0[1]:02x}{0[2]:02x}".format(img.getpixel((x + n, y)))
-        low = p.register(low)
-        high = "0x{0[0]:02x}{0[1]:02x}{0[2]:02x}".format(img.getpixel((x + n + 1,y)))
-        high = p.register(high)
+        low = p.register(img.getpixel((x + n, y)))
+        high = p.register(img.getpixel((x + n + 1,y)))
         # uses pico8 "swapped" format
         s += "{:02x}".format(low<<4|high)
   return s, p.pal()
 
 # conver image to pico8 format
-def pack_p8image(stream, asset, palette=None, swap=False, bigendian=False):
+def pack_p8image(stream, asset, palette=None, swap=False, bigendian=False, size=None):
   src = None
   try:
     src = Image.open(io.BytesIO(stream.read(asset)))
   except:
     # no image
-    logging.info("Optional image not found: {}".format(asset))
-    return None
+    logging.debug("Image not found: {}".format(asset))
+    return (None,None,None)
   
   logging.info("Packing image: {}".format(asset))
-  img = Image.new('RGBA', (128,128), (0,0,0,0))
+  size = size or src.size
+  if size[0]!=128:
+    raise Exception("Image: {} invalid size: {} - Must be 128px width".format(asset, size))
+  img = Image.new('RGBA', size, (0,0,0,0))
   img.paste(src)
   data,autopalette = pack_image(img, palette)
   if swap:
@@ -849,7 +851,8 @@ def pack_p8image(stream, asset, palette=None, swap=False, bigendian=False):
     for i in range(0,len(data),4):
       s += data[i+2:i+4] + data[i:i+2]
     data = s
-  return data, autopalette
+  # convert palette into a "pal" call
+  return data, "[0]={},".format(autopalette[0])+",".join(str(c) for c in autopalette[1:]), size
 
 def to_gamecart(carts_path, name, group_name, width, map_data, gfx_data, palette, compress=False):
   cart="""\
@@ -897,7 +900,7 @@ __lua__
   cart += "__gfx__\n"
   cart += re.sub("(.{128})", "\\1\n", s, 0, re.DOTALL)
   cart += "\n"
-  
+
   # pad map
   map_data = ["".join(map("{:02x}".format,map_data[i:i+width] + [0]*(128-width))) for i in range(0,len(map_data),width)]
   map_data = "".join(map_data)
@@ -954,10 +957,15 @@ def load_WAD(stream, mapname):
       i += 1
   raise Exception("No entry matching E[0-9]M[0-9] found in WAD: {}".format(mapname))
 
-def compress_byte_str(s):
+# compress the given byte string
+# raw = True returns an array of bytes (a byte string otherwise)
+def compress_byte_str(s,raw=False):
   # LZSS compressor
   cc = Codec(b_off = 8, b_len = 3) 
-  return "".join(map("{:02x}".format, cc.toarray(bytes.fromhex(s))))
+  compressed = cc.toarray(bytes.fromhex(s))
+  if raw:
+    return compressed
+  return "".join(map("{:02x}".format, compressed))
 
 
 def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
@@ -989,7 +997,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
   actors = DecorateReader(file_stream).actors
   
   # cart label (optional)
-  title = pack_p8image(graphics_stream, "G_LABEL", std_palette())
+  title,title_pal,title_size = pack_p8image(graphics_stream, "G_LABEL", std_palette())
 
   # extract map + things
   cart_len = 2*0x4300
@@ -1056,16 +1064,22 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
     wp_wheel_data += "|" + wp_templates[i].format(wp.slotnumber,x0-1,x1-1,name,x0)
 
   # get loading game image
-  logging.info("Packing title images")
-  loadinggame_image,loadinggame_pal = pack_p8image(graphics_stream, "G_TITLE", swap=True, bigendian=True)
-  enggame_image = pack_p8image(graphics_stream, "G_END", colormap.palette, swap=True, bigendian=True)
+  logging.info("Packing title images")  
+  # todo: provide default images
+  title_images = dotdict({
+    'title': pack_p8image(graphics_stream, "G_TITLE", swap=True),    
+    'loading': pack_p8image(graphics_stream, "G_LOAD", palette=colormap.palette, swap=True),
+    'endgame': pack_p8image(graphics_stream, "G_END", swap=True)
+  })
+  
   image_code="""
 -- *********************************
 -- generated code - do not edit
 -- *********************************
-loadlevel_gfx="{}"
-endgame_gfx="{}"
-  """.format(loadinggame_image,enggame_image)
+{}
+  """.format(
+    "\n".join(['{0}_gfx={{bytes="{1}",pal={{{2}}},w={3[0]},h={3[1]}}}'.format(k,bytes_to_base255(bytes.fromhex(data[0])),data[1],data[2]) for k,data in title_images.items()]))
+
   with open(os.path.join(carts_path, "{}_images.lua".format(modname)), "w", encoding='utf-8') as f:
     f.write(image_code)
 

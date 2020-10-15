@@ -12,6 +12,8 @@ local _ambientlight,_ammo_factor,_intersectid,_msg=0,1,0
 
 -- copy color gradients (16*16 colors x 2) to memory
 memcpy(0x4300,0x1000,512)
+-- immediately install palette (for loading screen)
+memcpy(0x5f10,0x4400,16)
 
 -- single-linked list keyed on first element
 local depth_cls={
@@ -355,7 +357,7 @@ function draw_walls(segs,v_cache,light)
         for x=cx0,x1\1 do
           if w0>2.4 then
             -- top/bottom+color shifing
-            local t,b,pal1=y0-top*w0,y0-bottom*w0,(light*min(15,w0<<1))\1
+            local t,b,u,pal1=y0-top*w0,y0-bottom*w0,u0/(w0>>4),(light*min(15,w0<<1))\1
             if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
 
             -- top wall side between current sector and back sector
@@ -364,7 +366,7 @@ function draw_walls(segs,v_cache,light)
             if otop then
               poke4(0x5f38,toptex)             
               local ot=y0-otop*w0
-              tline(x,ct,x,ot,u0/w0,(ct-t)/w0+yoffset,0,1/w0)
+              tline(x,ct,x,ot,u,(ct-t)/w0+yoffset,0,1/w0)
               -- new window top
               t=ot
               ct=ot\1+1
@@ -374,7 +376,7 @@ function draw_walls(segs,v_cache,light)
               poke4(0x5f38,bottomtex)             
               local ob=y0-obottom*w0
               local cob=ob\1+1
-              tline(x,cob,x,b,u0/w0,(cob-ob)/w0,0,1/w0)
+              tline(x,cob,x,b,u,(cob-ob)/w0,0,1/w0)
               -- new window bottom
               b=ob
             end
@@ -383,7 +385,7 @@ function draw_walls(segs,v_cache,light)
             if midtex!=0 then
               -- texture selection
               poke4(0x5f38,midtex)
-              tline(x,ct,x,b,u0/w0,(ct-t)/w0+yoffset,0,1/w0)
+              tline(x,ct,x,b,u,(ct-t)/w0+yoffset,0,1/w0)
             end   
           end
           y0+=dy
@@ -420,7 +422,8 @@ function draw_flats(v_cache,segs,things)
       if(ax<<1>az) code|=8
       
       local w=128/az
-      v={ax,m8,az,outcode=code,u=x,v=z,x=63.5+ax*w,y=63.5-m8*w,w=w}
+      -- >>4 to fix u|v*w overflow on large maps 
+      v={ax,m8,az,outcode=code,u=x>>4,v=z>>4,x=63.5+ax*w,y=63.5-m8*w,w=w}
       v_cache[v0]=v
     end
     v.seg=seg
@@ -1074,7 +1077,7 @@ function attach_plyr(thing,actor,skill)
       -- keys
       for item,amount in pairs(self.inventory) do
         if amount>0 and item.slot then
-          printb(item.icon,106,120-item.slot*10,item.hudcolor)
+          printb(item.icon,98+item.slot*8,111,item.hudcolor)
         end
       end
 
@@ -1211,7 +1214,7 @@ function play_state()
   _cam=make_camera()
 
   -- start level music (if any)
-  music(_maps_music[map_id],0,14)
+  music(_maps_music[_map_id],0,14)
 
   return 
     -- update
@@ -1254,11 +1257,11 @@ function gameover_state(pos,angle,target,h)
       -- avoid immediate button hit
       if idle_ttl<0 then
         if btnp(🅾️) then
-          -- back to title cart        
+          -- 1: gameover    
           load(mod_name.."_0.p8",nil,_skill..",".._map_id..",1")
         elseif btnp(❎) then
-          -- todo: restart parameter
-          load(mod_name.."_0.p8",nil,_skill..",".._map_id..",1")
+          -- 3: retry
+          load(mod_name.."_0.p8",nil,_skill..",".._map_id..",3")
         end
       end
     end,
@@ -1275,22 +1278,19 @@ function gameover_state(pos,angle,target,h)
 end
 
 
-function mainmenu()
-  load(mod_name.."_0.p8")
-end
-
 -->8
 -- game loop
 function _init()
   cartdata(mod_name)
 
-  menuitem(1,"main menu",mainmenu)
+  -- exit menu entry
+  menuitem(1,"main menu",function()
+    load(mod_name.."_0.p8")
+  end)
   
   -- launch params
   local p=split(stat(6))
   _skill,_map_id=tonum(p[1]) or 2,tonum(p[2]) or 1
-  -- record max level reached so far
-  if(_map_id>dget(32)) dset(32,_map_id)
 
   next_state(play_state)
 end
@@ -1485,15 +1485,6 @@ function unpack_special(sectors,actors)
       -- save player's state
       _plyr:save()
 
-      --_map_id+=1
-      -- end game?
-      --if _map_id>#_maps_group then
-        -- records best skill completed
-      --  if(_skill>dget(33)) dset(33,_skill)
-      --  load(mod_name_.."0.p8",nil,"endgame")
-      --end
-      -- load next map
-      --load(_maps_group[_map_id]..".p8",nil,_skill..",".._map_id)
       load(mod_name.."_0.p8",nil,_skill..",".._map_id..",2")
     end
   end
