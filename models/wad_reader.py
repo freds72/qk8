@@ -999,6 +999,10 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
   # cart label (optional)
   title,title_pal,title_size = pack_p8image(graphics_stream, "G_LABEL", std_palette())
 
+  # pack actors (shared by all maps)
+  game_data = pack_actors(image_reader, actors)
+  game_data = compress and compress_byte_str(game_data) or game_data
+
   # extract map + things
   cart_len = 2*0x4300
   map_groups = sorted(set(m.group for m in all_maps))
@@ -1019,24 +1023,17 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
       reader = TextureReader(file_stream, colormap.palette)
       textures = reader.read(active_textures)
 
-      data = ""
       for i,m in enumerate(maps):
         # locate maps in multicarts
         logging.info("Packing map: {}".format(m.name))
-        m.cart_id = int(len(data)/cart_len)
-        m.cart_offset = int((len(data)%cart_len)/2)
+        m.cart_id = int(len(game_data)/cart_len)
+        m.cart_offset = int((len(game_data)%cart_len)/2)
         # compress each map separately 
         map_data = pack_zmap(m.zmap, textures, actors)
-        data += compress and compress_byte_str(map_data) or map_data
+        game_data += compress and compress_byte_str(map_data) or map_data
       
-      # map data
-      to_multicart(data, pico_path, carts_path, modname + "_" + map_group)
-
       # export game cart (hub for maps from same group)
       to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, gradients, compress)
-
-  # pack actors (shared by all maps)
-  data = pack_actors(image_reader, actors)
 
   # list of weapons
   wp_anchors = [50,64,78,64,64]
@@ -1121,7 +1118,7 @@ __lua__
 #include title.lua
 """.format(modname)
 
-  to_multicart(compress and compress_byte_str(data) or data, pico_path, carts_path, modname, boot_code=boot_code, label=title)
+  to_multicart(game_data, pico_path, carts_path, modname, boot_code=boot_code, label=title)
 
   # export_cmd=""
   # for i in range(0,last_cart_id+1):

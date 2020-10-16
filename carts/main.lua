@@ -1188,7 +1188,7 @@ function play_state()
 
   -- ammo scaling factor
   _ammo_factor=split"2,1,1,1"[_skill]
-  local bsp,thingdefs=decompress(_maps_group[_map_id],_maps_cart[_map_id],_maps_offset[_map_id],unpack_map,_skill,_actors)
+  local bsp,thingdefs=decompress(mod_name,_maps_cart[_map_id],_maps_offset[_map_id],unpack_map,_skill,_actors)
   _bsp=bsp
 
   -- restore main data cart
