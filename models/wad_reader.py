@@ -303,7 +303,7 @@ def pack_special(owner, lines, sides, sectors):
     if special==11:
       s += pack_variant(0)
     else:  
-      s += pack_variant(owner.get('arg2',90))
+      s += pack_variant(owner.get('arg2',0))
     # lock
     s += pack_variant(owner.get('arg3',0))
   elif special==10:
@@ -350,7 +350,7 @@ def pack_special(owner, lines, sides, sectors):
     # speed
     s += "{:02x}".format(128+get_safe_speed(owner,'arg1'))
     # delay
-    s += "{:02x}".format(owner.get('arg2',90))
+    s += "{:02x}".format(owner.get('arg2',0))
     # lock (not supported)
     s += pack_variant(0)
   elif special==62: 
@@ -374,7 +374,7 @@ def pack_special(owner, lines, sides, sectors):
     # speed
     s += "{:02x}".format(get_safe_speed(owner,'arg1'))
     # delay (default: 3s)
-    s += "{:02x}".format(owner.get('arg2',90))
+    s += "{:02x}".format(owner.get('arg2',0))
     # lock (not supported)
     s += pack_variant(0)
   elif special==243:
