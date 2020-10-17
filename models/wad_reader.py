@@ -824,11 +824,13 @@ def pack_image(img, palette=None):
   return s, p.pal()
 
 # conver image to pico8 format
-def pack_p8image(stream, asset, palette=None, swap=False, bigendian=False, size=None):
+def pack_p8image(stream, asset, palette=None, swap=False, bigendian=False, size=None, mandatory=False):
   src = None
   try:
     src = Image.open(io.BytesIO(stream.read(asset)))
   except:
+    if mandatory:
+      raise Exception("Image not found: {}".format(asset))
     # no image
     logging.debug("Image not found: {}".format(asset))
     return (None,None,None)
@@ -1064,9 +1066,9 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
   logging.info("Packing title images")  
   # todo: provide default images
   title_images = dotdict({
-    'title': pack_p8image(graphics_stream, "G_TITLE", swap=True),    
-    'loading': pack_p8image(graphics_stream, "G_LOAD", palette=colormap.palette, swap=True),
-    'endgame': pack_p8image(graphics_stream, "G_END", swap=True)
+    'title': pack_p8image(graphics_stream, "G_TITLE", swap=True, mandatory=True),    
+    'loading': pack_p8image(graphics_stream, "G_LOAD", palette=colormap.palette, swap=True, mandatory=True),
+    'endgame': pack_p8image(graphics_stream, "G_END", swap=True, mandatory=True)
   })
   
   image_code="""
