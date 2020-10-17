@@ -987,62 +987,62 @@ function attach_plyr(thing,actor,skill)
 
   return inherit({
     -- tick for player
-    tick=function() 
+    tick=function(self)
       hit_ttl=max(hit_ttl-1)
-      return true
-    end,
-    control=function(self)
-      wp_y=lerp(wp_y,wp_yoffset,0.3)
+      if not self.dead then
+        wp_y=lerp(wp_y,wp_yoffset,0.3)
 
-      local dx,dz=0,0
+        local dx,dz=0,0
 
-      if wp_hud then
-        wp_hud=not btn(6)
-        for i,k in pairs{0,3,1,2,4} do
-          if btnp(k) then
-            -- only switch if we have the weapon and it's not the current weapon
-            wp_hud,btns=(wp_slot!=i and wp[i]) and wp_switch(i),{}
+        if wp_hud then
+          wp_hud=not btn(6)
+          for i,k in pairs{0,3,1,2,4} do
+            if btnp(k) then
+              -- only switch if we have the weapon and it's not the current weapon
+              wp_hud,btns=(wp_slot!=i and wp[i]) and wp_switch(i),{}
+            end
           end
-        end
-      else
-        -- cursor: fwd+rotate
-        -- cursor+x: weapon switch+rotate
-        -- wasd: fwd+strafe
-        -- o: fire
-        if btn(🅾️) then
-          if(btns[1]) dx=1
-          if(btns[2]) dx=-1
         else
-          if(btns[1]) da-=0.75
-          if(btns[2]) da+=0.75
+          -- cursor: fwd+rotate
+          -- cursor+x: weapon switch+rotate
+          -- wasd: fwd+strafe
+          -- o: fire
+          if btn(🅾️) then
+            if(btns[1]) dx=1
+            if(btns[2]) dx=-1
+          else
+            if(btns[1]) da-=0.75
+            if(btns[2]) da+=0.75
+          end
+          if(btns[3]) dz=1
+          if(btns[4]) dz=-1
+
+          wp_hud=btn(6)
+          poke(0x5f30,1)
+
+          -- wasd
+          if(btn(0,1)) dx=1
+          if(btn(1,1)) dx=-1
+          if(btn(2,1)) dz=1
+          if(btn(3,1)) dz=-1
         end
-        if(btns[3]) dz=1
-        if(btns[4]) dz=-1
 
-        wp_hud=btn(6)
-        poke(0x5f30,1)
+        self.angle-=da/256
+        local ca,sa=cos(self.angle),-sin(self.angle)
+        self:apply_forces(speed*(dz*ca-dx*sa),speed*(dz*sa+dx*ca))
 
-        -- wasd
-        if(btn(0,1)) dx=1
-        if(btn(1,1)) dx=-1
-        if(btn(2,1)) dz=1
-        if(btn(3,1)) dz=-1
+        -- damping
+        -- todo: move to physic code?
+        da*=0.8
+
+        -- update weapon vm
+        wp[wp_slot].owner=self
+        wp[wp_slot]:tick()
+        
+        -- weapon bobing
+        bobx,boby=lerp(bobx,2*da,0.3),lerp(boby,cos(time()*3)*abs(dz)*speed*2,0.2)
       end
-
-      self.angle-=da/256
-      local ca,sa=cos(self.angle),-sin(self.angle)
-      self:apply_forces(speed*(dz*ca-dx*sa),speed*(dz*sa+dx*ca))
-
-      -- damping
-      -- todo: move to physic code?
-      da*=0.8
-
-      -- update weapon vm
-      wp[wp_slot].owner=self
-      wp[wp_slot]:tick()
-      
-      -- weapon bobing
-      bobx,boby=lerp(bobx,2*da,0.3),lerp(boby,cos(time()*3)*abs(dz)*speed*2,0.2)
+      return true
     end,
     attach_weapon=function(self,weapon,switch)
       local slot=weapon.actor.slot
@@ -1322,7 +1322,6 @@ function _update()
   _ambientlight*=0.8
   -- keep world running
   for thing in all(_things) do
-    if(thing.control) thing:control()
     if(thing:tick() and thing.update) thing:update()
   end
 
