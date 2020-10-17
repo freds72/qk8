@@ -533,11 +533,9 @@ function add_thing(thing)
 end
 
 function del_thing(thing)
-  do_async(function()
-    -- detach thing from sub-sector
-    unregister_thing_subs(thing)
-    del(_things,thing) 
-  end)
+  -- detach thing from sub-sector
+  unregister_thing_subs(thing)
+  del(_things,thing)
 end
 
 function unregister_thing_subs(thing)
@@ -930,7 +928,11 @@ function with_health(thing)
       -- avoid reentrancy
       if(dead) return
       
+      -- avoid same species fight
+      if(instigator and instigator.actor.id==self.actor.id) return
+
       -- avoid automatic infight
+      -- + override when player
       if(self==_plyr or instigator==_plyr or rnd()>0.8) self.target=instigator
 
       -- damage reduction?
@@ -984,9 +986,10 @@ function attach_plyr(thing,actor,skill)
   end
 
   return inherit({
-    update=function(self,...)
-      thing.update(self,...)
+    -- tick for player
+    tick=function() 
       hit_ttl=max(hit_ttl-1)
+      return true
     end,
     control=function(self)
       wp_y=lerp(wp_y,wp_yoffset,0.3)
@@ -1318,10 +1321,9 @@ function _update()
   -- decay flash light
   _ambientlight*=0.8
   -- keep world running
-  for _,thing in pairs(_things) do
+  for thing in all(_things) do
     if(thing.control) thing:control()
-    thing:tick()
-    if(thing.update) thing:update()
+    if(thing:tick() and thing.update) thing:update()
   end
 
   _update_state()
@@ -1736,7 +1738,7 @@ function unpack_actors()
           tick=function(self)
             while ticks!=-1 do
               -- wait
-              if(ticks>0) ticks-=1 return
+              if(ticks>0) ticks-=1 return true
               -- done, next step
               if(ticks==0) i+=1
 ::loop::
