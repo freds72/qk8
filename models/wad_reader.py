@@ -636,7 +636,7 @@ def pack_actors(image_reader, actors):
 
   # know state names
   # max: 16
-  all_states = ['Spawn','Idle','See','Melee','Missile','Death','XDeath','Ready','Hold','Fire','Pickup']
+  all_states = ['Spawn','Idle','See','Melee','Missile','Death','XDeath','Ready','Hold','Fire','Pickup','Pain']
 
   # known functions
   # max: 256 (ahah!)
@@ -650,7 +650,8 @@ def pack_actors(image_reader, actors):
     'A_Look': dotdict({'id':7, 'args': []}),
     'A_Chase': dotdict({'id':8, 'args': []}),
     'A_Light': dotdict({'id':9, 'args': [pack_byte]}),
-    'A_MeleeAttack':dotdict({'id':10, 'args': [pack_byte, pack_variant]})
+    'A_MeleeAttack':dotdict({'id':10, 'args': [pack_byte, pack_variant]}),
+    'A_SkullAttack': dotdict({'id':11, 'args': [pack_variant], 'defaults': [20]})
   })
 
   s += pack_variant(len(concrete_actors))
@@ -658,12 +659,12 @@ def pack_actors(image_reader, actors):
     # actor "class"
     s += pack_variant(actor.kind)
     s += pack_variant(actor.id)
+    # behavior flags
+    flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2 | pack_flag(actor, 'ismonster')<<3 | pack_flag(actor, 'nogravity')<<4 | pack_flag(actor, 'float')<<5 | pack_flag(actor, 'dropoff')<<6 | pack_flag(actor, 'dontfall')<<7
+    s += "{:02x}".format(flags)
     # mandatory/shared properties
     s += pack_fixed(actor.radius)
     s += pack_fixed(actor.height)
-    # behavior flags
-    flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2 | pack_flag(actor, 'ismonster')<<3
-    s += "{:02x}".format(flags)
     
     ################## properties
     properties = 0
@@ -750,7 +751,7 @@ def pack_actors(image_reader, actors):
     s += pack_variant(len(actor._labels))
     for state_label,state_address in actor._labels.items():
       if state_label not in all_states:
-        raise Exception("Unkown state: {} for actor: {} - Custom state names are not supported.".format(state_label.actor.name))
+        raise Exception("Unkown state: \"{}\" for actor: {} - Custom state names are not supported.".format(state_label,actor.name))
       s += "{:02x}{:02x}".format(all_states.index(state_label),state_address+1)
     # export states
     s += pack_variant(len(actor._states))

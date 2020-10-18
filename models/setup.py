@@ -15,7 +15,7 @@ import setuptools
 # >>
 setuptools.setup(
     name="wad_reader",
-    version="1.7",
+    version="1.9",
     author="https://twitter.com/FSouchu",
     description="POOM archive compiler for PICO8",
     url="https://github.com/freds72/qk8",

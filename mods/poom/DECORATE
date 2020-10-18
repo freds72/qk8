@@ -181,9 +181,8 @@ actor PlasmaBall : Projectile 9998
 {
 	Radius 13
 	Height 8
-	Speed 25
+	Speed 50
  	Damage 5
- +MISSILE
  States
 	{
  	Spawn:
@@ -332,7 +331,7 @@ actor PlasmaRifle : Weapon 2004
 		Fire:
 			PLSF A 2 A_Light(160)
 			PLSF A 1 A_FireProjectile("PlasmaBall");
-			PLSG B 20
+			PLSG B 5
 			Goto Ready
 		Ready:
 			PLSG A 1 A_WeaponReady;
@@ -422,7 +421,7 @@ actor Fist : Weapon 5000
 	}
 }
 
-actor PoomGuy: Player 1
+actor PoomGuy: PlayerPawn 1
 {
 	Radius 16
 	Health 100
@@ -434,13 +433,6 @@ actor PoomGuy: Player 1
 	StartItem "PlasmaRifle"
 	StartItem "Cell", 100
 	StartItem "Fist"
-	
-	States
-	{
-		Spawn:
-			PLAY A -1
-			Stop
-	}
 }
 
 actor ZombieMan : Monster 3004
@@ -484,8 +476,6 @@ actor DoomImpBall: Projectile 9995
   Damage 3
   Mass 33
   +RANDOMIZE
-  +MISSILE
-  +NOGRAVITY
   States
   {
   Spawn:
@@ -583,4 +573,47 @@ actor Cacodemon: Monster 3005
 			HEAD C -1
 			Stop
 	}
+}
+
+actor LostSoul: Monster 3006
+{
+  Health 100
+  Radius 16
+  Height 56
+  Mass 50
+  Speed 8
+  Damage 3
+  PainChance 256
+  +FLOAT
+  +NOGRAVITY
+  +MISSILEMORE
+  +DONTFALL
+	+DROPOFF
+  +NOICEDEATH
+
+  States
+  {
+  Spawn:
+    SKUL A 10 Bright A_Look;
+    SKUL B 10 Bright A_Look;
+    Loop
+  See:
+    SKUL A 6 Bright A_Chase;
+    SKUL B 6 Bright A_Chase;
+    Loop
+  Missile:
+    SKUL C 10 Bright A_FaceTarget;
+  	SKUL D 4 Bright A_SkullAttack;
+    SKUL C 4 Bright
+    SKUL D 4 Bright
+    Goto Missile
+  Death:
+    SKUL F 6 Bright
+    SKUL G 6 Bright 
+    SKUL H 6 Bright
+    SKUL I 6 Bright 
+    SKUL J 6
+    SKUL K 6
+    Stop
+  }
 }

@@ -132,9 +132,9 @@ class ImageReader():
       # multi-sided image
       angles = [
         re.compile("({}{}1)".format(image,variant)),
-        re.compile("({}{}2)".format(image,variant)),
-        re.compile("({}{}3)".format(image,variant)),
-        re.compile("({}{}4)".format(image,variant)),
+        re.compile("({}{}2)|({}{}6{}4)".format(image,variant,image,variant,variant)),
+        re.compile("({}{}3)|({}{}7{}3)".format(image,variant,image,variant,variant)),
+        re.compile("({}{}4)|({}{}8{}2)".format(image,variant,image,variant,variant)),
         re.compile("({}{}5)".format(image,variant)),
         re.compile("({}{}6)|({}{}4{}6)".format(image,variant,image,variant,variant)),
         re.compile("({}{}7)|({}{}3{}7)".format(image,variant,image,variant,variant)),

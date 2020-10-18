@@ -50,14 +50,15 @@ builtin_actors = {
     'radius': 20,
     'maxamount': 200
   },
-  'player':{
+  'playerpawn':{
     'kind': ACTOR_KIND.PLAYER,
     'radius': 32,
     'armor': 100,
     'health': 100,
     'speed': 3,
     'shootable': True,
-    'solid': True
+    'solid': True,
+    'dropoff': True
   },
   'monster':{
     'kind': ACTOR_KIND.MONSTER,
@@ -71,7 +72,10 @@ builtin_actors = {
   'projectile':{
     'kind': ACTOR_KIND.PROJECTILE,
     'damage': 1,
-    'speed': 5
+    'speed': 5,
+    'dropoff': True,
+    'nogravity': True,
+    'missile': True
   }
 }
 
