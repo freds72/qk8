@@ -44,8 +44,8 @@ function start_state()
       pal()
       memcpy(0x6000,0x4e00,64*13)
       spr(0,0,13,16,15)    
-      printb("@fsouchu",2,121,12)
-      printb("@gamecactus",83,121,12)
+      printb("@fsouchu",2,121,vcol(4))
+      printb("@gamecactus",83,121,vcol(4))
 
       pal(title_gfx.pal,1)
     end,
@@ -95,43 +95,49 @@ function menu_state()
         -- unlocked?
         menus[menu_i].sel=mid(active_sel,1,menus[menu_i].max)
       end
-      if btnp(4) or btnp(5) then
+      if btnp(5) then
+        if(menu_i>1)sfx(0)
+        menu_i=max(1,menu_i-1)
+      elseif btnp(4) then
         if(menu_i>0)sfx(1)
         menu_i+=1
         if menu_i>#menus then
           next_state(launch_state,menus[2].sel,menus[1].sel)
         end
-      end      
+      end
     end,
     function()
+      -- exit early because state will have been change to launch_state
+      if (menu_i>#menus)return
+
       cls()
       memcpy(0x6000,0x4e00,64*13)
       spr(0,0,13,16,15)    
-      printb("@fsouchu",2,121,12)
-      printb("@gamecactus",83,121,12)
+      printb("@fsouchu",2,121,vcol(4))
+      printb("@gamecactus",83,121,vcol(4))
 
       -- dark menu background
       -- todo: fix
       for i=0,15 do
-        pal(sget(112+i,128-13),sget(112+i,129-13))
+        pal(vcol(i),sget(112+i,129-13))
         --pset(i,0,i)
       end
       sspr(12,51,104,19+#menus[menu_i][2]*9,12,64)
       pal()
       
       -- title
-      printb(menus[menu_i][1],63-#menus[menu_i][1]*2,69,9)
+      printb(menus[menu_i][1],63-#menus[menu_i][1]*2,69,vcol(14))
 
       -- selection marker
-      rectfill(18,70+menus[menu_i].sel*9,113,79+menus[menu_i].sel*9,4)
-      palt(0,false)
-      palt(12,true)
+      rectfill(18,70+menus[menu_i].sel*9,113,79+menus[menu_i].sel*9,vcol(2))
+      palt(vcol(0),false)
+      palt(vcol(4),true)
       sspr(anm_ttl\12*10,115,11,12,14,68+menus[menu_i].sel*9)
       palt()
 
       -- menu items
       for i=1,#menus[menu_i][2] do
-        printb(menus[menu_i][2][i],28,72+i*9,i<=menus[menu_i].max and 8 or 11)
+        printb(menus[menu_i][2][i],28,72+i*9,i<=menus[menu_i].max and vcol(4) or vcol(3))
       end
       
       pal(title_gfx.pal,1)
@@ -166,15 +172,28 @@ end
 function launch_state(skill,id)
   -- record max level reached so far
   if(id>dget(32)) dset(32,id)
-
-  unpack_gfx(loading_gfx.bytes)
-  cls()
-  spr(0,0,0,16,16)
-  pal(loading_gfx.pal,1)
-  local s="eNTERING ".._maps_label[id]
-  printb(s,63-#s*2,80,15)
-  flip()
-  load(_maps_group[id]..".p8",nil,skill..","..id)
+  return
+    function()
+      -- delay to allow _draw to be called to prevent palette reset on load
+      if launch_ttl==0 then
+        -- stop all sfx to prevent audio glitch
+        for i=0,3 do
+          sfx(-1,i)
+        end
+        load(_maps_group[id]..".p8",nil,skill..","..id)
+      end
+      launch_ttl-=1
+    end,
+    function()
+      cls()
+      spr(0,0,0,16,16)
+      pal(loading_gfx.pal,1)
+      local s="eNTERING ".._maps_label[id]
+      printb(s,63-#s*2,80,15)
+    end,
+    function()
+      unpack_gfx(loading_gfx.bytes)
+    end
 end
 
 function endgame_state(skill)
@@ -257,6 +276,9 @@ function _init()
     {fadetoblack_state,endgame_state,skill+1}
   }
 
+  -- wait time before launching (15 frames when loading from menu to prevent audio from getting cut too short)
+  launch_ttl=(state==2 or state==3) and 1 or 15
+
   next_state(unpack(states[state]))
 end
 
@@ -270,4 +292,9 @@ end
 
 function lerp(a,b,t)
   return a+t*(b-a)
+end
+
+-- color lookup from title image
+function vcol(c)
+  return sget(112+c,128-13)
 end
