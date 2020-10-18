@@ -722,12 +722,7 @@ function make_thing(actor,x,y,z,angle,special)
     sector=ss.sector,
     ssector=ss,
     subs={},
-    trigger=special,
-    -- turn thing toward given position
-    face_target=function(self,otherthing,speed)
-      local target_angle=atan2(otherthing[1]-self[1],self[2]-otherthing[2])
-      self.angle=lerp(shortest_angle(target_angle,self.angle),target_angle,speed or 0.2)
-    end
+    trigger=special
   }
   
   if actor.is_shootable then
@@ -783,8 +778,10 @@ function with_physic(thing)
       -- integrate forces
       v2_add(velocity,forces)
       -- floating actor?
-      if actor.is_float and self.target then      
+      if actor.is_float and self.target then
         dz+=mid((self.target[3]-self[3])>>4,-2,2)
+        -- avoid woobling
+        dz*=friction
       end
       -- gravity?
       if(not actor.is_nogravity or (self.dead and not actor.is_dontfall)) dz-=1
@@ -914,8 +911,8 @@ function with_physic(thing)
           dz,h=0,sector.floor
         end
         -- for floating actors, avoid going through roof!
-        if h+actor.height>sector.ceil then
-          dz,h=0,sector.ceil-actor.height
+        if h+height>sector.ceil then
+          dz,h=0,sector.ceil-height
         end
         self[3]=h
       end
@@ -1630,7 +1627,10 @@ function unpack_actors()
       local speed=mpeek()/255
       return function(self)
         -- nothing to face to?
-        if(self.target) self:face_target(self.target,speed)
+        if self.target then
+          local target_angle=atan2(self.target[1]-self[1],self[2]-self.target[2])
+          self.angle=lerp(shortest_angle(target_angle,self.angle),target_angle,speed)   
+        end
       end
     end,
     -- A_Look
