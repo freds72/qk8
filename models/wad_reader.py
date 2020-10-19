@@ -19,6 +19,7 @@ from python2pico import pack_byte
 from python2pico import to_multicart
 from python2pico import pack_int32
 from python2pico import pack_short
+from python2pico import pack_release
 from python2pico import bytes_to_base255
 from bsp_compiler import Polygon
 from bsp_compiler import POLYGON_CLASSIFICATION
@@ -857,7 +858,7 @@ def pack_p8image(stream, asset, palette=None, swap=False, bigendian=False, size=
   # convert palette into a "pal" call
   return data, "[0]={},".format(autopalette[0])+",".join(str(c) for c in autopalette[1:]), size
 
-def to_gamecart(carts_path, name, group_name, width, map_data, gfx_data, palette, compress=False):
+def to_gamecart(carts_path, name, group_name, width, map_data, gfx_data, palette, compress=False, release=None):
   cart="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
@@ -868,11 +869,12 @@ __lua__
 -- generated code - do not edit
 -- *********************************
 #include {0}_atlas.lua
-{1}
-#include main.lua
+#include {1}
+#include {2}
 """.format(
   name,
-  compress and "#include lzs.lua" or "#include plain.lua")
+  compress and "lzs.lua" or "plain.lua",
+  release and "main_mini.lua" or "main.lua")
 
   # transpose gfx
   gfx_data=[pack_sprite(data) for data in gfx_data]
@@ -971,7 +973,7 @@ def compress_byte_str(s,raw=False):
   return "".join(map("{:02x}".format, compressed))
 
 
-def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
+def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, release=None):
   # resource readers
   maps_stream = FileStream(os.path.join(root, "maps"))
   file_stream = FileStream(os.path.join(root))
@@ -982,11 +984,12 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
     # all maps
     logging.info("Packing all mod maps")
     all_maps = MapinfoReader(file_stream).read()
-  else:    
+  else:
+    # single map
     logging.info("Packing single map: {}".format(mapname))
     all_maps = [dotdict({
       'name': mapname,
-      'group' : mapname[:2],
+      'group' : mapname[:2].lower(),
       'label': mapname,
       'music': -1
     })]
@@ -1010,6 +1013,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
   cart_len = 2*0x4300
   map_groups = sorted(set(m.group for m in all_maps))
 
+  all_carts = []
   # export maps
   for map_group in map_groups:
       maps = list(m for m in all_maps if m.group==map_group)
@@ -1036,7 +1040,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False):
         game_data += compress and compress_byte_str(map_data) or map_data
       
       # export game cart (hub for maps from same group)
-      to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, gradients, compress)
+      to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, gradients, compress, release)
 
   # list of weapons
   wp_anchors = [50,64,78,64,64]
@@ -1122,6 +1126,14 @@ __lua__
 """.format(modname)
 
   to_multicart(game_data, pico_path, carts_path, modname, boot_code=boot_code, label=title)
+
+  if release:
+    all_carts = []
+    for i in range(int(len(game_data)/cart_len)+1):
+      all_carts.append(i)
+    all_carts += map_groups
+
+    pack_release(modname, pico_path, carts_path, all_carts, release)
 
   # export_cmd=""
   # for i in range(0,last_cart_id+1):
@@ -1221,11 +1233,12 @@ def main():
   parser.add_argument("--mod-name", required=True,type=str, help="game cart name (ex: poom)")
   parser.add_argument("--map", type=str, default="", required=False, help="map name to compile (ex: E1M1)")
   parser.add_argument("--compress", action='store_true', required=False, help="Enable compression (default: false)")
+  parser.add_argument("--release", required=False,  type=str, help="Generate package with given version")
   args = parser.parse_args()
 
   logging.basicConfig(level=logging.INFO)
 
-  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress)
+  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress, release=args.release)
   logging.info('DONE')
 
 if __name__ == '__main__':

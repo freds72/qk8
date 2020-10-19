@@ -197,6 +197,7 @@ function launch_state(skill,id)
 end
 
 function endgame_state(skill)
+  local ttl=9000
   -- todo: music??
   
   -- record max skill reached
@@ -204,7 +205,8 @@ function endgame_state(skill)
 
   return
     function()
-      if btnp()!=0 then
+      ttl-=1
+      if ttl<0 or btnp()!=0 then
         -- back to startup screen
         next_state(fadetoblack_state,start_state)
       end
@@ -216,6 +218,43 @@ function endgame_state(skill)
     end,
     function()
       unpack_gfx(endgame_gfx.bytes)
+    end
+end
+
+function credits_state()
+  local ttl=0
+  local txt=split([[
+gAME eNGINE:
+@fsouchu
+lEVEL dESIGN+aRT:
+@paranoidcactus
+oRIGINAL mATERIAL:
+id sOFTWARE (mICROSOFT)
+rEFERENCE mATERIAL:
+zdOOM wIKI
+bsp eDITOR:
+sLADE 3+zbsp
+pICO8:
+zEP
+
+]],"\n")
+  return
+    -- update
+    function()
+      ttl+=0.33
+    end,
+    -- draw
+    function()
+      cls()
+      local y=64-ttl
+      for i,t in ipairs(txt) do
+        print(t,64-#t*2,y+1,1)
+        print(t,64-#t*2,y,(i-1)%2==0 and 6 or 12)
+        y+=7
+      end
+    end,
+    function()
+      pal()
     end
 end
 
@@ -235,11 +274,16 @@ function slicefade_state(...)
     end,
     -- draw
     function()
-      cls()
+      local src,mem=loading_gfx.bytes,0x6000
+      for i=0,#src-1 do
+        poke(mem+i,ord(src,i+1))
+      end
+
       for i,r in pairs(r) do
         h[i]=lerp(h[i],129,r)
         sspr(i,0,1,128,i,h[i],1,128)
       end
+      pal(loading_gfx.pal,1)
     end,
     -- init
     function()
@@ -280,6 +324,7 @@ function _init()
   launch_ttl=(state==2 or state==3) and 1 or 15
 
   next_state(unpack(states[state]))
+  --next_state(credits_state)
 end
 
 -->8
