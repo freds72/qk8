@@ -179,13 +179,12 @@ def to_multicart(s,pico_path,carts_path,cart_name,boot_code=None,label=None):
       to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_code=cart_id==0 and boot_code, label=cart_id==0 and label)
   return cart_id
 
-def pack_release(modname, pico_path, carts_path, all_carts, release):
+def pack_release(modname, pico_path, carts_path, all_carts, release, mode=".bin"):
     all_carts = list(["{}_{}.p8".format(modname,id) for id in all_carts])
 
     # entry point
     main_cart = all_carts.pop(0)
 
-    # run cart
-    print(" ".join([os.path.join(pico_path,"pico8.exe"),main_cart,"-export \"{}_{}.bin {}\"".format(modname,release," ".join(all_carts))]))
-
-    subprocess.run([os.path.join(pico_path,"pico8.exe"),main_cart,"-export \"{}_{}.bin {}\"".format(modname,release," ".join(all_carts))], stdout=PIPE, stderr=PIPE, check=True, cwd=carts_path)
+    # 
+    cmd = " ".join([os.path.join(pico_path,"pico8.exe"),main_cart,"-export \"{}_{}{} {}\"".format(modname,release,mode," ".join(all_carts))])
+    subprocess.run(cmd, cwd=carts_path, check=True)

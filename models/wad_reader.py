@@ -811,22 +811,28 @@ def pack_sprite(arr):
 # remap image to given palette and export to byte string
 # if palette is not given, produces a dynamic palette
 # raises an exception if #colors>16
-def pack_image(img, palette=None):
+def pack_image(img, palette=None, label=False):
   p = AutoPalette(palette=palette)
 
-  s = ""
+  data = bytearray()
   for y in range(img.size[1]):
     for x in range(0,img.size[0],8):
-      pixels = []
       for n in range(0,8,2):
         low = p.register(img.getpixel((x + n, y)))
         high = p.register(img.getpixel((x + n + 1,y)))
-        # uses pico8 "swapped" format
-        s += "{:02x}".format(low<<4|high)
-  return s, p.pal()
+        data.append(low)
+        data.append(high)
+  
+  s = ""
+  pal = p.pal(label=label)
+  if label:
+    s = "".join([pal[c] for c in data])
+  else:
+    s = "".join(map("{:01x}".format,data))
+  return s, pal
 
 # conver image to pico8 format
-def pack_p8image(stream, asset, palette=None, swap=False, bigendian=False, size=None, mandatory=False):
+def pack_p8image(stream, asset, palette=None, swap=False, bigendian=False, size=None, mandatory=False, label=False):
   src = None
   try:
     src = Image.open(io.BytesIO(stream.read(asset)))
@@ -843,7 +849,7 @@ def pack_p8image(stream, asset, palette=None, swap=False, bigendian=False, size=
     raise Exception("Image: {} invalid size: {} - Must be 128px width".format(asset, size))
   img = Image.new('RGBA', size, (0,0,0,0))
   img.paste(src)
-  data,autopalette = pack_image(img, palette)
+  data,autopalette = pack_image(img, palette=palette, label=label)
   if swap:
     s = ""
     for i in range(0,len(data),2):
@@ -1002,8 +1008,8 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
   image_reader = ImageReader(graphics_stream, colormap.palette)
   actors = DecorateReader(file_stream).actors
   
-  # cart label (optional)
-  title,title_pal,title_size = pack_p8image(graphics_stream, "G_LABEL", std_palette())
+  # cart label (optional) - uses title image
+  label_image,label_pal,label_size = pack_p8image(graphics_stream, "G_TITLE", size=(128,128), label=True)
 
   # pack actors (shared by all maps)
   game_data = pack_actors(image_reader, actors)
@@ -1125,7 +1131,7 @@ __lua__
 #include title.lua
 """.format(modname)
 
-  to_multicart(game_data, pico_path, carts_path, modname, boot_code=boot_code, label=title)
+  to_multicart(game_data, pico_path, carts_path, modname, boot_code=boot_code, label=label_image)
 
   if release:
     all_carts = []
@@ -1133,7 +1139,10 @@ __lua__
       all_carts.append(i)
     all_carts += map_groups
 
-    pack_release(modname, pico_path, carts_path, all_carts, release)
+    logging.info("Generating {} binaries".format(release))
+
+    pack_release(modname, pico_path, carts_path, all_carts, release, mode=".bin")
+    pack_release(modname, pico_path, carts_path, all_carts, release, mode=".html")
 
   # export_cmd=""
   # for i in range(0,last_cart_id+1):

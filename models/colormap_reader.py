@@ -43,6 +43,41 @@ rgb_to_pico8={
   "0xff6e59":142,
   "0xff9d81":143}
 
+# map rgb colors to label fake hexa codes
+rgb_to_label={
+  "0x000000":'0',
+  "0x1d2b53":'1',
+  "0x7e2553":'2',
+  "0x008751":'3',
+  "0xab5236":'4',
+  "0x5f574f":'5',
+  "0xc2c3c7":'6',
+  "0xfff1e8":'7',
+  "0xff004d":'8',
+  "0xffa300":'9',
+  "0xffec27":'a',
+  "0x00e436":'b',
+  "0x29adff":'c',
+  "0x83769c":'d',
+  "0xff77a8":'e',
+  "0xffccaa":'f',
+  "0x291814":'g',
+  "0x111d35":'h',
+  "0x422136":'i',
+  "0x125359":'j',
+  "0x742f29":'k',
+  "0x49333b":'l',
+  "0xa28879":'m',
+  "0xf3ef7d":'n',
+  "0xbe1250":'o',
+  "0xff6c24":'p',
+  "0xa8e72e":'q',
+  "0x00b543":'r',
+  "0x065ab5":'s',
+  "0x754665":'t',
+  "0xff6e59":'u',
+  "0xff9d81":'v'}
+
 # returns pico8 standard palette
 def std_palette():
   return {rgb:p8 for rgb,p8 in rgb_to_pico8.items() if p8<16}
@@ -119,5 +154,9 @@ class AutoPalette:
     raise Exception("Color: {} not in palette".format(rgba))
 
   # returns a list of hardware colors matching the palette
-  def pal(self):
-    return list(map(rgb_to_pico8.get,map("0x{0[0]:02x}{0[1]:02x}{0[2]:02x}".format,self.palette)))
+  # label indicates if color coding should be using 'fake' hexa or standard
+  def pal(self, label=False):
+    encoding = rgb_to_pico8
+    if label:
+      encoding = rgb_to_label
+    return list(map(encoding.get,map("0x{0[0]:02x}{0[1]:02x}{0[2]:02x}".format,self.palette)))
