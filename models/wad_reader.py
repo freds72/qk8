@@ -1160,8 +1160,8 @@ __lua__
 
     logging.info("Generating {} binaries".format(release))
 
-    #pack_release(modname, pico_path, carts_path, all_carts, release, mode=".bin")
-    #pack_release(modname, pico_path, carts_path, all_carts, release, mode=".html")
+    pack_release(modname, pico_path, carts_path, all_carts, release, mode=".bin")
+    pack_release(modname, pico_path, carts_path, all_carts, release, mode=".html")
 
   # export_cmd=""
   # for i in range(0,last_cart_id+1):
