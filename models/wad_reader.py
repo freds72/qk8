@@ -1122,7 +1122,7 @@ version 29
 __lua__
 -- {0}
 -- by @freds72
--- title cart
+-- bootstrap cart
 -- *********************************
 -- generated code - do not edit
 -- *********************************
@@ -1139,10 +1139,29 @@ __lua__
       all_carts.append(i)
     all_carts += map_groups
 
+    # minifying main
+    main_code = ""
+    with open(os.path.join(carts_path, "main.lua"), "r", encoding='utf-8') as f:
+      main_code = f.read()
+    # rules
+    minify_rules=[
+      (re.compile('---',re.MULTILINE),'==='),
+      (re.compile('--\\[\\[.*?\\]\\]',re.DOTALL),''),
+      (re.compile('--[ ]*.*$',re.MULTILINE),''),
+      (re.compile('^[ \t]*',re.MULTILINE),''),
+      (re.compile('[ \t]*$',re.MULTILINE),''),
+      (re.compile('\n\s*\n*',re.MULTILINE),'\n'),
+      (re.compile('===',re.MULTILINE),'---')
+    ]
+    for rule in minify_rules:
+      main_code = rule[0].sub(rule[1],main_code)
+    with open(os.path.join(carts_path, "main_mini.lua"), "w", encoding='utf-8') as f:
+      f.write(main_code)
+
     logging.info("Generating {} binaries".format(release))
 
-    pack_release(modname, pico_path, carts_path, all_carts, release, mode=".bin")
-    pack_release(modname, pico_path, carts_path, all_carts, release, mode=".html")
+    #pack_release(modname, pico_path, carts_path, all_carts, release, mode=".bin")
+    #pack_release(modname, pico_path, carts_path, all_carts, release, mode=".html")
 
   # export_cmd=""
   # for i in range(0,last_cart_id+1):
