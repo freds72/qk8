@@ -197,6 +197,7 @@ function launch_state(skill,id)
 end
 
 function endgame_state(skill)
+  local ttl=9000
   -- todo: music??
   
   -- record max skill reached
@@ -204,7 +205,8 @@ function endgame_state(skill)
 
   return
     function()
-      if btnp()!=0 then
+      ttl-=1
+      if ttl<0 or btnp()!=0 then
         -- back to startup screen
         next_state(fadetoblack_state,start_state)
       end
@@ -216,6 +218,43 @@ function endgame_state(skill)
     end,
     function()
       unpack_gfx(endgame_gfx.bytes)
+    end
+end
+
+function credits_state()
+  local ttl=0
+  local txt=split([[
+gAME eNGINE:
+@fsouchu
+lEVEL dESIGN+aRT:
+@paranoidcactus
+oRIGINAL mATERIAL:
+id sOFTWARE (mICROSOFT)
+rEFERENCE mATERIAL:
+zdOOM wIKI
+bsp eDITOR:
+sLADE 3+zbsp
+pICO8:
+zEP
+
+]],"\n")
+  return
+    -- update
+    function()
+      ttl+=0.33
+    end,
+    -- draw
+    function()
+      cls()
+      local y=64-ttl
+      for i,t in ipairs(txt) do
+        print(t,64-#t*2,y+1,1)
+        print(t,64-#t*2,y,(i-1)%2==0 and 6 or 12)
+        y+=7
+      end
+    end,
+    function()
+      pal()
     end
 end
 
@@ -285,6 +324,7 @@ function _init()
   launch_ttl=(state==2 or state==3) and 1 or 15
 
   next_state(unpack(states[state]))
+  --next_state(credits_state)
 end
 
 -->8

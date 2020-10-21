@@ -31,7 +31,7 @@ class MAPINFO(MAPINFOListener):
                 
     self.maps[lump] = dotdict({
       'name': lump,
-      'group': lump[:2],
+      'group': lump[:2].lower(),
       'label': label,
       # need first entry only
       'num': properties.get('levelnum',-1),

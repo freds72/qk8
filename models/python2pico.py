@@ -1,4 +1,5 @@
 import os
+import subprocess
 from subprocess import Popen, PIPE
 import re
 import tempfile
@@ -129,9 +130,7 @@ cstore(0, 0, 0x4300, "{}")
     with open(cart_path, "w") as f:
         f.write(cart.format(cart_name, sfx_data, cart_filename))
     # run cart
-    exitcode, out, err = call([os.path.join(pico_path,"pico8.exe"),"-x",os.path.abspath(cart_path)])
-    if err:
-        raise Exception('Unable to process pico-8 cart: {}. Exception: {}'.format(cart_path,err))
+    subprocess.run([os.path.join(pico_path,"pico8.exe"),"-x",os.path.abspath(cart_path)], stdout=PIPE, stderr=PIPE, check=True)
 
     if cart_code:
         cart = cart_code
@@ -180,3 +179,12 @@ def to_multicart(s,pico_path,carts_path,cart_name,boot_code=None,label=None):
       to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_code=cart_id==0 and boot_code, label=cart_id==0 and label)
   return cart_id
 
+def pack_release(modname, pico_path, carts_path, all_carts, release, mode=".bin"):
+    all_carts = list(["{}_{}.p8".format(modname,id) for id in all_carts])
+
+    # entry point
+    main_cart = all_carts.pop(0)
+
+    # 
+    cmd = " ".join([os.path.join(pico_path,"pico8.exe"),main_cart,"-export \"{}_{}{} {}\"".format(modname,release,mode," ".join(all_carts))])
+    subprocess.run(cmd, cwd=carts_path, check=True)

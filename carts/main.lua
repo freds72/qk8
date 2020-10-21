@@ -1,7 +1,3 @@
-pico-8 cartridge // http://www.pico-8.com
-version 29
-__lua__
-
 -- globals
 local _bsp,_cam,_plyr,_things,_sprite_cache,_actors,btns,wp_hud
 local _onoff_textures={[0]=0}
