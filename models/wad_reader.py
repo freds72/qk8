@@ -21,6 +21,8 @@ from python2pico import pack_int32
 from python2pico import pack_short
 from python2pico import pack_release
 from python2pico import bytes_to_base255
+from python2pico import minify_file
+
 from bsp_compiler import Polygon
 from bsp_compiler import POLYGON_CLASSIFICATION
 from bsp_compiler import normal,ortho
@@ -832,7 +834,7 @@ def pack_image(img, palette=None, label=False):
   return s, pal
 
 # conver image to pico8 format
-def pack_p8image(stream, asset, palette=None, swap=False, bigendian=False, size=None, mandatory=False, label=False):
+def pack_p8image(stream, asset, palette=None, swap=False, size=None, mandatory=False, label=False):
   src = None
   try:
     src = Image.open(io.BytesIO(stream.read(asset)))
@@ -855,12 +857,6 @@ def pack_p8image(stream, asset, palette=None, swap=False, bigendian=False, size=
     for i in range(0,len(data),2):
       s += data[i+1:i+2] + data[i:i+1]
     data = s
-  if bigendian:
-    # convert to big endian
-    s = ""
-    for i in range(0,len(data),4):
-      s += data[i+2:i+4] + data[i:i+2]
-    data = s
   # convert palette into a "pal" call
   return data, "[0]={},".format(autopalette[0])+",".join(str(c) for c in autopalette[1:]), size
 
@@ -880,7 +876,7 @@ __lua__
 """.format(
   name,
   compress and "lzs.lua" or "plain.lua",
-  release and "main_mini.lua" or "main.lua")
+  release and "{}_main_mini.lua".format(name) or "main.lua")
 
   # transpose gfx
   gfx_data=[pack_sprite(data) for data in gfx_data]
@@ -977,7 +973,6 @@ def compress_byte_str(s,raw=False):
   if raw:
     return compressed
   return "".join(map("{:02x}".format, compressed))
-
 
 def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, release=None):
   # resource readers
@@ -1128,8 +1123,10 @@ __lua__
 -- *********************************
 #include {0}_atlas.lua
 #include {0}_images.lua
-#include title.lua
-""".format(modname)
+#include {1}
+""".format(
+  modname,
+  compress and "{}_title_mini.lua".format(modname) or "title.lua")
 
   to_multicart(game_data, pico_path, carts_path, modname, boot_code=boot_code, label=label_image)
 
@@ -1140,23 +1137,8 @@ __lua__
     all_carts += map_groups
 
     # minifying main
-    main_code = ""
-    with open(os.path.join(carts_path, "main.lua"), "r", encoding='utf-8') as f:
-      main_code = f.read()
-    # rules
-    minify_rules=[
-      (re.compile('---',re.MULTILINE),'==='),
-      (re.compile('--\\[\\[.*?\\]\\]',re.DOTALL),''),
-      (re.compile('--[ ]*.*$',re.MULTILINE),''),
-      (re.compile('^[ \t]*',re.MULTILINE),''),
-      (re.compile('[ \t]*$',re.MULTILINE),''),
-      (re.compile('\n\s*\n*',re.MULTILINE),'\n'),
-      (re.compile('===',re.MULTILINE),'---')
-    ]
-    for rule in minify_rules:
-      main_code = rule[0].sub(rule[1],main_code)
-    with open(os.path.join(carts_path, "main_mini.lua"), "w", encoding='utf-8') as f:
-      f.write(main_code)
+    minify_file(os.path.join(carts_path, "main.lua"), os.path.join(carts_path, "{}_main_mini.lua".format(modname)))
+    minify_file(os.path.join(carts_path, "title.lua"), os.path.join(carts_path, "{}_title_mini.lua".format(modname)))
 
     logging.info("Generating {} binaries".format(release))
 

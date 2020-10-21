@@ -1,8 +1,5 @@
 import setuptools
 
-# how to launch:
-# pex -r requirements.txt -o compile.pex . -e wad_reader:pack_archive --validate-entry-point
-
 # how to pack
 # python setup.py sdist
 
@@ -15,7 +12,7 @@ import setuptools
 # >>
 setuptools.setup(
     name="wad_reader",
-    version="1.9",
+    version="2.0",
     author="https://twitter.com/FSouchu",
     description="POOM archive compiler for PICO8",
     url="https://github.com/freds72/qk8",

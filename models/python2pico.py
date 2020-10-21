@@ -188,3 +188,24 @@ def pack_release(modname, pico_path, carts_path, all_carts, release, mode=".bin"
     # 
     cmd = " ".join([os.path.join(pico_path,"pico8.exe"),main_cart,"-export \"{}_{}{} {}\"".format(modname,release,mode," ".join(all_carts))])
     subprocess.run(cmd, cwd=carts_path, check=True)
+
+# read infile and write minified version to outfile
+def minify_file(infile, outfile):
+    # minifying main
+    main_code = ""
+    with open(infile, "r", encoding='utf-8') as f:
+      main_code = f.read()
+    # rules
+    minify_rules=[
+      (re.compile('---',re.MULTILINE),'==='),
+      (re.compile('--\\[\\[.*?\\]\\]',re.DOTALL),''),
+      (re.compile('--[ ]*.*$',re.MULTILINE),''),
+      (re.compile('^[ \t]*',re.MULTILINE),''),
+      (re.compile('[ \t]*$',re.MULTILINE),''),
+      (re.compile('\n\s*\n*',re.MULTILINE),'\n'),
+      (re.compile('===',re.MULTILINE),'---')
+    ]
+    for rule in minify_rules:
+      main_code = rule[0].sub(rule[1],main_code)
+    with open(outfile, "w", encoding='utf-8') as f:
+      f.write(main_code)
