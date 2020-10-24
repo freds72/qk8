@@ -44,7 +44,8 @@ class TEXTURES(TEXTURESListener):
         'width':width>>3,
         'height':height>>3,
         'mx':xoffset>>3,
-        'my':yoffset>>3
+        'my':yoffset>>3,
+        'transparent': patch.translucent() is not None
       })
       self.flats[name] = texture
   

@@ -28,7 +28,11 @@ offsets:
   ;
 
 patch:
-  'Patch' name ',' xoffset ',' yoffset
+  'Patch' name ',' xoffset ',' yoffset ('{' translucent '}')?
+  ;
+
+translucent:
+  'Style' 'Translucent'
   ;
 
 name:

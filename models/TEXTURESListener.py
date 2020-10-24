@@ -71,6 +71,15 @@ class TEXTURESListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by TEXTURESParser#translucent.
+    def enterTranslucent(self, ctx:TEXTURESParser.TranslucentContext):
+        pass
+
+    # Exit a parse tree produced by TEXTURESParser#translucent.
+    def exitTranslucent(self, ctx:TEXTURESParser.TranslucentContext):
+        pass
+
+
     # Enter a parse tree produced by TEXTURESParser#name.
     def enterName(self, ctx:TEXTURESParser.NameContext):
         pass

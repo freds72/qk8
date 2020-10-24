@@ -543,12 +543,19 @@ def pack_zmap(map, textures, actors):
     if other_texture is not None:
       texture_pairs[name] = other_texture
 
+  # on/off textures
   s += pack_variant(len(flats))
   for name,texture in flats.items():
     s+= pack_texture(texture)
     # get pair or self
     s+= pack_texture(texture_pairs.get(name, texture))
-  
+
+  # transparent textures
+  transparent_textures=list([texture for name,texture in flats.items() if texture.transparent])
+  s += pack_variant(len(transparent_textures))
+  for texture in transparent_textures:
+    s+= pack_texture(texture)
+
   # things
   things = []
   actors = [actor.get('id',-1) for actor in actors.values()]

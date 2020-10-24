@@ -44,6 +44,11 @@ class TEXTURESVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by TEXTURESParser#translucent.
+    def visitTranslucent(self, ctx:TEXTURESParser.TranslucentContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by TEXTURESParser#name.
     def visitName(self, ctx:TEXTURESParser.NameContext):
         return self.visitChildren(ctx)
