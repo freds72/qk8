@@ -11,16 +11,6 @@ memcpy(0x4300,0x1000,512)
 -- immediately install palette (for loading screen)
 memcpy(0x5f10,0x4400,16)
 
--- single-linked list keyed on first element
-local depth_cls={
-  __index=function(t,k)
-    -- head of stack
-    local head={0}
-    t[k]=head
-    return head
-  end
-}
-
 -- create a new instance with parent properties
 function inherit(t,parent)
   return setmetatable(t,{__index=parent})
@@ -432,8 +422,8 @@ function draw_flats(v_cache,segs,things)
   if outcode==0 then
     if(nearclip!=0) verts=z_poly_clip(verts)
     if #verts>2 then
-      local sector=segs.sector
-      local light,things=max(sector.lightlevel,_ambientlight),setmetatable({},depth_cls)
+      local sector,pal0=segs.sector
+      local light,things=max(sector.lightlevel,_ambientlight),{}
       -- not visible?
       if(sector.floor+m8<0) polyfill(verts,sector.tx or 0,sector.floor,sector.floortex,light)
       if(sector.ceil+m8>0) polyfill(verts,0,sector.ceil,sector.ceiltex,light)
@@ -482,22 +472,19 @@ function draw_flats(v_cache,segs,things)
         local ax,az=m1*x+m3*y+m4,m9*x+m11*y+m12
         -- todo: take radius into account 
         if az>8 and az<854 and ax<az and -ax<az then
-          -- h: thing offset+cam offset
-          -- get start of linked list
-          local w,h,head=128/az,thing[3]+m8,things[1]
-          -- empty list case
-          local x,y,prev=63.5+ax*w,63.5-h*w,head
-          while head and head[1]<w do
-            -- swap/advance
-            prev,head=head,head.next
+          -- default: insert at end of sorted array
+          local w,thingi=128/az,#things+1
+          -- thing offset+cam offset
+          local x,y=63.5+ax*w,63.5-(thing[3]+m8)*w
+          -- basic insertion sort
+          for i,otherthing in ipairs(things) do          
+            if(otherthing[1]>w) thingi=i break
           end
-          -- insert new thing
-          prev.next={w,thing,x,y,next=prev.next}
+          add(things,{w,thing,x,y},thingi)
         end
       end
       -- things are sorted, draw them
-      local head,pal0=things[1].next
-      while head do
+      for _,head in ipairs(things) do
         local w0,thing,x0,y0=unpack(head)
         -- get image from current state
         local frame=thing.state
@@ -517,7 +504,6 @@ function draw_flats(v_cache,segs,things)
         vspr(frame[side+5],x0,y0,w0<<5,flipx)
         -- thing:draw_vm(x0,y0)
         -- print(thing.angle,x0,y0,8)
-        head=head.next
       end
     end
   end
@@ -538,7 +524,7 @@ function unregister_thing_subs(thing)
   for node,_ in pairs(thing.subs) do
     if(node.things) node.things[thing]=nil
     -- remove self from sectors (multiple)
-    if(not thing.actor.is_missile) node.sector.things-=1
+    if(thing.actor.is_solid) node.sector.things-=1
   end
 end
 
@@ -550,8 +536,8 @@ function register_thing_subs(node,thing,radius)
     -- reverse
     if(not node.things) node.things={}
     node.things[thing]=true
-    -- don't count missile actors
-    if(not thing.actor.is_missile) node.sector.things+=1
+    -- register only solid actors
+    if(thing.actor.is_solid) node.sector.things+=1
     return
   end
 
@@ -574,8 +560,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
   local intersectid,_tmax,px,py,dx,dy,othersector=_intersectid,tmax,p[1],p[2],d[1],d[2]
 
   if not skipthings then
-    -- hitting things?
-    local things_hits={t=-32000}
+    local lasthit=#res+1
     for thing,_ in pairs(segs.things) do
       local actor=thing.actor
       -- not already "hit"
@@ -596,26 +581,19 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,res,skipthings)
             if(t<tmin) t=tmin
             -- record hit
             if t>=tmin and t<tmax then
-              -- empty list case
-              local head,prev=things_hits,things_hits
-              while head and head.t<t do
-                -- swap/advance
-                prev,head=head,head.next
+              local thingi=#res+1
+              for i=lasthit,#res do
+                -- find first largest hit
+                if(t<res[i].t) thingi=i break
               end
               -- insert new thing
-              prev.next={ti=t,t=(radius-t)/radius,thing=thing,next=prev.next}
+              add(res,{ti=t,t=(radius-t)/radius,thing=thing},thingi)
             end
           end
         end
         -- avoid duplicate hits
         thing.intersectid=intersectid
       end
-    end
-    -- add sorted things intersections
-    local head=things_hits.next
-    while head do
-      res[#res+1]=head
-      head=head.next
     end
   end
 

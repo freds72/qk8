@@ -1242,8 +1242,8 @@ def main():
   parser.add_argument("--carts-path", required=True,type=str, help="path to carts folder where game is exported")
   parser.add_argument("--mod-name", required=True,type=str, help="game cart name (ex: poom)")
   parser.add_argument("--map", type=str, default="", required=False, help="map name to compile (ex: E1M1)")
-  parser.add_argument("--compress", action='store_true', required=False, help="Enable compression (default: false)")
-  parser.add_argument("--release", required=False,  type=str, help="Generate package with given version")
+  parser.add_argument("--compress", action='store_true', required=False, help="enable compression (default: false)")
+  parser.add_argument("--release", required=False,  type=str, help="generate html+bin packages with given version. Note: compression mandatory if number of carts above 16.")
   args = parser.parse_args()
 
   logging.basicConfig(level=logging.INFO)
