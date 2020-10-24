@@ -1,6 +1,6 @@
 -- globals
 local _bsp,_cam,_plyr,_things,_sprite_cache,_actors,btns,wp_hud
-local _onoff_textures={[0]=0}
+local _onoff_textures,_transparent_textures={[0]=0},{}
 local _ambientlight,_ammo_factor,_intersectid,_msg=0,1,0
 
 --local k_far,k_near=0,2
@@ -328,7 +328,7 @@ function draw_walls(segs,v_cache,light)
         end
         -- span rasterization
         -- pick correct texture "major"
-        local dx,u0=x1-x0,v0[seg[9]]*w0
+        local dx,u0,midtex_tc=x1-x0,v0[seg[9]]*w0,_transparent_textures[midtex]
         local cx0,dy,du,dw=x0\1+1,(y1-y0)/dx,(v1[seg[9]]*w1-u0)/dx,((w1-w0)<<4)/dx
         w0<<=4
         local sx=cx0-x0    
@@ -369,7 +369,10 @@ function draw_walls(segs,v_cache,light)
             if midtex!=0 then
               -- texture selection
               poke4(0x5f38,midtex)
+              -- enable transparent black if needed
+              poke(0x5f00,midtex_tc)
               tline(x,ct,x,b,u,(ct-t)/w0+yoffset,0,1/w0)
+              poke(0x5f00,0)
             end   
           end
           y0+=dy
@@ -2082,6 +2085,11 @@ function unpack_map(skill,actors)
   -- texture pairs
   unpack_array(function()
     _onoff_textures[unpack_fixed()]=unpack_fixed()
+  end)
+
+  -- transparent textures
+  unpack_array(function()
+    _transparent_textures[unpack_fixed()]=0x10
   end)
 
   -- things
