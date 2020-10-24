@@ -791,7 +791,7 @@ function with_physic(thing)
             end
           else
             if is_player and otherthing.pickup then
-              otherthing.actor.pickup(otherthing,self)
+              otherthing:pickup(self)
             elseif self.owner!=otherthing then -- avoid projectile intersect with owner
               fix_move=intersect_thing(otherthing,h,radius) and hit
             end
@@ -1808,26 +1808,26 @@ function unpack_actors()
     
     local pickup_factory={
       -- default inventory item (ex: lock)
-      function(thing,target)
-        pickup(thing,target.inventory)
+      function(self,target)
+        pickup(self,target.inventory)
       end,
       -- ammo family
-      function(thing,target)
-        pickup(thing,target.inventory,item.ammotype,_ammo_factor*item.amount)
+      function(self,target)
+        pickup(self,target.inventory,item.ammotype,_ammo_factor*item.amount)
       end,
       -- weapon
-      function(thing,target)
+      function(self,target)
         local ammotype=item.ammotype
-        pickup(thing,target.inventory,ammotype,_ammo_factor*item.ammogive,ammotype.maxamount)
-        target:attach_weapon(thing,true)
+        pickup(self,target.inventory,ammotype,_ammo_factor*item.ammogive,ammotype.maxamount)
+        target:attach_weapon(self,true)
       end,
       -- health pickup
-      function(thing,target)
-        pickup(thing,target,"health")
+      function(self,target)
+        pickup(self,target,"health")
       end,
       -- armor pickup
-      function(thing,target)
-        pickup(thing,target,"armor")
+      function(self,target)
+        pickup(self,target,"armor")
       end
     }
     item.pickup=pickup_factory[kind+1]
