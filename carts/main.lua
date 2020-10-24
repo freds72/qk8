@@ -52,9 +52,7 @@ function make_camera()
 end
 
 function lerp(a,b,t)
-  -- todo: try a+t*(b-a)
   -- faster by 1 cycle
-  -- return a*(1-t)+b*t
   return a+t*(b-a)
 end
 
@@ -790,10 +788,6 @@ function with_physic(thing)
             end
           else
             if is_player and otherthing.pickup then
-              -- avoid reentrancy
-              otherthing.pickup=nil
-              -- jump to pickup state
-              otherthing:jump_to(10)
               otherthing.actor.pickup(otherthing,self)
             elseif self.owner!=otherthing then -- avoid projectile intersect with owner
               fix_move=intersect_thing(otherthing,h,radius) and hit
@@ -1408,7 +1402,6 @@ function unpack_special(sectors,actors)
           while sector.things>0 do
             -- wait 1 sec if door is blocked
             wait_async(30)
-            sfx(63)
           end
         end          
         local h=sector[what]+speed
@@ -1800,37 +1793,38 @@ function unpack_actors()
         item[k]=(fn or unpack_variant)()
       end
     end
-    local function pickup(owner,ref,qty,maxqty)
-      ref=ref or item
-      owner[ref]=min((owner[ref] or 0)+(qty or item.amount),maxqty or item.maxamount)
-      if(item.pickupsound) sfx(item.pickupsound)
+    local function pickup(thing,owner,ref,qty,maxqty)
+      ref,maxqty=ref or item,maxqty or item.maxamount
+      -- only pick up if we're below max quantity
+      if not owner[ref] or owner[ref]<maxqty then
+        owner[ref]=min((owner[ref] or 0)+(qty or item.amount),maxqty)
+        if(item.pickupsound) sfx(item.pickupsound)
+        del_thing(thing)
+      end
     end
     
     local pickup_factory={
       -- default inventory item (ex: lock)
-      function(_,target)
-        pickup(target.inventory)
+      function(thing,target)
+        pickup(thing,target.inventory)
       end,
       -- ammo family
-      function(_,target)
-        pickup(target.inventory,item.ammotype,_ammo_factor*item.amount)
+      function(thing,target)
+        pickup(thing,target.inventory,item.ammotype,_ammo_factor*item.amount)
       end,
       -- weapon
       function(thing,target)
         local ammotype=item.ammotype
-        pickup(target.inventory,ammotype,_ammo_factor*item.ammogive,ammotype.maxamount)
-
+        pickup(thing,target.inventory,ammotype,_ammo_factor*item.ammogive,ammotype.maxamount)
         target:attach_weapon(thing,true)
-        -- remove from things
-        del_thing(thing)
       end,
       -- health pickup
-      function(_,target)
-        pickup(target,"health")
+      function(thing,target)
+        pickup(thing,target,"health")
       end,
       -- armor pickup
-      function(_,target)
-        pickup(target,"armor")
+      function(thing,target)
+        pickup(thing,target,"armor")
       end
     }
     item.pickup=pickup_factory[kind+1]
