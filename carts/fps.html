@@ -3,8 +3,8 @@
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <script type="text/javascript">
 
-	// Default shell for PICO-8 0.2.1
-
+	// Shell for POOM (or any fps game)
+	
 	// options
 
 	// fullscreen, sound, close button at top when playing on touchscreen
@@ -200,7 +200,7 @@
 			
 			b = 0;
 
-			if (y < h - r*8)
+			if (y < h - r*12)
 			{
 				// no controller buttons up here; includes canvas and menu buttons at top in touch mode
 			}
@@ -412,13 +412,13 @@
 
 			el = document.getElementById("controls_right_panel");
 			el.style.left = w-r*6;
-			el.style.top = h-r*7;
+			el.style.top = h-r*12;
 			el.style.width = r*6;
 			el.style.height = r*7;
 			if (el.getAttribute("src") != p8_gfx_dat["controls_right_panel"]) // optimisation: avoid reload? (browser should handle though)
 				el.setAttribute("src", p8_gfx_dat["controls_right_panel"]);
 
-			el = document.getElementById("controls_left_panel");
+			el = document.getElementById("controls_left_paddle");
 			el.style.left = 0;
 			el.style.top = h-r*6;
 			el.style.width = r*6;
@@ -426,7 +426,15 @@
 			if (el.getAttribute("src") != p8_gfx_dat["controls_left_panel"]) // optimisation: avoid reload? (browser should handle though)
 				el.setAttribute("src", p8_gfx_dat["controls_left_panel"]);
 			
-			// scroll to cart (need to stop running with X)
+			el = document.getElementById("controls_right_paddle");
+			el.style.left = w-r*6;
+			el.style.top = h-r*6;
+			el.style.width = r*6;
+			el.style.height = r*6;
+			if (el.getAttribute("src") != p8_gfx_dat["controls_left_panel"]) // optimisation: avoid reload? (browser should handle though)
+				el.setAttribute("src", p8_gfx_dat["controls_left_panel"]);
+
+				// scroll to cart (need to stop running with X)
 			p8_frame.scrollIntoView(true);
 
 			document.getElementById("touch_controls_gfx").style.display="table";
@@ -791,7 +799,8 @@ canvas{
 						 position:fixed; top:0px; left:0px; border:0; width:100vw; height:100vh">
 
 					<img src="" id="controls_right_panel" style="position:absolute; opacity:0.5;">
-					<img src="" id="controls_left_panel" style="position:absolute;  opacity:0.5;">
+					<img src="" id="controls_left_paddle" style="position:absolute;  opacity:0.5;">
+					<img src="" id="controls_right_paddle" style="position:absolute;  opacity:0.5;">
 						
 			
 			</div> <!-- touch_controls_gfx -->
