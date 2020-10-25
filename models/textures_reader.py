@@ -91,8 +91,7 @@ class TextureReader(TEXTURESListener):
     logging.info("Found tileset: {} - {}x{}px".format(texture_name,width, height))
 
     # extract tiles
-    # tile 0 (all black)
-    pico_gfx = [bytes(32)]
+    pico_gfx = []
     pico_map = []
     for j in range(0,math.floor(height/8)):
       for i in range(0,math.floor(width/8)):
@@ -122,11 +121,12 @@ class TextureReader(TEXTURESListener):
           else:
             tile = len(pico_gfx)
             pico_gfx.append(data)
-        pico_map.append(tile)
+        # tiles are in spritesheet 2+3
+        pico_map.append(tile+128)
     # map width
     width=width>>3
 
-    max_tiles = 16*4*2-1
+    max_tiles = 16*4*2
     if len(pico_gfx)>max_tiles:
       raise Exception("Too many unique tiles: {} in tileset: {} (max: {})".format(len(pico_gfx), texture_name, max_tiles))
 
