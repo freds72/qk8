@@ -475,13 +475,12 @@ function draw_flats(v_cache,segs,things)
         if az>8 and az<854 and ax<az and -ax<az then
           -- default: insert at end of sorted array
           local w,thingi=128/az,#things+1
-          -- thing offset+cam offset
-          local x,y=63.5+ax*w,63.5-(thing[3]+m8)*w
           -- basic insertion sort
           for i,otherthing in ipairs(things) do          
             if(otherthing[1]>w) thingi=i break
           end
-          add(things,{w,thing,x,y},thingi)
+          -- thing offset+cam offset
+          add(things,{w,thing,63.5+ax*w,63.5-(thing[3]+m8)*w},thingi)
         end
       end
       -- things are sorted, draw them
