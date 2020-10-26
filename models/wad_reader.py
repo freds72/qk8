@@ -889,27 +889,29 @@ __lua__
   gfx_data=[pack_sprite(data) for data in gfx_data]
 
   s = ""
-  rows = [""]*8
-  for i,img in enumerate(gfx_data):
-      # full row?
-      if i%16==0:
-          # collect
-          s += "".join(rows)
-          rows = [""]*8           
-      for j in range(8):
-          rows[j] += img[j]
-
-  # remaining tiles (+ padding)
-  s += "".join([row + "0" * (128-len(row)) for row in rows])
-  # fill until spritesheet 2
-  s += "0"*(128*64-len(s))
-
   # palette (e.g. gradients or screen palettes)
   #print("\n".join([" ".join(map("{:02x}".format,palette[i:i+16])) for i in range(0,len(palette),16)]))
   tmp = "".join(map("{:02x}".format,palette))
   # preserve byte orders
   for i in range(0,len(tmp),2):
     s += tmp[i+1:i+2] + tmp[i:i+1]
+
+  # fill until spritesheet 2
+  s += "0"*(128*64-len(s))
+
+  # tiles
+  rows = [""]*8
+  for i,img in enumerate(gfx_data):
+      # full row?
+      if i%16==0:
+        # collect
+        s += "".join(rows)
+        rows = [""]*8           
+      for j in range(8):
+        rows[j] += img[j]
+  # remaining tiles (+ padding)
+  s += "".join([row + "0" * (128-len(row)) for row in rows])
+
   # convert to string
   cart += "__gfx__\n"
   cart += re.sub("(.{128})", "\\1\n", s, 0, re.DOTALL)
