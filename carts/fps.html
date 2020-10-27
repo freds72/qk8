@@ -416,21 +416,24 @@
 			el.style.top = h-r*12;
 			el.style.width = r*6;
 			el.style.height = r*7;
-			el.setAttribute("src","img/buttons.png");
+			if(el.getAttribute("src") != "img/buttons.png")
+				el.setAttribute("src","img/buttons.png");
 
 			el = document.getElementById("controls_left_paddle");
 			el.style.left = 0;
 			el.style.top = h-r*6;
 			el.style.width = r*6;
 			el.style.height = r*6;
-			el.setAttribute("src", "img/left_paddle.png");
+			if(el.getAttribute("src") != "img/left_paddle.png")
+				el.setAttribute("src", "img/left_paddle.png");
 			
 			el = document.getElementById("controls_right_paddle");
 			el.style.left = w-r*6;
 			el.style.top = h-r*6;
 			el.style.width = r*6;
 			el.style.height = r*6;
-			el.setAttribute("src", "img/right_paddle.png");
+			if(el.getAttribute("src") != "img/right_paddle.png")
+				el.setAttribute("src", "img/right_paddle.png");
 
 				// scroll to cart (need to stop running with X)
 			p8_frame.scrollIntoView(true);

@@ -999,7 +999,7 @@ function attach_plyr(thing,actor,skill)
           if(btn(3,1)) dz=-1
         end
 
-        self.angle-=da/256
+        self.angle-=da>>8
         local ca,sa=cos(self.angle),-sin(self.angle)
         self:apply_forces(speed*(dz*ca-dx*sa),speed*(dz*sa+dx*ca))
 
