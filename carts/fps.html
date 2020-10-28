@@ -185,7 +185,8 @@
 
 
 			// buttons
-			
+			var deadzone = r/3;
+
 			if (y < h - r*12)
 			{
 				// no controller buttons up here; includes canvas and menu buttons at top in touch mode
@@ -194,17 +195,32 @@
 			{
 				e.preventDefault();					
 
-				if (x < w/2 && x < r*6)
+				if (y < h - r*6 ) {
+					var b = 0;
+
+					var cx = w - r*3;
+					var cy = h - r*7;
+
+					var dx = x - cx;
+					var dy = y - cy;
+
+					deadzone = r/3;
+					if(abs(dx)<deadzone && abs(dy)<deadzone) {
+						b |= 0x40;
+					}
+
+					pico8_buttons[0] |= b;
+					
+				}
+				else if (x < w/2 && x < r*6)
 				{
-					b = 0;
+					var b = 0;
 
 					// stick (left)
 
-					mask = 0xf; // dpad
 					var cx = 0 + r*3;
 					var cy = h - r*3;
 
-					deadzone = r/3;
 					var dx = x - cx;
 					var dy = y - cy;
 
@@ -224,8 +240,7 @@
 				else if (x > w/2 && x > r*6)
 				{
 					// stick (right)
-					b = 0;
-					mask = 0xf; // dpad
+					var b = 0;
 					var cx = w - r*3;
 					var cy = h - r*3;
 
@@ -246,9 +261,6 @@
 						if (dy > deadzone) b |= 0x10;
 					}
 
-					console.log(r*12 + "**" + x + "/" + y + " " + cx+"/"+cy+"  "+dx+"/"+dy+" = 0x" + b.toString(16));
-
-					
 					pico8_buttons[0] |= b;
 				}
 			}
