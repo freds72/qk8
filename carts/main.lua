@@ -1,6 +1,5 @@
 -- globals
-local _bsp,_cam,_plyr,_things,_sprite_cache,_actors,btns,wp_hud
-local _onoff_textures,_transparent_textures={[0]=0},{}
+local _onoff_textures,_transparent_textures,_bsp,_cam,_plyr,_things,_sprite_cache,_actors,_btns,_wp_hud={[0]=0},{}
 local _ambientlight,_ammo_factor,_intersectid,_msg=0,1,0
 
 --local k_far,k_near=0,2
@@ -8,8 +7,6 @@ local _ambientlight,_ammo_factor,_intersectid,_msg=0,1,0
 
 -- copy color gradients (16*16 colors x 2) to memory
 memcpy(0x4300,0x0,512)
--- immediately install palette (for loading screen)
-memcpy(0x5f10,0x4400,16)
 
 -- create a new instance with parent properties
 function inherit(t,parent)
@@ -502,6 +499,7 @@ function draw_flats(v_cache,segs,things)
           flipx=nil
         end
         vspr(frame[side+5],x0,y0,w0<<5,flipx)
+        
         -- thing:draw_vm(x0,y0)
         -- print(thing.angle,x0,y0,8)
       end
@@ -966,12 +964,12 @@ function attach_plyr(thing,actor,skill)
 
         local dx,dz=0,0
 
-        if wp_hud then
-          wp_hud=not btn(6)
+        if _wp_hud then
+          _wp_hud=not (btn(6) or btn(6,1))
           for i,k in pairs{0,3,1,2,4} do
-            if btnp(k) then
+            if btnp(k) or btnp(k,1) then
               -- only switch if we have the weapon and it's not the current weapon
-              wp_hud,btns=(wp_slot!=i and wp[i]) and wp_switch(i),{}
+              _wp_hud,_btns=(wp_slot!=i and wp[i]) and wp_switch(i),{}
             end
           end
         else
@@ -980,23 +978,23 @@ function attach_plyr(thing,actor,skill)
           -- wasd: fwd+strafe
           -- o: fire
           if btn(🅾️) then
-            if(btns[1]) dx=1
-            if(btns[2]) dx=-1
+            if(_btns[0]) dx=1
+            if(_btns[1]) dx=-1
           else
-            if(btns[1]) da-=0.75
-            if(btns[2]) da+=0.75
+            if(_btns[0]) da-=0.75
+            if(_btns[1]) da+=0.75
           end
-          if(btns[3]) dz=1
-          if(btns[4]) dz=-1
+          if(_btns[2]) dz=1
+          if(_btns[3]) dz=-1
 
-          wp_hud=btn(6)
+          _wp_hud=btn(6)
           poke(0x5f30,1)
 
           -- wasd
-          if(btn(0,1)) dx=1
-          if(btn(1,1)) dx=-1
-          if(btn(2,1)) dz=1
-          if(btn(3,1)) dz=-1
+          if(_btns[0x10]) dx=1
+          if(_btns[0x11]) dx=-1
+          if(_btns[0x12]) dz=1
+          if(_btns[0x13]) dz=-1
         end
 
         self.angle-=da>>8
@@ -1057,7 +1055,7 @@ function attach_plyr(thing,actor,skill)
       end
 
       -- display weapon selection hud
-      if wp_hud then
+      if _wp_hud then
         -- structure:
         -- slot number (or -1)
         -- function
@@ -1156,7 +1154,7 @@ end
 _max_cpu,_max_cpu_ttl=0,0
 
 function play_state()
-  btns,wp_hud={}
+  _btns,_wp_hud={}
   
   -- stop music (eg. restart game)
   music(-1)
@@ -1278,9 +1276,10 @@ function _init()
 end
 
 function _update()
-  -- get btn states and suppress pressed buttons until btnp occurs
-  for i=1,6 do
-    btns[i]=btnp(i-1) or btns[i] and btn(i-1)
+  -- get btn states and suppress pressed buttons until btnp occurs  
+  for i=0,5 do
+    _btns[i]=btnp(i) or _btns[i] and btn(i)
+    _btns[0x10|i]=btnp(i,1) or _btns[0x10|i] and btn(i,1)
   end
 
   -- any futures?
@@ -1562,7 +1561,7 @@ function unpack_actors()
     -- A_WeaponReady
     function(item)
       return function(weapon)
-        if not wp_hud and btn(❎) then
+        if not _wp_hud and btn(❎) then
           local inventory,ammotype,newqty=weapon.owner.inventory,item.ammotype,0
           -- handle "fist" (eg weapon without ammotype)
           if(ammotype) newqty=inventory[ammotype]-item.ammouse
