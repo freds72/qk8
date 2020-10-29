@@ -17,7 +17,9 @@ class TEXTURES(TEXTURESListener):
   def __init__(self, filter):
     self.flats = {}
     self.patches = set()
-    self.filter = filter
+    self.filter = filter    
+    # reverse x/y to texture index
+    self.textureByTile = {}
 
   def exitBlock(self, ctx):  
     name = ctx.name().getText().strip('"')
@@ -32,22 +34,25 @@ class TEXTURES(TEXTURESListener):
       self.patches.add(patch.name().getText().lower().strip('"'))
 
       # texture size
-      width = int(ctx.width().getText())
-      height = int(ctx.height().getText())
+      width = int(ctx.width().getText())>>3
+      height = int(ctx.height().getText())>>3
 
       # offset in texture image
-      xoffset = -int(patch.xoffset().getText())
-      yoffset = -int(patch.yoffset().getText())
+      xoffset = -int(patch.xoffset().getText())>>3
+      yoffset = -int(patch.yoffset().getText())>>3
 
       # convert to 8x8 map unit
       texture = dotdict({
-        'width':width>>3,
-        'height':height>>3,
-        'mx':xoffset>>3,
-        'my':yoffset>>3,
+        'width':width,
+        'height':height,
+        'mx':xoffset,
+        'my':yoffset,
         'transparent': patch.translucent() is not None
       })
       self.flats[name] = texture
+      for j in range(height):          
+        for i in range(width):
+          self.textureByTile[(i+xoffset)+(j+yoffset)*128] = texture
   
 # Converts a TEXTURE file definition into a set of unique tiles + map index
 class TextureReader(TEXTURESListener):
@@ -76,8 +81,10 @@ class TextureReader(TEXTURESListener):
     # convert texture image to map/gfx
     if len(listener.patches)>1:
       raise Exception("Multiple tilesets not supported: {}".format(listener.patches))
-
+    
     texture_name = listener.patches.pop()
+    texture_by_tile = listener.textureByTile
+
     image_data = self.stream.read(texture_name)
 
     # read image bytes
@@ -112,17 +119,23 @@ class TextureReader(TEXTURESListener):
             high = self.rgba_to_pico[high]
             if high==-1: high = 0
             data += bytes([high|low<<4])
-        tile = 0
-        # remove empty tiles
-        if not all(b==0 for b in data):
+
+        # remove empty tiles (only if texture patch is transparent)        
+        texture = texture_by_tile.get(i+j*128,None)
+        # not referenced zone
+        if texture is None or (texture.transparent and all(b==0 for b in data)):
+          pico_map.append(0)
+        else:          
+          tile = 0
           # known tile?
           if data in pico_gfx:
             tile = pico_gfx.index(data)
           else:
             tile = len(pico_gfx)
-            pico_gfx.append(data)
-        # tiles are in spritesheet 2+3
-        pico_map.append(tile+128)
+            pico_gfx.append(data) 
+          # tiles are in spritesheet 2+3
+          pico_map.append(tile+128)
+
     # map width
     width=width>>3
 

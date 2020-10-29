@@ -298,7 +298,7 @@ function draw_walls(segs,v_cache,light)
       -- dual?
       local facingside,otherside,otop,obottom=ldef[seg.side],ldef[not seg.side]
       -- peg bottom?
-      local yoffset,_,toptex,midtex,bottomtex=bottom-top,unpack(facingside)
+      local yoffset,yoffsettop,_,toptex,midtex,bottomtex=bottom-top,bottom-top,unpack(facingside)
       -- no need to draw untextured walls
       if toptex|midtex|bottomtex!=0 then
         -- fix animated side walls (elevators)
@@ -310,8 +310,9 @@ function draw_walls(segs,v_cache,light)
           otop=otherside[1].ceil>>4
           obottom=otherside[1].floor>>4
           -- offset animated walls (doors)
+          yoffset=0
           if ldef.flags&0x4!=0 then
-            yoffset=otop-top
+            yoffsettop=otop-top
           end
           -- make sure bottom is not crossing this side top
           obottom=min(top,obottom)
@@ -347,7 +348,7 @@ function draw_walls(segs,v_cache,light)
             if otop then
               poke4(0x5f38,toptex)             
               local ot=y0-otop*w0
-              tline(x,ct,x,ot,u,(ct-t)/w0+yoffset,0,1/w0)
+              tline(x,ct,x,ot,u,(ct-t)/w0+yoffsettop,0,1/w0)
               -- new window top
               t=ot
               ct=ot\1+1

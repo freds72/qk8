@@ -278,10 +278,10 @@ def pack_special(owner, lines, sides, sectors):
     s = "{:02x}".format(special)
 
   if special==202:
-    logging.warning("Unsupported special: {}".format(special))
+    logging.error("Unsupported special: {}".format(special))
   elif special in [11,12,13]:
     # door open
-    logging.info("Special: Door_Open/Door_Raise/Door_LockedRaise")
+    logging.debug("Special: Door_Open/Door_Raise/Door_LockedRaise")
     sector_ids = []
     if is_missing_or_zero(owner,'arg0'):
       if 'sideback' not in owner:
@@ -311,7 +311,7 @@ def pack_special(owner, lines, sides, sectors):
     s += pack_variant(owner.get('arg3',0))
   elif special==10:
     # door close
-    logging.info("Special: Door_Close")
+    logging.debug("Special: Door_Close")
     sector_ids = []
     if is_missing_or_zero(owner,'arg0'):
       # find sector from line other side
@@ -333,7 +333,7 @@ def pack_special(owner, lines, sides, sectors):
     # lock (not supported)
     s += pack_variant(0)
   elif special==64: 
-    logging.info("Sector: Plat_UpWaitDownStay")
+    logging.debug("Sector: Plat_UpWaitDownStay")
     sector_ids = []
     if is_missing_or_zero(owner,'arg0'):
       # find sector from line other side
@@ -357,7 +357,7 @@ def pack_special(owner, lines, sides, sectors):
     # lock (not supported)
     s += pack_variant(0)
   elif special==62: 
-    logging.info("Special: Plat_DownWaitUpStay")
+    logging.debug("Special: Plat_DownWaitUpStay")
     sector_ids = []
     if is_missing_or_zero(owner,'arg0'):
       # find sector from line other side
@@ -382,9 +382,9 @@ def pack_special(owner, lines, sides, sectors):
     s += pack_variant(0)
   elif special==243:
     # exit level
-    logging.info("Special: exit level")
+    logging.debug("Special: exit level")
   elif special==112:
-    logging.info("Special: set light level")
+    logging.debug("Special: set light level")
     # set lightlevel
     sector_ids = find_sectors_by_tag(owner.arg0, sectors)
     s += pack_sectors_by_tag(sector_ids)
@@ -1151,14 +1151,8 @@ __lua__
 
     logging.info("Generating {} binaries".format(release))
 
-    pack_release(modname, pico_path, carts_path, all_carts, release, mode=".bin")
-    pack_release(modname, pico_path, carts_path, all_carts, release, mode=".html")
-
-  # export_cmd=""
-  # for i in range(0,last_cart_id+1):
-  #   export_cmd += "{}_{}.p8 ".format(modname,i)
-  # print("export index.html {} {}.p8".format(export_cmd,modname))
-  # print("export {}.bin {} {}.p8".format(modname,export_cmd,modname))
+    pack_release(modname, pico_path, carts_path, all_carts, release, mode="bin")
+    pack_release(modname, pico_path, carts_path, all_carts, release, mode="html")
 
 def to_float(n):
   return float((n-0x100000000)/65535.0) if n>0x7fffffff else float(n/65535.0)

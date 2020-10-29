@@ -186,8 +186,20 @@ def pack_release(modname, pico_path, carts_path, all_carts, release, mode=".bin"
     main_cart = all_carts.pop(0)
 
     # 
-    cmd = " ".join([os.path.join(pico_path,"pico8.exe"),main_cart,"-export \"{}_{}{} {}\"".format(modname,release,mode," ".join(all_carts))])
+    cmd = " ".join([os.path.join(pico_path,"pico8.exe"),os.path.join(carts_path,main_cart),"-export \"{}_{}.{} {} -p fps\"".format(modname, release, mode," ".join(all_carts))])
     subprocess.run(cmd, cwd=carts_path, check=True)
+
+    #if mode=="html":
+    #    # update html plate
+    #    html = ""
+    #    with open(os.path.join(carts_path, "fps.html"), "r", encoding='utf-8') as f:
+    #        html = f.read()
+    #        html = html..replace("##game_label##","{}({})".format(modname, release)).replace("##js_file##","{}_{}.js".format(modname, release))
+    #    # ovewrite default plate
+    #    with open(os.path.join(carts_path, "{}_{}.html".format(modname, release)), "w", encoding='utf-8') as f:
+    #        f.write(html)
+    
+
 
 # read infile and write minified version to outfile
 def minify_file(infile, outfile):
