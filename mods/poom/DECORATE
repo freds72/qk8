@@ -181,7 +181,7 @@ actor PlasmaBall : Projectile 9998
 {
 	Radius 13
 	Height 8
-	Speed 50
+	Speed 150
  	Damage 5
  States
 	{

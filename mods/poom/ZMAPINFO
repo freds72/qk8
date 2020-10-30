@@ -1,7 +1,7 @@
 map E1M1 "Hangar"
 {
 	levelnum = 1
-	next = "E1M2"
+	next = "E1M3"
 	music = 0
 }
 
