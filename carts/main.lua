@@ -740,10 +740,10 @@ function with_physic(thing)
   local height,radius,mass,is_missile,is_player=actor.height,actor.radius,2*actor.mass,actor.is_missile,actor.id==1
   local ss,friction,forces,velocity,dz=thing.ssector,is_missile and 0.9967 or 0.9062,{0,0},{0,0},0
   return inherit({
-    apply_forces=function(self,x,y)
-      -- todo: review 96 arbitrary factor...
-      forces[1]+=64*x/mass
-      forces[2]+=64*y/mass
+    apply_forces=function(self,x,y,mag)
+      -- todo: review arbitrary factor...
+      forces[1]+=64*mag*x/mass
+      forces[2]+=64*mag*y/mass
     end,
     update=function(self)
       -- integrate forces
@@ -917,7 +917,7 @@ function with_health(thing)
       end
       -- kickback
       if dir then
-        self:apply_forces(hp*dir[1],hp*dir[2])
+        self:apply_forces(dir[1],dir[2],hp)
       end
       return hp
     end,
@@ -999,7 +999,7 @@ function attach_plyr(thing,actor,skill)
 
         self.angle-=da>>8
         local ca,sa=cos(self.angle),-sin(self.angle)
-        self:apply_forces(speed*(dz*ca-dx*sa),speed*(dz*sa+dx*ca))
+        self:apply_forces(dz*ca-dx*sa,dz*sa+dx*ca,speed)
 
         -- damping
         -- todo: move to physic code?
@@ -1554,7 +1554,7 @@ function unpack_actors()
         -- todo: get height from properties
         -- todo: improve z setting
         thing[3]=owner[3]+32
-        thing:apply_forces(speed*ca,speed*sa)         
+        thing:apply_forces(ca,sa,speed)         
         add_thing(thing)
       end
     end,
@@ -1639,7 +1639,7 @@ function unpack_actors()
             local mx,my=ny*dir+nx,nx*-dir+ny
             local target_angle=atan2(mx,-my)
             self.angle=lerp(shortest_angle(target_angle,self.angle),target_angle,0.5)
-            self:apply_forces(speed*mx,speed*my)
+            self:apply_forces(mx,my,speed)
           end
           return
         end
@@ -1671,7 +1671,7 @@ function unpack_actors()
       return function(self)
         -- nothing to face to?
         if self.target then   
-          self:apply_forces(speed*cos(self.angle),-speed*sin(self.angle))
+          self:apply_forces(cos(self.angle),-sin(self.angle),speed)
         end
       end
     end
