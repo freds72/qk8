@@ -266,9 +266,9 @@ function polyfill(v,xoffset,yoffset,tex,light)
           -- mode7 texturing
           local rz=cy/(y-63.5)
           local rx=rz*(a-63.5)>>7
-          local x,z=ca*rx+sa*rz+cx,-sa*rx+ca*rz+cz
         
-          tline(a,y,b,y,x,z,ca*rz>>7,-sa*rz>>7)   
+          -- camera space
+          tline(a,y,b,y,ca*rx+sa*rz+cx,ca*rz+cz-sa*rx,ca*rz>>7,-sa*rz>>7)   
         end       
       else
         spans[y]=x0
