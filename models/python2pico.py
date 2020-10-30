@@ -179,15 +179,18 @@ def to_multicart(s,pico_path,carts_path,cart_name,boot_code=None,label=None):
       to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_code=cart_id==0 and boot_code, label=cart_id==0 and label)
   return cart_id
 
-def pack_release(modname, pico_path, carts_path, all_carts, release, mode=".bin"):
+def pack_release(modname, pico_path, carts_path, all_carts, release, mode="bin"):
     all_carts = list(["{}_{}.p8".format(modname,id) for id in all_carts])
 
     # entry point
     main_cart = all_carts.pop(0)
 
-    # 
-    cmd = " ".join([os.path.join(pico_path,"pico8.exe"),os.path.join(carts_path,main_cart),"-export \"{}_{}.{} {} -p fps\"".format(modname, release, mode," ".join(all_carts))])
-    subprocess.run(cmd, cwd=carts_path, check=True)
+    #
+    option = ""
+    if mode == "html":
+        option = "-p fps"
+    cmd = " ".join([os.path.join(pico_path,"pico8.exe"),os.path.join("carts",main_cart),"-home",".","-export","\"{}_{}.{} {} {}\"".format(modname, release, mode,option," ".join(all_carts))])
+    subprocess.run(cmd, cwd=os.path.join(carts_path,".."), check=True)
 
     #if mode=="html":
     #    # update html plate

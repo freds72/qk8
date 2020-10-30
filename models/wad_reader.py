@@ -1151,7 +1151,8 @@ __lua__
 
     logging.info("Generating {} binaries".format(release))
 
-    pack_release(modname, pico_path, carts_path, all_carts, release, mode="bin")
+    # pico8 command line export is totally broken :/
+    # pack_release(modname, pico_path, carts_path, all_carts, release, mode="bin")
     pack_release(modname, pico_path, carts_path, all_carts, release, mode="html")
 
 def to_float(n):
