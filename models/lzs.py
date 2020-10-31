@@ -2,6 +2,9 @@ import time
 import sys 
 import array 
 
+# LZS compression
+# credits: https://www.excamera.com/sphinx/article-compression.html
+
 def prefix(s1, s2): 
   """ Return the length of the common prefix of s1 and s2 """
   sz = len(s2)

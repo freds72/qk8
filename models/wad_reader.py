@@ -1135,7 +1135,7 @@ __lua__
 #include {1}
 """.format(
   modname,
-  compress and "{}_title_mini.lua".format(modname) or "title.lua")
+  release and "{}_title_mini.lua".format(modname) or "title.lua")
 
   to_multicart(game_data, pico_path, carts_path, modname, boot_code=boot_code, label=label_image)
 
