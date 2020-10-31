@@ -263,6 +263,7 @@ function polyfill(v,xoffset,yoffset,tex,light)
           -- color shifing
           if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
 
+          a=a\1+1
           -- mode7 texturing
           local rx=rz*(a-63.5)>>7
         

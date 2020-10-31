@@ -22,11 +22,11 @@ end
 function next_state(fn,...)
   local u,d,i=fn(...)
   -- ensure update/draw pair is consistent
-  _update60=function()
+  _update=function()
     -- init function (if any)
     if(i) i()
     -- 
-    _update60,_draw=u,d
+    _update,_draw=u,d
     -- actually run the update
     u()
   end
@@ -57,6 +57,9 @@ function start_state()
     end,
     -- init
     function()
+      -- reset any bitplane masking
+      poke(0x5f5e,0xff)
+
       unpack_gfx(title_gfx.bytes,13)
     end  
 end
@@ -197,34 +200,13 @@ function launch_state(skill,id)
     end
 end
 
-function endgame_state(skill)
-  local ttl=9000
-  -- todo: music??
-  
-  return
-    function()
-      ttl-=1
-      if ttl<0 or btnp()!=0 then
-        -- back to startup screen
-        next_state(fadetoblack_state,start_state)
-      end
-    end,
-    function()
-      cls()
-      spr(0,0,0,16,16)
-      pal(endgame_gfx.pal,1)
-    end,
-    function()
-      unpack_gfx(endgame_gfx.bytes)
-    end
-end
 
-function credits_state()
+function credits_state()  
   local ttl=0
   local txt=split([[
 gAME eNGINE:
 @fsouchu
-lEVEL dESIGN+aRT:
+lEVEL dESIGN+aRT+sOUND:
 @paranoidcactus
 oRIGINAL mATERIAL:
 id sOFTWARE (mICROSOFT)
@@ -234,25 +216,52 @@ bsp eDITOR:
 sLADE 3+zbsp
 pICO8:
 zEP
-
 ]],"\n")
   return
     -- update
     function()
-      ttl+=0.33
+      if ttl>3000 or btnp(4) or btnp(5) then
+        -- back to startup screen
+        next_state(start_state)
+      end
+
+      ttl+=0.25
     end,
     -- draw
     function()
-      cls()
-      local y=64-ttl
+      -- doom fire!
+      -- credits: https://fabiensanglard.net/doom_fire_psx/index.html
+
+      -- draw 'fire plane'
+      poke(0x5f5e,0x77)
+      for x=0,127 do
+        for y=127,100,-1 do
+          local c=pget(x,y)
+          -- decay
+          pset((x+rnd(2)-1)&127,y-1,rnd()>0.5 and min(c+1,7) or c)
+        end
+      end
+      -- draw 'text plane'
+      poke(0x5f5e,0x88)      
+      rectfill(0,0,127,127,0)
+      local y=128-ttl
+      pal(1,8)
+      sspr(0,0,128,13,0,y,128,13)
+      pal()
+      y+=128
       for i,t in ipairs(txt) do
-        print(t,64-#t*2,y+1,1)
-        print(t,64-#t*2,y,(i-1)%2==0 and 6 or 12)
+        print(t,64-#t*2,y,8)
         y+=7
       end
+      pal({[0]=0,7,10,9,8,2,1,0,8,10,9,8,2,8,2,8},1)
     end,
     function()
+      cls()
       pal()
+      -- seed
+      memset(0x7fc0,0x11,64)
+      -- 
+      unpack_gfx(endgame_gfx.bytes)
     end
 end
 
@@ -315,7 +324,7 @@ function _init()
     -- 3: retry
     {slicefade_state,launch_state,skill,mapid},    
     -- 4: end game
-    {fadetoblack_state,endgame_state,skill+1}
+    {fadetoblack_state,credits_state}
   }
 
   -- wait time before launching (15 frames when loading from menu to prevent audio from getting cut too short)
