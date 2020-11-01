@@ -1094,7 +1094,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
 mod_name="{0}"
 _maps_group=split"{1}"
 _maps_cart=split"{2}"
-_maps_offset=split"{2}"
+_maps_offset=split"{3}"
 _maps_music=split"{4}"
 _wp_wheel=split("{5}","|")
   """.format(
