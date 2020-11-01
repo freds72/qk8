@@ -18,3 +18,8 @@ map E1M3 "Test"
 	next = "endgame"
 	music = 12
 }
+
+gameinfo 
+{
+	credits = "gAME eNGINE:,@fsouchu,lEVEL dESIGN+aRT+sOUND:,@paranoidcactus,oRIGINAL mATERIAL:,id sOFTWARE (mICROSOFT),rEFERENCE mATERIAL:,zdOOM wIKI,bsp eDITOR:,sLADE 3+zbsp,pICO8:,zEP"
+}

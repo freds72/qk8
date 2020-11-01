@@ -990,10 +990,11 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
   graphics_stream = FileStream(os.path.join(root, "graphics"))
 
   all_maps = []
+  gameinfo = {}
   if mapname=="":
     # all maps
     logging.info("Packing all mod maps")
-    all_maps = MapinfoReader(file_stream).read()
+    all_maps,gameinfo = MapinfoReader(file_stream).read()
   else:
     # single map
     logging.info("Packing single map: {}".format(mapname))
@@ -1086,31 +1087,18 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
     'endgame': pack_p8image(graphics_stream, "G_END", swap=True, mandatory=True)
   })
   
-  image_code="""
--- *********************************
--- generated code - do not edit
--- *********************************
-{}
-  """.format(
-    "\n".join(['{0}_gfx={{bytes="{1}",pal={{{2}}},w={3[0]},h={3[1]}}}'.format(k,bytes_to_base255(bytes.fromhex(data[0])),data[1],data[2]) for k,data in title_images.items()]))
-
-  with open(os.path.join(carts_path, "{}_images.lua".format(modname)), "w", encoding='utf-8') as f:
-    f.write(image_code)
-
   atlas_code="""
 -- *********************************
 -- generated code - do not edit
 -- *********************************
 mod_name="{0}"
-_maps_label=split"{1}"
-_maps_group=split"{2}"
-_maps_cart=split"{3}"
-_maps_offset=split"{4}"
-_maps_music=split"{5}"
-_wp_wheel=split("{6}","|")
+_maps_group=split"{1}"
+_maps_cart=split"{2}"
+_maps_offset=split"{2}"
+_maps_music=split"{4}"
+_wp_wheel=split("{5}","|")
   """.format(
   modname,
-  ",".join(["{}".format(m.label) for m in all_maps]),
   ",".join(["{}".format("{}_{}".format(modname,m.group)) for m in all_maps]),
   ",".join(["{}".format(m.cart_id) for m in all_maps]),
   ",".join(["{}".format(m.cart_offset) for m in all_maps]),
@@ -1131,10 +1119,15 @@ __lua__
 -- generated code - do not edit
 -- *********************************
 #include {0}_atlas.lua
-#include {0}_images.lua
-#include {1}
+{1}
+_maps_label=split"{2}"
+_credits=split"{3}"
+#include {4}
 """.format(
   modname,
+  "\n".join(['{0}_gfx={{bytes="{1}",pal={{{2}}},w={3[0]},h={3[1]}}}'.format(k,bytes_to_base255(bytes.fromhex(data[0])),data[1],data[2]) for k,data in title_images.items()]),
+  ",".join(["{}".format(m.label) for m in all_maps]),
+  gameinfo.get('credits',""),
   release and "{}_title_mini.lua".format(modname) or "title.lua")
 
   to_multicart(game_data, pico_path, carts_path, modname, boot_code=boot_code, label=label_image)

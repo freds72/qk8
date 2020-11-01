@@ -17,12 +17,21 @@ class MAPINFOListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by MAPINFOParser#block.
-    def enterBlock(self, ctx:MAPINFOParser.BlockContext):
+    # Enter a parse tree produced by MAPINFOParser#mapblock.
+    def enterMapblock(self, ctx:MAPINFOParser.MapblockContext):
         pass
 
-    # Exit a parse tree produced by MAPINFOParser#block.
-    def exitBlock(self, ctx:MAPINFOParser.BlockContext):
+    # Exit a parse tree produced by MAPINFOParser#mapblock.
+    def exitMapblock(self, ctx:MAPINFOParser.MapblockContext):
+        pass
+
+
+    # Enter a parse tree produced by MAPINFOParser#infoblock.
+    def enterInfoblock(self, ctx:MAPINFOParser.InfoblockContext):
+        pass
+
+    # Exit a parse tree produced by MAPINFOParser#infoblock.
+    def exitInfoblock(self, ctx:MAPINFOParser.InfoblockContext):
         pass
 
 

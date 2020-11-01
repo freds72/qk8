@@ -14,8 +14,13 @@ class MAPINFOVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by MAPINFOParser#block.
-    def visitBlock(self, ctx:MAPINFOParser.BlockContext):
+    # Visit a parse tree produced by MAPINFOParser#mapblock.
+    def visitMapblock(self, ctx:MAPINFOParser.MapblockContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by MAPINFOParser#infoblock.
+    def visitInfoblock(self, ctx:MAPINFOParser.InfoblockContext):
         return self.visitChildren(ctx)
 
 

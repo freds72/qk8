@@ -4,11 +4,15 @@ grammar MAPINFO;
 
 // parser
 maps:
-  block* EOF
+  (mapblock|infoblock)* EOF
   ;
 
-block:
+mapblock:
   'map' maplump label '{' pair* '}'
+  ;
+
+infoblock:
+  'gameinfo' '{' pair* '}'
   ;
 
 pair:

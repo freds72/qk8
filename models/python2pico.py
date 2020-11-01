@@ -134,7 +134,7 @@ cstore(0, 0, 0x4300, "{}")
 
     if cart_code:
         cart = cart_code
-        with open(os.path.join(carts_path,cart_filename),"r") as f:
+        with open(os.path.join(carts_path,cart_filename),"r", encoding='utf-8') as f:
             copy = False
             for line in f:
                 line = line.rstrip("\n\r")
@@ -147,19 +147,19 @@ cstore(0, 0, 0x4300, "{}")
                 if copy:
                     cart += line
                     cart += "\n"
-        with open(os.path.join(carts_path,cart_filename),"w") as f:                   
+        with open(os.path.join(carts_path,cart_filename),"w", encoding='utf-8') as f:                   
             f.write(cart)
 
     # label image
     if label:
         cart = ""
-        with open(os.path.join(carts_path,cart_filename),"r") as f:
+        with open(os.path.join(carts_path,cart_filename),"r", encoding='utf-8') as f:
             cart = f.read()
         
         cart += "\n__label__\n"
         cart += re.sub("(.{128})", "\\1\n", label, 0, re.DOTALL)
         cart += "\n"
-        with open(os.path.join(carts_path,cart_filename),"w") as f:                   
+        with open(os.path.join(carts_path,cart_filename),"w", encoding='utf-8') as f:                   
             f.write(cart)
     
     os.unlink(cart_path)
@@ -189,8 +189,9 @@ def pack_release(modname, pico_path, carts_path, all_carts, release, mode="bin")
     option = ""
     if mode == "html":
         option = "-p fps"
-    cmd = " ".join([os.path.join(pico_path,"pico8.exe"),os.path.join("carts",main_cart),"-home",".","-export","\"{}_{}.{} {} {}\"".format(modname, release, mode,option," ".join(all_carts))])
-    subprocess.run(cmd, cwd=os.path.join(carts_path,".."), check=True)
+    cmd = " ".join([os.path.join(pico_path,"pico8.exe"),main_cart,"-export","\"{}_{}.{} {} {}\"".format(modname, release, mode,option," ".join(all_carts))])
+    print(cmd)
+    subprocess.run(cmd, cwd=os.path.join(carts_path), check=True)
 
     #if mode=="html":
     #    # update html plate

@@ -203,20 +203,6 @@ end
 
 function credits_state()  
   local ttl=0
-  local txt=split([[
-gAME eNGINE:
-@fsouchu
-lEVEL dESIGN+aRT+sOUND:
-@paranoidcactus
-oRIGINAL mATERIAL:
-id sOFTWARE (mICROSOFT)
-rEFERENCE mATERIAL:
-zdOOM wIKI
-bsp eDITOR:
-sLADE 3+zbsp
-pICO8:
-zEP
-]],"\n")
   return
     -- update
     function()
@@ -249,7 +235,7 @@ zEP
       sspr(0,0,128,13,0,y,128,13)
       pal()
       y+=128
-      for i,t in ipairs(txt) do
+      for i,t in ipairs(_credits) do
         print(t,64-#t*2,y,8)
         y+=7
       end

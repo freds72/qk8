@@ -14,8 +14,11 @@ from dotdict import dotdict
 class MAPINFO(MAPINFOListener):
   def __init__(self):
     self.maps = {}
-      
-  def exitBlock(self, ctx):  
+    self.gameinfo = dotdict({
+      "credits":"gAME eNGINE:,@fsouchu"
+    })
+
+  def exitMapblock(self, ctx):  
     lump = ctx.maplump().getText()
     label = ctx.label().getText().strip('"')
     logging.info("Found map entry: {} label: {}".format(lump, label))
@@ -40,6 +43,12 @@ class MAPINFO(MAPINFOListener):
       'next': properties.get('next','endgame')
     })
   
+  def exitInfoblock(self, ctx):
+    for pair in ctx.pair():
+      attribute = pair.keyword().getText().lower()
+      value = pair.value().getText().strip('"')
+      self.gameinfo[attribute] = value
+
   
 # Converts a TEXTURE file definition into a set of unique tiles + map index
 class MapinfoReader(MAPINFOListener):
@@ -72,5 +81,5 @@ class MapinfoReader(MAPINFOListener):
       curmap = listener.maps[curmap.next]
       allmaps.append(curmap)
 
-    return allmaps
+    return allmaps,listener.gameinfo
 
