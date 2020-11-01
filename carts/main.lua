@@ -386,7 +386,7 @@ function draw_walls(segs,v_cache,light)
 end
 
 -- ceil/floor/wal rendering
-function draw_flats(v_cache,segs,things)
+function draw_flats(v_cache,segs)
   local verts,outcode,nearclip={},0xffff,0
   local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
   
