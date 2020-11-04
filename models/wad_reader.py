@@ -672,6 +672,9 @@ def pack_actors(image_reader, actors):
     # behavior flags
     flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2 | pack_flag(actor, 'ismonster')<<3 | pack_flag(actor, 'nogravity')<<4 | pack_flag(actor, 'float')<<5 | pack_flag(actor, 'dropoff')<<6 | pack_flag(actor, 'dontfall')<<7
     s += "{:02x}".format(flags)
+    # behavior flags (cont.)
+    flags = pack_flag(actor, 'randomize')
+    s += "{:02x}".format(flags)
     # mandatory/shared properties
     s += pack_fixed(actor.radius)
     s += pack_fixed(actor.height)
@@ -719,15 +722,6 @@ def pack_actors(image_reader, actors):
     if actor.get('ammotype'):
       properties |= 0x200
       properties_data += pack_variant(actor.ammotype)
-    if actor.get('startitems'):
-      properties |= 0x400
-      startitems = actor.startitems
-      properties_data += pack_variant(len(startitems))
-      for si in startitems:
-        # other actor reference
-        properties_data += pack_variant(si[0])
-        # amount
-        properties_data += pack_variant(si[1])
     if actor.get('mass'):
       properties |= 0x800
       properties_data += pack_variant(actor.mass)      
@@ -751,7 +745,21 @@ def pack_actors(image_reader, actors):
       properties_data += pack_variant(actor.maxtargetrange)      
     if actor.get('ammogive'):
       properties |= 0x40000
-      properties_data += pack_variant(actor.ammogive)      
+      properties_data += pack_variant(actor.ammogive)     
+    if actor.get('trailtype'):
+      properties |= 0x80000
+      properties_data += pack_variant(actor.trailtype)     
+
+    # must be at the end 
+    if actor.get('startitems'):
+      properties |= 0x400
+      startitems = actor.startitems
+      properties_data += pack_variant(len(startitems))
+      for si in startitems:
+        # other actor reference
+        properties_data += pack_variant(si[0])
+        # amount
+        properties_data += pack_variant(si[1])
 
     s += pack_int32(properties)
     s += properties_data

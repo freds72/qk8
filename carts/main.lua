@@ -852,6 +852,15 @@ function with_physic(thing)
         -- apply move
         v2_add(self,velocity)
 
+        -- trail?
+        if actor.trailtype  then
+          local puffthing=make_thing(actor.trailtype,self[1],self[2],0,self.angle)
+          -- todo: get height from properties
+          -- todo: improve z setting
+          puffthing[3]=h
+          add_thing(puffthing)
+        end
+
         -- refresh sector after fixed collision
         ss=find_sub_sector(_bsp,self)
 
@@ -1485,7 +1494,7 @@ function unpack_actors()
 
   -- inventory & things
   -- actor properties + skill ammo factor
-  local properties_factory=split("0x0.0001,health,unpack_variant,0x0.0002,armor,unpack_variant,0x0.0004,amount,unpack_variant,0x0.0008,maxamount,unpack_variant,0x0.0010,icon,unpack_chr,0x0.0020,slot,mpeek,0x0.0040,ammouse,unpack_variant,0x0.0080,speed,unpack_variant,0x0.0100,damage,unpack_variant,0x0.0200,ammotype,unpack_actor_ref,0x0.0800,mass,unpack_variant,0x0.1000,pickupsound,unpack_variant,0x0.2000,attacksound,unpack_variant,0x0.4000,hudcolor,unpack_variant,0x0.8000,deathsound,unpack_variant,0x1,meleerange,unpack_variant,0x2,maxtargetrange,unpack_variant,0x4,ammogive,unpack_variant",",",1)
+  local properties_factory=split("0x0.0001,health,unpack_variant,0x0.0002,armor,unpack_variant,0x0.0004,amount,unpack_variant,0x0.0008,maxamount,unpack_variant,0x0.0010,icon,unpack_chr,0x0.0020,slot,mpeek,0x0.0040,ammouse,unpack_variant,0x0.0080,speed,unpack_variant,0x0.0100,damage,unpack_variant,0x0.0200,ammotype,unpack_actor_ref,0x0.0800,mass,unpack_variant,0x0.1000,pickupsound,unpack_variant,0x0.2000,attacksound,unpack_variant,0x0.4000,hudcolor,unpack_variant,0x0.8000,deathsound,unpack_variant,0x1,meleerange,unpack_variant,0x2,maxtargetrange,unpack_variant,0x4,ammogive,unpack_variant,0x8,trailtype,unpack_actor_ref",",",1)
 
   -- actors functions
   local function_factory={
@@ -1665,9 +1674,10 @@ function unpack_actors()
   -- float
   -- dropoff
   -- dontfall
-  local all_flags=split("0x1,is_solid,0x2,is_shootable,0x4,is_missile,0x8,is_monster,0x10,is_nogravity,0x20,is_float,0x40,is_dropoff,0x80,is_dontfall,0x10,rockettrail,0x20,randomize",",",1)
+  local all_flags=split("0x1,is_solid,0x2,is_shootable,0x4,is_missile,0x8,is_monster,0x10,is_nogravity,0x20,is_float,0x40,is_dropoff,0x80,is_dontfall,0x100,randomize",",",1)
   unpack_array(function()
     local kind,id,flags,state_labels,states,weapons,active_slot,inventory=unpack_variant(),unpack_variant(),mpeek()|mpeek()<<8,{},{},{}
+    local randomize=flags&0x200!=0
 
     local item={
       id=id,
@@ -1678,7 +1688,7 @@ function unpack_actors()
       -- attach actor to this thing
       attach=function(self,thing)
         -- vm state (starts at spawn)
-        local i,ticks,rnd_tick=state_labels[0],-2,0
+        local i,ticks,rnd_tick=state_labels[0],-2,randomize and rnd(4)\1 or 0
 
         -- extend properties
         thing=inherit({
@@ -1694,7 +1704,7 @@ function unpack_actors()
           jump_to=function(self,label,fallback)
             i,ticks=state_labels[label] or (fallback and state_labels[fallback]),-2
             -- randomize?
-            if(label==5 and flags&0x20!=0) rnd_tick=rnd(4)\1
+            if(randomize and label==5) rnd_tick=rnd(4)\1
           end,
           -- vm update
           tick=function(self)
