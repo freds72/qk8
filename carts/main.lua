@@ -300,10 +300,9 @@ local function v_clip(v0,v1,t)
     }
 end
 
--- ceil/floor/wal rendering
+-- ceil/floor/wall rendering
 function draw_flats(v_cache,segs)
-  local verts,outcode,nearclip={},0xffff,0
-  local m1,m3,m4,m8,m9,m11,m12=unpack(_cam.m)
+  local verts,outcode,nearclip,m1,m3,m4,m8,m9,m11,m12={},0xffff,0,unpack(_cam.m)
   
   -- to cam space + clipping flags
   for i,seg in ipairs(segs) do
@@ -360,10 +359,9 @@ function draw_flats(v_cache,segs)
       if(floor+m8<0) polyfill(verts,sector.tx or 0,floor,sector.floortex,light)
       if(ceil+m8>0) polyfill(verts,0,ceil,sector.ceiltex,light)
 
-      -- walls
+      -- draw walls
       -- get heights
-      local sector=segs.sector
-      local v0,top,bottom,pal0=verts[#verts],ceil>>4,floor>>4
+      local v0,top,bottom=verts[#verts],ceil>>4,floor>>4
       local x0,y0,w0=v0.x,v0.y,v0.w
     
       for i,v1 in ipairs(verts) do
@@ -1148,7 +1146,7 @@ function draw_bsp()
   --
   -- draw bsp & visible things
   -- 
-  local pvs,pos,v_cache=_plyr.ssector.pvs,_plyr,{}
+  local pvs,v_cache=_plyr.ssector.pvs,{}
   visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
     if node.leaf[side] then
       local subs=node[side]
@@ -1361,6 +1359,15 @@ function unpack_bbox()
   return {l,b,l,t,r,t,r,b}
 end
 
+function unpack_chr()
+  return chr(mpeek())
+end
+
+-- inventory & things
+function unpack_actor_ref(actors)
+  return actors[unpack_variant()]
+end
+
 function unpack_special(sectors,actors)
   local special=mpeek()
   local function unpack_moving_sectors(what)
@@ -1477,39 +1484,14 @@ function unpack_actors()
   end)
 
   -- inventory & things
-  local unpack_actor_ref=function()
-    return actors[unpack_variant()]
-  end
-
   -- actor properties + skill ammo factor
-  local properties_factory={
-    {0x0.0001,"health"},
-    {0x0.0002,"armor"},
-    {0x0.0004,"amount"},
-    {0x0.0008,"maxamount"},
-    -- convert icon code into character
-    {0x0.0010,"icon",function() return chr(mpeek()) end},
-    {0x0.0020,"slot",mpeek},
-    {0x0.0040,"ammouse"},
-    {0x0.0080,"speed"},
-    {0x0.0100,"damage"},
-    {0x0.0200,"ammotype",unpack_actor_ref},
-    {0x0.0800,"mass"},
-    -- some actor have multiple sounds (weapon for ex.)
-    {0x0.1000,"pickupsound"},
-    {0x0.2000,"attacksound"},
-    {0x0.4000,"hudcolor"},
-    {0x0.8000,"deathsound"},
-    {0x1,"meleerange"},
-    {0x2,"maxtargetrange"},
-    {0x4,"ammogive"}
-  }
+  local properties_factory=split("0x0.0001,health,unpack_variant,0x0.0002,armor,unpack_variant,0x0.0004,amount,unpack_variant,0x0.0008,maxamount,unpack_variant,0x0.0010,icon,unpack_chr,0x0.0020,slot,mpeek,0x0.0040,ammouse,unpack_variant,0x0.0080,speed,unpack_variant,0x0.0100,damage,unpack_variant,0x0.0200,ammotype,unpack_actor_ref,0x0.0800,mass,unpack_variant,0x0.1000,pickupsound,unpack_variant,0x0.2000,attacksound,unpack_variant,0x0.4000,hudcolor,unpack_variant,0x0.8000,deathsound,unpack_variant,0x1,meleerange,unpack_variant,0x2,maxtargetrange,unpack_variant,0x4,ammogive,unpack_variant",",",1)
 
   -- actors functions
   local function_factory={
     -- A_FireBullets
     function()
-      local xspread,yspread,bullets,dmg,puff=unpack_fixed(),unpack_fixed(),mpeek(),mpeek(),unpack_actor_ref()
+      local xspread,yspread,bullets,dmg,puff=unpack_fixed(),unpack_fixed(),mpeek(),mpeek(),unpack_actor_ref(actors)
       return function(owner)
         -- find 'real' owner
         owner=owner.owner or owner
@@ -1528,7 +1510,7 @@ function unpack_actors()
     end,
     -- A_FireProjectile
     function()
-      local projectile=unpack_actor_ref()
+      local projectile=unpack_actor_ref(actors)
       return function(owner)
         -- find 'real' owner
         owner=owner.owner or owner
@@ -1644,7 +1626,7 @@ function unpack_actors()
     end,
     -- A_MeleeAttack
     function()
-      local dmg,puff=mpeek(),unpack_actor_ref()
+      local dmg,puff=mpeek(),unpack_actor_ref(actors)
       return function(owner)
         -- find 'real' owner
         owner=owner.owner or owner
@@ -1683,9 +1665,9 @@ function unpack_actors()
   -- float
   -- dropoff
   -- dontfall
-  local all_flags=split("0x1,is_solid,0x2,is_shootable,0x4,is_missile,0x8,is_monster,0x10,is_nogravity,0x20,is_float,0x40,is_dropoff,0x80,is_dontfall",",",1)
+  local all_flags=split("0x1,is_solid,0x2,is_shootable,0x4,is_missile,0x8,is_monster,0x10,is_nogravity,0x20,is_float,0x40,is_dropoff,0x80,is_dontfall,0x10,rockettrail,0x20,randomize",",",1)
   unpack_array(function()
-    local kind,id,flags,state_labels,states,weapons,active_slot,inventory=unpack_variant(),unpack_variant(),mpeek(),{},{},{}
+    local kind,id,flags,state_labels,states,weapons,active_slot,inventory=unpack_variant(),unpack_variant(),mpeek()|mpeek()<<8,{},{},{}
 
     local item={
       id=id,
@@ -1696,7 +1678,7 @@ function unpack_actors()
       -- attach actor to this thing
       attach=function(self,thing)
         -- vm state (starts at spawn)
-        local i,ticks=state_labels[0],-2
+        local i,ticks,rnd_tick=state_labels[0],-2,0
 
         -- extend properties
         thing=inherit({
@@ -1711,6 +1693,8 @@ function unpack_actors()
           -- goto vm label
           jump_to=function(self,label,fallback)
             i,ticks=state_labels[label] or (fallback and state_labels[fallback]),-2
+            -- randomize?
+            if(label==5 and flags&0x20!=0) rnd_tick=rnd(4)\1
           end,
           -- vm update
           tick=function(self)
@@ -1729,7 +1713,8 @@ function unpack_actors()
               -- effective state
               self.state=state
               -- get ticks
-              ticks=state[1]
+              ticks=max(-1,state[1]-rnd_tick)
+              rnd_tick=0
               -- trigger function (if any)
               if(state.fn) state.fn(self)
             end
@@ -1750,10 +1735,17 @@ function unpack_actors()
     end
 
     local properties=unpack_fixed()
-    -- warning: update if adding new properties
-    properties_factory[19]={0x0.0400,"",function()
+    -- decode 
+    for i=1,#properties_factory,3 do
+      if properties_factory[i]&properties!=0 then
+        -- unpack
+        item[properties_factory[i+1]]=_ENV[properties_factory[i+2]](actors)
+      end
+    end
+    -- startitems (always packed at the end)
+    if properties&0x0.0400!=0 then
       unpack_array(function()
-        local startitem,amount=unpack_actor_ref(),unpack_variant()
+        local startitem,amount=unpack_actor_ref(actors),unpack_variant()
         if startitem.kind==2 then
           -- weapon
           weapons=weapons or {}
@@ -1769,16 +1761,8 @@ function unpack_actors()
           inventory[startitem]=amount
         end
       end)
-    end}
-
-    -- decode 
-    for _,props in ipairs(properties_factory) do
-      local mask,k,fn=unpack(props)
-      if mask&properties!=0 then
-        -- unpack
-        item[k]=(fn or unpack_variant)()
-      end
     end
+
     local function pickup(thing,owner,ref,qty,maxqty)
       ref,maxqty=ref or item,maxqty or item.maxamount
       -- only pick up if we're below max quantity
