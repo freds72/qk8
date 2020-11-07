@@ -832,12 +832,11 @@ def pack_image(img, palette=None, label=False):
 
   data = bytearray()
   for y in range(img.size[1]):
-    for x in range(0,img.size[0],8):
-      for n in range(0,8,2):
-        low = p.register(img.getpixel((x + n, y)))
-        high = p.register(img.getpixel((x + n + 1,y)))
-        data.append(low)
-        data.append(high)
+    for x in range(0,img.size[0],2):
+      low = p.register(img.getpixel((x, y)))
+      high = p.register(img.getpixel((x + 1,y)))
+      data.append(low)
+      data.append(high)
   
   s = ""
   pal = p.pal(label=label)
@@ -848,7 +847,7 @@ def pack_image(img, palette=None, label=False):
   return s, pal
 
 # convert image to pico8 format
-def pack_p8image(stream, asset, palette=None, swap=False, size=None, mandatory=False, label=False):
+def pack_p8image(stream, asset, palette=None, swap=False, min_size=(0,0), max_size=(128,128), crop=False, mandatory=False, label=False):
   src = None
   try:
     src = Image.open(io.BytesIO(stream.read(asset)))
@@ -860,9 +859,12 @@ def pack_p8image(stream, asset, palette=None, swap=False, size=None, mandatory=F
     return (None,None,None)
   
   logging.info("Packing image: {}".format(asset))
-  size = size or src.size
-  if size[0]!=128:
-    raise Exception("Image: {} invalid size: {} - Must be 128px width".format(asset, size))
+  # check allowed size  
+  size = src.size
+  if crop and size>max_size:
+    size = max_size
+  if size>max_size or size<min_size:
+    raise Exception("Image: {} invalid size: {} - Must be between {} and {}".format(asset, size, min_size, max_size))
   img = Image.new('RGBA', size, (0,0,0,0))
   img.paste(src)
   data,autopalette = pack_image(img, palette=palette, label=label)
@@ -1023,7 +1025,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
   actors = DecorateReader(file_stream).actors
   
   # cart label (optional) - uses title image
-  label_image,label_pal,label_size = pack_p8image(graphics_stream, "G_TITLE", size=(128,128), label=True)
+  label_image,label_pal,label_size = pack_p8image(graphics_stream, "G_TITLE", min_size=(128,128), crop=True, label=True)
 
   # pack actors (shared by all maps)
   game_data = pack_actors(image_reader, actors)
@@ -1053,19 +1055,28 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
       textures = reader.read(active_textures)
 
       skybox_data = ""
+      skyboxes = {}
       for i,m in enumerate(maps):
         # locate maps in multicarts
         logging.info("Packing map: {}".format(m.name))
         m.cart_id = int(len(game_data)/cart_len)
         m.cart_offset = int((len(game_data)%cart_len)/2)        
         if m.sky:
-          skybox_img,skybox_code,skybox_size = pack_p8image(graphics_stream, m.sky, palette=colormap.palette, mandatory=True)
-          m.sky_height = skybox_size[1]-1 # to repeat last pixel line
-          m.sky_offset = int(len(skybox_data)/2)+len(gradients)+0x4300
-          skybox_data += skybox_img
+          print("{}:{}".format(m.name,m.sky))
+          if m.sky not in skyboxes:            
+            skybox_img,skybox_code,skybox_size = pack_p8image(graphics_stream, m.sky, palette=colormap.palette, mandatory=True, min_size=(2,0), max_size=(2,128))
+            skyboxes[m.sky] = dotdict({
+              'height': skybox_size[1]-1,
+              'offset': int(len(skybox_data)/2)+len(gradients)+0x4300
+            })
+            skybox_data += skybox_img
+          m.sky = skyboxes[m.sky]   
+          print(m.sky)   
         else:
-          m.sky_height = 0
-          m.sky_offset = 0
+          m.sky = dotdict({
+            'height': 0,
+            'offset': 0
+          }) 
         # compress each map separately 
         map_data = pack_zmap(m.zmap, textures, actors)
         game_data += compress and compress_byte_str(map_data) or map_data
@@ -1100,9 +1111,8 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
 
   # get loading game image
   logging.info("Packing title images")  
-  # todo: provide default images
   title_images = dotdict({
-    'title': pack_p8image(graphics_stream, "G_TITLE", swap=True, mandatory=True),    
+    'title': pack_p8image(graphics_stream, "G_TITLE", swap=True, mandatory=True, min_size=(128,140),max_size=(128,140)),    
     'loading': pack_p8image(graphics_stream, "G_LOAD", palette=colormap.palette, swap=True, mandatory=True),
     'endgame': pack_p8image(graphics_stream, "G_END", swap=True, mandatory=True)
   })
@@ -1123,7 +1133,7 @@ _wp_wheel=split("{6}","|")
   ",".join(["{}".format("{}_{}".format(modname,m.group)) for m in all_maps]),
   ",".join(["{}".format(m.cart_id) for m in all_maps]),
   ",".join(["{}".format(m.cart_offset) for m in all_maps]),
-  ",".join(["{},0x{:04x}".format(m.sky_height,m.sky_offset) for m in all_maps]),
+  ",".join(["{},0x{:04x}".format(m.sky.height,m.sky.offset) for m in all_maps]),
   ",".join(["{}".format(m.music) for m in all_maps]),
   wp_wheel_data)
 

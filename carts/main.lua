@@ -233,17 +233,15 @@ end
 -- floor/ceiling n-gon filling routine
 -- xoffset: used as texture offset
 -- yoffset: height
+-- if tex is 0: renders skybox gradient
 function polyfill(v,xoffset,yoffset,tex,light)
   poke4(0x5f38,tex)
   local _tline,_memcpy=tline,memcpy
   if tex==0 then
-    -- backup sprite line
-    memcpy(0x52c0,0x0,64)
     pal()
     _memcpy,_tline=time,function(x0,y0,x1) 
-      x0,x1=mid(x0\1,0,127),mid(x1\1,0,127)
-      memcpy(0x0,_sky_offset+(min(y0,_sky_height)<<6),64)
-      sspr(x0,0,x1-x0+1,1,x0,y0)
+      if(y0>_sky_height) y0=_sky_height
+      rectfill(x0,y0,x1,y0,@(_sky_offset+y0))
     end
   end
 
@@ -290,8 +288,7 @@ function polyfill(v,xoffset,yoffset,tex,light)
     x0=_x1
     y0=_y1
     w0=_w1
-  end
-  if(tex==0) memcpy(0x0,0x52c0,64)
+  end  
 end
 
 local function v_clip(v0,v1,t)
@@ -1343,6 +1340,8 @@ function _init()
   -- sky texture
   local id=_map_id*2-2
   _sky_height,_sky_offset=_maps_sky[id+1],_maps_sky[id+2]
+  -- skybox fill pattern
+  fillp(0xaaaa)
 
   next_state(play_state)
 end
