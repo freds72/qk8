@@ -141,7 +141,9 @@ function menu_state()
 
       -- menu items
       for i=1,#menus[menu_i][2] do
-        printb(menus[menu_i][2][i],28,72+i*9,i<=menus[menu_i].max and vcol(4) or vcol(3))
+        local s=menus[menu_i][2][i]
+        if(i>menus[menu_i].max) s=masked(s)
+        printb(s,28,72+i*9,i<=menus[menu_i].max and vcol(4) or vcol(3))
       end
       
       pal(title_gfx.pal,1)
@@ -174,23 +176,34 @@ function fadetoblack_state(...)
 end
 
 function stats_state(skill,id,level_time,kills,monsters,secrets,all_secrets)
-  local ttl=120
+  local ttl,msg_ttl,max_msg=0,0,2
+  local msgs={
+    "completed:",
+    _maps_label[id],
+    "time: "..time_tostr(level_time),
+    "kills: "..kills.."/"..monsters,
+    all_secrets>0 and "secrets: "..secrets.."/"..all_secrets
+  }
+
   return
     function()
-      ttl-=1
-      if ttl<0 or btnp(4) or btnp(5) then
-        next_state(launch_state,skill,id)
+      if ttl>600 or btnp(4) or btnp(5) then
+        next_state(launch_state,skill,id+1)
+      end
+      ttl+=1
+      msg_ttl+=1
+      if msg_ttl>15 and max_msg<#msgs then
+        sfx(0)
+        max_msg+=1
+        msg_ttl=0
       end
     end,
-    function()
-      local s="time: "..level_time      
-      printb(s,63-#s*2,60,15)
-      s="kills: "..kills.."/"..monsters
-      printb(s,63-#s*2,70,15)
-      -- does map have any secret?
-      if all_secrets>0 then
-        s="secrets: "..secrets.."/"..all_secrets
-        printb(s,63-#s*2,80,15)
+    function()   
+      local y=40   
+      for i=1,max_msg do
+        local s=msgs[i]
+        printb(s,63-#s*2,y,15)
+        y+=10
       end
     end
 end
@@ -328,7 +341,7 @@ function _init()
     -- 1: game over
     {fadetoblack_state,start_state},
     -- 2: next level
-    {slicefade_state,stats_state,skill,mapid+1,level_time,kills,monsters,secrets,_secrets[mapid]},
+    {slicefade_state,stats_state,skill,mapid,level_time,kills,monsters,secrets,_secrets[mapid]},
     -- 3: retry
     {slicefade_state,launch_state,skill,mapid},    
     -- 4: end game
@@ -339,7 +352,6 @@ function _init()
   launch_ttl=(state==2 or state==3) and 1 or 15
 
   next_state(unpack(states[state]))
-  --next_state(credits_state)
 end
 
 -->8
@@ -348,6 +360,24 @@ function printb(s,x,y,c,bgc)
   bgc=bgc or 0
   print(s,x,y+1,bgc)
   print(s,x,y,c)
+end
+
+function padding(n)
+	n=tostr(min(n,99)\1)
+	return sub("00",1,2-#n)..n
+end
+
+function masked(s)
+  local q=""
+  for i=1,#s do
+    q=q.."?"
+  end
+  return q
+end
+
+-- frames per sec to human time (mm'ss''zzz')
+function time_tostr(t)
+	return padding((t\60)%60).."'"..padding(t%60).."''"..padding((t&0x0.ffff)*100)
 end
 
 function lerp(a,b,t)
