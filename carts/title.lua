@@ -182,7 +182,7 @@ function stats_state(skill,id,level_time,kills,monsters,secrets,all_secrets)
     _maps_label[id],
     "time: "..time_tostr(level_time),
     "kills: "..kills.."/"..monsters,
-    all_secrets>0 and "secrets: "..secrets.."/"..all_secrets
+    all_secrets>0 and "secrets: "..secrets.."/"..all_secrets or nil
   }
 
   return
@@ -351,7 +351,7 @@ function _init()
   -- wait time before launching (15 frames when loading from menu to prevent audio from getting cut too short)
   launch_ttl=(state==2 or state==3) and 1 or 15
 
-  next_state(unpack(states[state]))
+  next_state(unpack(states[state]))  
 end
 
 -->8
@@ -370,7 +370,8 @@ end
 function masked(s)
   local q=""
   for i=1,#s do
-    q=q.."?"
+    local c=sub(s,i,i)
+    q=q..(c==" " and c or "?")
   end
   return q
 end
