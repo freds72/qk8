@@ -1062,7 +1062,6 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
         m.cart_id = int(len(game_data)/cart_len)
         m.cart_offset = int((len(game_data)%cart_len)/2)        
         if m.sky:
-          print("{}:{}".format(m.name,m.sky))
           if m.sky not in skyboxes:            
             skybox_img,skybox_code,skybox_size = pack_p8image(graphics_stream, m.sky, palette=colormap.palette, mandatory=True, min_size=(2,0), max_size=(2,128))
             skyboxes[m.sky] = dotdict({
@@ -1071,7 +1070,6 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
             })
             skybox_data += skybox_img
           m.sky = skyboxes[m.sky]   
-          print(m.sky)   
         else:
           m.sky = dotdict({
             'height': 0,
