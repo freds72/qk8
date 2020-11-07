@@ -672,7 +672,7 @@ def pack_actors(image_reader, actors):
     flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2 | pack_flag(actor, 'ismonster')<<3 | pack_flag(actor, 'nogravity')<<4 | pack_flag(actor, 'float')<<5 | pack_flag(actor, 'dropoff')<<6 | pack_flag(actor, 'dontfall')<<7
     s += "{:02x}".format(flags)
     # behavior flags (cont.)
-    flags = pack_flag(actor, 'randomize')
+    flags = pack_flag(actor, 'randomize') | pack_flag(actor, 'countkill')<<1
     s += "{:02x}".format(flags)
     # mandatory/shared properties
     s += pack_fixed(actor.radius)
@@ -1044,6 +1044,8 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
         logging.info("Reading map WAD: {}".format(m.name))
         zmap = load_WAD(maps_stream, m.name) 
         m.zmap = zmap
+        # records number of secrets
+        m.secrets = len([sector for sector in zmap.sectors if sector.special==195])
         active_textures |= get_zmap_textures(zmap)
 
       # decode textures
@@ -1142,12 +1144,14 @@ __lua__
 {1}
 _maps_label=split"{2}"
 _credits=split"{3}"
-#include {4}
+_secrets=split("{4}",",",1)
+#include {5}
 """.format(
   modname,
   "\n".join(['{0}_gfx={{bytes="{1}",pal={{{2}}},w={3[0]},h={3[1]}}}'.format(k,bytes_to_base255(bytes.fromhex(data[0])),data[1],data[2]) for k,data in title_images.items()]),
   ",".join(["{}".format(m.label) for m in all_maps]),
   gameinfo.get('credits',""),
+  ",".join(["{}".format(m.secrets) for m in all_maps]),
   release and "{}_title_mini.lua".format(modname) or "title.lua")
 
   to_multicart(game_data, pico_path, carts_path, modname, boot_code=boot_code, label=label_image)

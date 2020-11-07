@@ -173,7 +173,29 @@ function fadetoblack_state(...)
     end
 end
 
-function launch_state(skill,id)
+function stats_state(skill,id,level_time,kills,monsters,secrets,all_secrets)
+  local ttl=120
+  return
+    function()
+      ttl-=1
+      if ttl<0 or btnp(4) or btnp(5) then
+        next_state(launch_state,skill,id)
+      end
+    end,
+    function()
+      local s="time: "..level_time      
+      printb(s,63-#s*2,60,15)
+      s="kills: "..kills.."/"..monsters
+      printb(s,63-#s*2,70,15)
+      -- does map have any secret?
+      if all_secrets>0 then
+        s="secrets: "..secrets.."/"..all_secrets
+        printb(s,63-#s*2,80,15)
+      end
+    end
+end
+
+function launch_state(skill,id,level_time,kills,secrets)
   -- record max level reached so far
   if(id>dget(32)) dset(32,id)
   return
@@ -295,7 +317,7 @@ function _init()
   end
 
   local p=split(stat(6))  
-  local skill,mapid,state=tonum(p[1]) or 2,tonum(p[2]) or 1,tonum(p[3]) or 0
+  local skill,mapid,state,level_time,kills,monsters,secrets=tonum(p[1]) or 2,tonum(p[2]) or 1,tonum(p[3]) or 0,tonum(p[4]) or 0,tonum(p[5]) or 0,tonum(p[6]) or 0,tonum(p[7]) or 0
   
   -- special case for end game state
   if(state==2 and mapid+1>#_maps_group) state=4
@@ -306,7 +328,7 @@ function _init()
     -- 1: game over
     {fadetoblack_state,start_state},
     -- 2: next level
-    {slicefade_state,launch_state,skill,mapid+1},
+    {slicefade_state,stats_state,skill,mapid+1,level_time,kills,monsters,secrets,_secrets[mapid]},
     -- 3: retry
     {slicefade_state,launch_state,skill,mapid},    
     -- 4: end game

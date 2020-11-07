@@ -67,7 +67,8 @@ builtin_actors = {
     'health': 50,
     'shootable': True,
     'solid': True,
-    'ismonster': True
+    'ismonster': True,
+    'countkill': True
   },
   'projectile':{
     'kind': ACTOR_KIND.PROJECTILE,
