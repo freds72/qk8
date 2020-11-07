@@ -163,7 +163,6 @@ actor BulletPuff 9999
   +NOGRAVITY
   +RANDOMIZE
   VSpeed 1
-  Mass 5
   States
   {
   Spawn:
@@ -177,12 +176,29 @@ actor BulletPuff 9999
   }
 }
 
+actor RocketSmokeTrail 5690
+{
+  +NOGRAVITY
+  +RANDOMIZE
+  VSpeed 1
+  States
+  {
+  Spawn:
+    PUFF C 4
+    PUFF D 4
+  }
+}
+
+
 actor PlasmaBall : Projectile 9998
 {
 	Radius 13
 	Height 8
 	Speed 150
  	Damage 5
+	TrailType "RocketSmokeTrail"
+	+RANDOMIZE
+
  States
 	{
  	Spawn:
@@ -204,7 +220,9 @@ actor Rocket : Projectile 9997
   Speed 20
   Damage 20
 	DeathSound 3
+	TrailType "RocketSmokeTrail"
   +MISSILE
+
   States
   {
   Spawn:
