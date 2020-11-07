@@ -211,7 +211,6 @@ def pack_segs(segs):
   return s
 
 def pack_texture(texture):
-
   return "{:02x}{:02x}{:02x}{:02x}".format(texture.my,texture.mx,texture.height,texture.width)
 
 def pack_named_texture(owner, textures, name):
@@ -848,7 +847,7 @@ def pack_image(img, palette=None, label=False):
     s = "".join(map("{:01x}".format,data))
   return s, pal
 
-# conver image to pico8 format
+# convert image to pico8 format
 def pack_p8image(stream, asset, palette=None, swap=False, size=None, mandatory=False, label=False):
   src = None
   try:
@@ -875,7 +874,7 @@ def pack_p8image(stream, asset, palette=None, swap=False, size=None, mandatory=F
   # convert palette into a "pal" call
   return data, "[0]={},".format(autopalette[0])+",".join(str(c) for c in autopalette[1:]), size
 
-def to_gamecart(carts_path, name, group_name, width, map_data, gfx_data, palette, compress=False, release=None):
+def to_gamecart(carts_path, name, group_name, width, map_data, gfx_data, palette, skybox_data, compress=False, release=None):
   cart="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
@@ -904,6 +903,7 @@ __lua__
   for i in range(0,len(tmp),2):
     s += tmp[i+1:i+2] + tmp[i:i+1]
 
+  s += skybox_data
   # fill until spritesheet 2
   s += "0"*(128*64-len(s))
 
@@ -991,7 +991,7 @@ def compress_byte_str(s,raw=False):
     return compressed
   return "".join(map("{:02x}".format, compressed))
 
-def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, release=None):
+def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, release=None, skybox=None):
   # resource readers
   maps_stream = FileStream(os.path.join(root, "maps"))
   file_stream = FileStream(os.path.join(root))
@@ -1010,6 +1010,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
       'name': mapname,
       'group' : mapname[:2].lower(),
       'label': mapname,
+      'sky': skybox,
       'music': -1
     })]
 
@@ -1049,17 +1050,26 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
       reader = TextureReader(file_stream, colormap.palette)
       textures = reader.read(active_textures)
 
+      skybox_data = ""
       for i,m in enumerate(maps):
         # locate maps in multicarts
         logging.info("Packing map: {}".format(m.name))
         m.cart_id = int(len(game_data)/cart_len)
-        m.cart_offset = int((len(game_data)%cart_len)/2)
+        m.cart_offset = int((len(game_data)%cart_len)/2)        
+        if m.sky:
+          skybox_img,skybox_code,skybox_size = pack_p8image(graphics_stream, m.sky, palette=colormap.palette, mandatory=True)
+          m.sky_height = skybox_size[1]-1 # to repeat last pixel line
+          m.sky_offset = int(len(skybox_data)/2)+len(gradients)+0x4300
+          skybox_data += skybox_img
+        else:
+          m.sky_height = 0
+          m.sky_offset = 0
         # compress each map separately 
         map_data = pack_zmap(m.zmap, textures, actors)
         game_data += compress and compress_byte_str(map_data) or map_data
       
       # export game cart (hub for maps from same group)
-      to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, gradients, compress, release)
+      to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, gradients, skybox_data, compress, release)
 
   # list of weapons
   wp_anchors = [50,64,78,64,64]
@@ -1094,7 +1104,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
     'loading': pack_p8image(graphics_stream, "G_LOAD", palette=colormap.palette, swap=True, mandatory=True),
     'endgame': pack_p8image(graphics_stream, "G_END", swap=True, mandatory=True)
   })
-  
+
   atlas_code="""
 -- *********************************
 -- generated code - do not edit
@@ -1103,13 +1113,15 @@ mod_name="{0}"
 _maps_group=split"{1}"
 _maps_cart=split"{2}"
 _maps_offset=split"{3}"
-_maps_music=split"{4}"
-_wp_wheel=split("{5}","|")
+_maps_sky=split("{4}",",",1)
+_maps_music=split"{5}"
+_wp_wheel=split("{6}","|")
   """.format(
   modname,
   ",".join(["{}".format("{}_{}".format(modname,m.group)) for m in all_maps]),
   ",".join(["{}".format(m.cart_id) for m in all_maps]),
   ",".join(["{}".format(m.cart_offset) for m in all_maps]),
+  ",".join(["{},0x{:04x}".format(m.sky_height,m.sky_offset) for m in all_maps]),
   ",".join(["{}".format(m.music) for m in all_maps]),
   wp_wheel_data)
 
@@ -1249,11 +1261,12 @@ def main():
   parser.add_argument("--map", type=str, default="", required=False, help="map name to compile (ex: E1M1)")
   parser.add_argument("--compress", action='store_true', required=False, help="enable compression (default: false)")
   parser.add_argument("--release", required=False,  type=str, help="generate html+bin packages with given version. Note: compression mandatory if number of carts above 16.")
+  parser.add_argument("--sky", required=False, type=str, help="Skybox texture name")
   args = parser.parse_args()
 
   logging.basicConfig(level=logging.INFO)
 
-  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress, release=args.release)
+  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress, release=args.release, skybox=args.sky)
   logging.info('DONE')
 
 if __name__ == '__main__':

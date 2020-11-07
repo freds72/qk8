@@ -5,8 +5,8 @@ local _ambientlight,_ammo_factor,_intersectid,_msg=0,1,0
 --local k_far,k_near=0,2
 --local k_right,k_left=4,8
 
--- copy color gradients (16*16 colors x 2) to memory
-memcpy(0x4300,0x0,512)
+-- copy color gradients (16*16 colors x 2) to memory + skybox image (if any)
+memcpy(0x4300,0x0,4096)
 
 -- create a new instance with parent properties
 function inherit(t,parent)
@@ -235,6 +235,17 @@ end
 -- yoffset: height
 function polyfill(v,xoffset,yoffset,tex,light)
   poke4(0x5f38,tex)
+  local _tline,_memcpy=tline,memcpy
+  if tex==0 then
+    -- backup sprite line
+    memcpy(0x52c0,0x0,64)
+    pal()
+    _memcpy,_tline=time,function(x0,y0,x1) 
+      x0,x1=mid(x0\1,0,127),mid(x1\1,0,127)
+      memcpy(0x0,_sky_offset+(min(y0,_sky_height)<<6),64)
+      sspr(x0,0,x1-x0+1,1,x0,y0)
+    end
+  end
 
   local v0,spans,ca,sa,cx,cy,cz,pal0=v[#v],{},_cam.u,_cam.v,(_plyr[1]>>4)+xoffset,(-_cam.m[4]-yoffset)<<3,_plyr[2]>>4
   local x0,w0=v0.x,v0.w
@@ -259,15 +270,15 @@ function polyfill(v,xoffset,yoffset,tex,light)
         if w0>0.15 then
           -- collect boundaries + color shitfint + mode 7
           local a,b,rz,pal1=x0,span,cy/(y-63.5),(light*min(15,w0<<5))\1
-          if(a>b) a=span+0 b=x0+0
+          if(a>b) a=span b=x0
           -- color shifing
-          if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
+          if(pal0!=pal1) _memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
 
           -- mode7 texturing
           local rx=rz*(a\1-63.5)>>7
         
           -- camera space
-          tline(a,y,b,y,ca*rx+sa*rz+cx,ca*rz-sa*rx+cz,ca*rz>>7,-sa*rz>>7)   
+          _tline(a,y,b,y,ca*rx+sa*rz+cx,ca*rz-sa*rx+cz,ca*rz>>7,-sa*rz>>7)   
         end       
       else
         spans[y]=x0
@@ -276,10 +287,11 @@ function polyfill(v,xoffset,yoffset,tex,light)
       x0+=dx
       w0+=dw
     end		
-    x0=_x1+0
-    y0=_y1+0
-    w0=_w1+0
+    x0=_x1
+    y0=_y1
+    w0=_w1
   end
+  if(tex==0) memcpy(0x0,0x52c0,64)
 end
 
 local function v_clip(v0,v1,t)
@@ -422,7 +434,7 @@ function draw_flats(v_cache,segs)
                   local ot=y0-otop*w0
                   tline(x,ct,x,ot,u,(ct-t)/w0+yoffsettop,0,1/w0)
                   -- new window top
-                  t=ot+0
+                  t=ot
                   ct=ot\1+1
                 end
                 -- bottom wall side between current sector and back sector     
@@ -432,7 +444,7 @@ function draw_flats(v_cache,segs)
                   local cob=ob\1+1
                   tline(x,cob,x,b,u,(cob-ob)/w0,0,1/w0)
                   -- new window bottom
-                  b=ob+0
+                  b=ob
                 end
         
                 -- middle wall?
@@ -452,9 +464,9 @@ function draw_flats(v_cache,segs)
           end
         end
         v0=v1
-        x0=_x1+0
-        y0=y1+0
-        w0=w1+0
+        x0=_x1
+        y0=y1
+        w0=w1
       end
       
       -- draw things (if any) in this convex space
@@ -1303,6 +1315,9 @@ function _init()
   -- launch params
   local p=split(stat(6))
   _skill,_map_id=tonum(p[1]) or 2,tonum(p[2]) or 1
+  -- sky texture
+  local id=_map_id*2-2
+  _sky_height,_sky_offset=_maps_sky[id+1],_maps_sky[id+2]
 
   next_state(play_state)
 end

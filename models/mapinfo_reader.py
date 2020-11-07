@@ -36,6 +36,8 @@ class MAPINFO(MAPINFOListener):
       'name': lump,
       'group': lump[:2].lower(),
       'label': label,
+      # background sky (optional)
+      'sky': properties.get('sky1',None),
       # need first entry only
       'num': properties.get('levelnum',-1),
       # music (or none)
