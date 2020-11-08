@@ -684,11 +684,8 @@ function hitscan_attack(owner,angle,range,dmg,puff)
       -- actual hit position
       local pos={owner[1],owner[2]}
       v2_add(pos,move_dir,fix_move.ti)
-      local puffthing=make_thing(puff,pos[1],pos[2],0,angle)
       -- todo: get height from properties
-      -- todo: improve z setting
-      puffthing[3]=h
-      add_thing(puffthing)
+      add_thing(make_thing(puff,pos[1],pos[2],h,angle))
 
       -- hit thing
       if(otherthing and otherthing.hit) otherthing:hit(dmg,move_dir,owner)
@@ -725,7 +722,7 @@ function make_thing(actor,x,y,z,angle,special)
   -- attach instance properties to new thing
   local thing=actor:attach{
     -- z: altitude
-    x,y,ss.sector.floor,
+    x,y,max(z,ss.sector.floor),
     angle=angle,
     sector=ss.sector,
     ssector=ss,
@@ -860,11 +857,7 @@ function with_physic(thing)
 
         -- trail? (at previous position)
         if actor.trailtype  then
-          local puffthing=make_thing(actor.trailtype,self[1],self[2],0,self.angle)
-          -- todo: get height from properties
-          -- todo: improve z setting
-          puffthing[3]=h
-          add_thing(puffthing)
+          add_thing(make_thing(actor.trailtype,self[1],self[2],h,self.angle))
         end
 
         -- apply move
@@ -1566,11 +1559,9 @@ function unpack_actors()
         -- fire at 1/2 edge of owner radius (ensure collision when close to walls)
         local angle,speed,radius=owner.angle,projectile.speed,owner.actor.radius/2
         local ca,sa=cos(angle),-sin(angle)
-        local thing=with_physic(make_thing(projectile,owner[1]+radius*ca,owner[2]+radius*sa,0,angle))
-        thing.owner=owner
         -- todo: get height from properties
-        -- todo: improve z setting
-        thing[3]=owner[3]+32
+        local thing=with_physic(make_thing(projectile,owner[1]+radius*ca,owner[2]+radius*sa,owner[3]+32,angle))
+        thing.owner=owner
         thing:apply_forces(ca,sa,speed)         
         add_thing(thing)
       end
@@ -2115,8 +2106,8 @@ function unpack_map(skill,actors)
         actors[id],
         -- coordinates
         x,y,
-        -- height
-        0,
+        -- dummy height, extracted from sector
+        0x8000,
         -- angle
         (flags&0xf)/8
       })
