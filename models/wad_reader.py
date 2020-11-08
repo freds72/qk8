@@ -1090,8 +1090,8 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
     "{0}|rectfill|{1},86,{2},94,0|{0}|print|➡️,68,88,5|{0}|print|{3},{4},88,11",
     "{0}|rectfill|{1},70,{2},78,0|{0}|print|⬆️,60,82,5|{0}|print|{3},{4},72,11",
     "{0}|print|🅾️,60,88,5"
-  ] 
-  wp_wheel_data = "-1|ovalfill|51,81,75,99,2"
+  ]
+  wp_wheel_data = "-1|ovalfill|51,81,75,99,0x22"
   for i,wp in enumerate(sorted([wp for wp in actors.values() if 'slotnumber' in wp and wp.kind==ACTOR_KIND.WEAPON], key=lambda wp: wp.slotnumber)):
     name = wp.get('hudlabel',wp.name)
     x0 = wp_anchors[i]
@@ -1267,12 +1267,12 @@ def get_PVS(zmap, sub_id):
 
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument("--pico-home", required=True, type=str, help="full path to PICO8 folder")
-  parser.add_argument("--carts-path", required=True,type=str, help="path to carts folder where game is exported")
-  parser.add_argument("--mod-name", required=True,type=str, help="game cart name (ex: poom)")
-  parser.add_argument("--map", type=str, default="", required=False, help="map name to compile (ex: E1M1)")
-  parser.add_argument("--compress", action='store_true', required=False, help="enable compression (default: false)")
-  parser.add_argument("--release", required=False,  type=str, help="generate html+bin packages with given version. Note: compression mandatory if number of carts above 16.")
+  parser.add_argument("--pico-home", required=True, type=str, help="Full path to PICO8 folder")
+  parser.add_argument("--carts-path", required=True,type=str, help="Path to carts folder where game is exported")
+  parser.add_argument("--mod-name", required=True,type=str, help="Game cart name (ex: poom)")
+  parser.add_argument("--map", type=str, default="", required=False, help="Map name to compile (ex: E1M1)")
+  parser.add_argument("--compress", action='store_true', required=False, help="Enable compression (default: false)")
+  parser.add_argument("--release", required=False,  type=str, help="Generate html+bin packages with given version. Note: compression mandatory if number of carts above 16.")
   parser.add_argument("--sky", required=False, type=str, help="Skybox texture name")
   args = parser.parse_args()
 

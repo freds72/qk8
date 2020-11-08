@@ -465,7 +465,7 @@ function draw_flats(v_cache,segs)
         y0=y1
         w0=w1
       end
-      
+
       -- draw things (if any) in this convex space
       for thing,_ in pairs(segs.things) do
         -- todo: cache thing projection
@@ -1718,7 +1718,7 @@ function unpack_actors()
       -- attach actor to this thing
       attach=function(self,thing)
         -- vm state (starts at spawn)
-        local i,ticks=state_labels[0],-2
+        local i,ticks,delay=state_labels[0],-2,flags&0x8!=0 and rnd(30)\1 or 0
 
         -- extend properties
         thing=inherit({
@@ -1738,7 +1738,7 @@ function unpack_actors()
           tick=function(self)
             while ticks!=-1 do
               -- wait
-              if(ticks>0) ticks-=1 return true
+              if(ticks>0) ticks+=delay-1 delay=0 return true
               -- done, next step
               if(ticks==0) i+=1
 ::loop::
