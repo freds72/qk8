@@ -132,9 +132,14 @@ end
 
 -- https://github.com/luapower/linkedlist/blob/master/linkedlist.lua
 function make_sprite_cache(tiles)
-	local len,index,first,last=0,{}
+  -- pre-generated poke4 offsets
+  -- for j=0,31 do
+  --   poke4(mem|(j&1)<<2|(j\2)<<6,tiles[id+j])
+  -- end	
+	local len,index,offsets,first,last=0,{},split("4,64,68,128,132,192,196,256,260,320,324,384,388,448,452,512,516,576,580,640,644,704,708,768,772,832,836,896,900,960,964",",",1)
+  offsets[0]=0
 
-	local function remove(t)
+  local function remove(t)
     -- note: keep multiline assignments, they are *faster*
     if t._next then
 			if t._prev then
@@ -178,8 +183,8 @@ function make_sprite_cache(tiles)
 				-- new (or relocate)
 				-- copy data to sprite sheet
 				local mem=sx\2|sy<<6
-				for j=0,31 do
-					poke4(mem|(j&1)<<2|(j\2)<<6,tiles[id+j])
+				for j,offset in pairs(offsets) do
+					poke4(mem|offset,tiles[id+j])
 				end		
 				--
 				entry={sx=sx,sy=sy,id=id}
@@ -239,7 +244,7 @@ function polyfill(v,xoffset,yoffset,tex,light)
   local _tline,_memcpy=tline,memcpy
   if tex==0 then
     pal()
-    _memcpy,_tline=time,function(x0,y0,x1) 
+    _memcpy,_tline=peek,function(x0,y0,x1) 
       if(y0>_sky_height) y0=_sky_height
       rectfill(x0,y0,x1,y0,@(_sky_offset+y0))
     end
@@ -294,16 +299,17 @@ end
 local function v_clip(v0,v1,t)
   local invt=1-t
   local x,y=
-    v0[1]*invt+v1[1]*t,
-    v0[2]
+    v0.xx*invt+v1.xx*t,
+    v0.yy
     --local w=128/z
     return {
       -- z is clipped to near plane
-      x,y,8,
+      xx=x,yy=y,zz=8,
       x=63.5+(x<<4),
       y=63.5-(y<<4),
       u=v0.u*invt+v1.u*t,
       v=v0.v*invt+v1.v*t,
+      -- 128/8
       w=16,
       seg=v0.seg
     }
@@ -330,7 +336,7 @@ function draw_flats(v_cache,segs)
       
       local w=128/az
       -- >>4 to fix u|v*w overflow on large maps 
-      v={ax,m8,az,outcode=code,u=x>>4,v=z>>4,x=63.5+ax*w,y=63.5-m8*w,w=w}
+      v={xx=ax,yy=m8,zz=az,outcode=code,u=x>>4,v=z>>4,x=63.5+ax*w,y=63.5-m8*w,w=w}
       v_cache[v0]=v
     end
     v.seg=seg
@@ -344,10 +350,10 @@ function draw_flats(v_cache,segs)
     if nearclip!=0 then
       -- near clipping required?
       local res,v0={},verts[#verts]
-      local d0=v0[3]-8
+      local d0=v0.zz-8
       for i=1,#verts do
         local v1=verts[i]
-        local d1=v1[3]-8
+        local d1=v1.zz-8
         if d1>0 then
           if d0<=0 then
             res[#res+1]=v_clip(v0,v1,d0/(d0-d1))
@@ -415,7 +421,6 @@ function draw_flats(v_cache,segs)
             y0+=sx*dy
             u0+=sx*du
             w0+=sx*dw
-            
             if(x1>127) x1=127
             for x=cx0,x1\1 do
               if w0>2.4 then
@@ -1164,13 +1169,49 @@ function attach_plyr(thing,actor,skill)
     end
   },thing)
 end
+  
+function visit_subs(subs,pvs,open_pvs)
+  open_pvs[subs]=true
+  local sector=subs.sector
+  local floor,ceil=sector.floor,sector.ceil
+  for _,seg in ipairs(subs) do
+    local partner=seg.partner
+    -- otherside and not already checked and visible?
+    if partner and (not open_pvs[partner]) and band(pvs[partner.id\32],0x0.0001<<(partner.id&31))!=0 then
+      -- closed?
+      local othersector=partner.sector
+      if othersector.ceil!=floor and othersector.ceil!=floor then
+        visit_subs(partner,pvs,open_pvs) 
+      end
+    end
+  end
+end
 
 function draw_bsp()
   cls()
   --
   -- draw bsp & visible things
-  -- 
+  
+  local v_cache,open_pvs={},{}
+
+  -- filter out closed sub-sectors
+  visit_subs(_plyr.ssector,_plyr.ssector.pvs,open_pvs)
+  
+  -- draw in order
+  visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
+    if node.leaf[side] then
+      local subs=node[side]
+      -- 
+      if(open_pvs[subs]) draw_flats(v_cache,subs)
+    elseif _cam:is_visible(node.bbox[side]) then
+      visit_bsp(node[side],pos,visitor)
+    end
+  end)
+
+  --[[
   local pvs,v_cache=_plyr.ssector.pvs,{}
+
+  -- visit bsp
   visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
     if node.leaf[side] then
       local subs=node[side]
@@ -1184,6 +1225,7 @@ function draw_bsp()
       visit_bsp(node[side],pos,visitor)
     end
   end)
+  ]]
 end
 
 -->8
@@ -1230,6 +1272,7 @@ function play_state()
       _plyr=attach_plyr(thing,actor,_skill)
       _plyr:load(_actors)
       thing=_plyr
+      --add_thing(thing)
     end    
     if(actor.countkill) _monsters+=1
     add_thing(thing)
@@ -1259,6 +1302,7 @@ function play_state()
 
       if(_msg) print(_msg,64-#_msg*2,120,15)
 
+      -- spr(0,0,64,16,8)
       -- debug messages
       --[[
       local cpu=stat(1)
@@ -1621,7 +1665,7 @@ function unpack_actors()
           self.target=otherthing
           -- see
           self:jump_to(2)
-        end 
+        end
       end
     end,
     -- A_Chase
