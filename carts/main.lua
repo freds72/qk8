@@ -727,7 +727,7 @@ function make_thing(actor,x,y,z,angle,special)
   -- attach instance properties to new thing
   local thing=actor:attach{
     -- z: altitude
-    x,y,max(z,ss.sector.floor),
+    x,y,z==0x8000 and ss.sector.floor or z,
     angle=angle,
     sector=ss.sector,
     ssector=ss,
@@ -1170,45 +1170,10 @@ function attach_plyr(thing,actor,skill)
   },thing)
 end
   
-function visit_subs(subs,pvs,open_pvs)
-  open_pvs[subs]=true
-  local sector=subs.sector
-  local floor,ceil=sector.floor,sector.ceil
-  for _,seg in ipairs(subs) do
-    local partner=seg.partner
-    -- otherside and not already checked and visible?
-    if partner and (not open_pvs[partner]) and band(pvs[partner.id\32],0x0.0001<<(partner.id&31))!=0 then
-      -- closed?
-      local othersector=partner.sector
-      if othersector.ceil!=floor and othersector.ceil!=floor then
-        visit_subs(partner,pvs,open_pvs) 
-      end
-    end
-  end
-end
-
 function draw_bsp()
   cls()
   --
   -- draw bsp & visible things
-  
-  local v_cache,open_pvs={},{}
-
-  -- filter out closed sub-sectors
-  visit_subs(_plyr.ssector,_plyr.ssector.pvs,open_pvs)
-  
-  -- draw in order
-  visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
-    if node.leaf[side] then
-      local subs=node[side]
-      -- 
-      if(open_pvs[subs]) draw_flats(v_cache,subs)
-    elseif _cam:is_visible(node.bbox[side]) then
-      visit_bsp(node[side],pos,visitor)
-    end
-  end)
-
-  --[[
   local pvs,v_cache=_plyr.ssector.pvs,{}
 
   -- visit bsp
@@ -1225,7 +1190,6 @@ function draw_bsp()
       visit_bsp(node[side],pos,visitor)
     end
   end)
-  ]]
 end
 
 -->8
@@ -2145,6 +2109,7 @@ function unpack_map(skill,actors)
   local function unpack_thing()
     local flags,id,x,y=mpeek(),unpack_variant(),unpack_fixed(),unpack_fixed()
     if flags&(0x10<<(skill-1))!=0 then
+      -- layout must match make_thing
       return add(things,{
         -- link to underlying actor
         actors[id],
