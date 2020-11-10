@@ -635,7 +635,7 @@ def pack_actors(image_reader, actors):
   # export all images bytes
   if tiles_count>32763-32:
     # exceeded pico8 array size?
-    raise Exception("Tiles count ({}) exceeds PICO8 table size - not yet supported".format(tiles_count))
+    raise Exception("Tiles count ({}) exceeds PICO8 table size".format(tiles_count))
   logging.info("Packing {} 16x16 tiles".format(tiles_count))
   image_s = pack_variant(tiles_count)
   for image_bytes in unique_tiles:
@@ -993,7 +993,7 @@ def compress_byte_str(s,raw=False):
     return compressed
   return "".join(map("{:02x}".format, compressed))
 
-def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, release=None, skybox=None):
+def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, release=None, skybox=None, dump_sprites=False):
   # resource readers
   maps_stream = FileStream(os.path.join(root, "maps"))
   file_stream = FileStream(os.path.join(root))
@@ -1021,7 +1021,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
   gradients = colormap.read("PLAYPAL", use_palette=True) + colormap.read("PAINPAL")
 
   # decode actors & sprites
-  image_reader = ImageReader(graphics_stream, colormap.palette)
+  image_reader = ImageReader(graphics_stream, colormap.palette, debug=dump_sprites)
   actors = DecorateReader(file_stream).actors
   
   # cart label (optional) - uses title image
@@ -1030,6 +1030,10 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
   # pack actors (shared by all maps)
   game_data = pack_actors(image_reader, actors)
   game_data = compress and compress_byte_str(game_data) or game_data
+
+  # save png file
+  if dump_sprites:
+    image_reader.poster.save(os.path.join(carts_path,"{}_sprites.png".format(modname)), "PNG")
 
   # extract map + things
   cart_len = 2*0x4300
@@ -1274,11 +1278,13 @@ def main():
   parser.add_argument("--compress", action='store_true', required=False, help="Enable compression (default: false)")
   parser.add_argument("--release", required=False,  type=str, help="Generate html+bin packages with given version. Note: compression mandatory if number of carts above 16.")
   parser.add_argument("--sky", required=False, type=str, help="Skybox texture name")
+  parser.add_argument("--dump-sprites", action='store_true', required=False, help="Writes all sprites to a single image with their 16x16 tile overlay.")
   args = parser.parse_args()
 
   logging.basicConfig(level=logging.INFO)
-
-  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress, release=args.release, skybox=args.sky)
+  print(args)
+  
+  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress, release=args.release, skybox=args.sky, dump_sprites=args.dump_sprites)
   logging.info('DONE')
 
 if __name__ == '__main__':

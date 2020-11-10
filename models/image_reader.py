@@ -6,11 +6,11 @@ import math
 import logging
 from collections import namedtuple
 from dotdict import dotdict
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageDraw
 
 # helper methods for image manipulation
 class ImageReader():  
-  def __init__(self, stream, palette):
+  def __init__(self, stream, palette, debug=False):
     # cache already processed tiles
     # image name -> tiles
     self.frames = {}
@@ -26,6 +26,13 @@ class ImageReader():
     if stream is None:
       raise Exception("Missing resource stream parameter")
     self.stream = stream
+    
+    if debug:
+      self.poster = Image.new('RGBA', (1024, 1024), (0,0,0,0))
+      self.poster_paste_location = (0,0)
+      self.poster_images = {}
+    else:
+      self.poster = None    
 
   # convert an image into a pair of tiles address and tiles data (binary)
   def read(self, name):
@@ -55,6 +62,36 @@ class ImageReader():
 
     img = Image.new('RGBA', (width, height), (0,0,0,0))
     img.paste(src, (0,0,src_width,src_height))
+
+    poster_x = 0
+    poster_y = 0
+    poster_mode = False
+    if self.poster and name not in self.poster_images:
+      poster_mode = True
+      self.poster_images[name] = True
+      poster_size = self.poster.size
+      poster_x,poster_y = self.poster_paste_location
+      if poster_x+width>poster_size[0]:
+        poster_x = 0
+        poster_y += 64
+        if poster_y + height>poster_size[1]:
+          # resize
+          poster_size += (0, 64)
+          self.poster.resize(poster_size)
+      draw = ImageDraw.Draw(self.poster)
+      for i in range(math.ceil(width/16)):
+        for j in range(math.ceil(height/16)):          
+          ix = poster_x + i*16
+          iy = poster_y + j*16
+          c = (64,64,64,255)
+          if (i+j)%2==0:
+            c = (128,128,128,255)
+          draw.rectangle((ix,iy,ix+15,iy+15), width=0, fill=c)
+      draw.rectangle((poster_x,poster_y,poster_x + width-1,poster_y + height-1), width=1, outline=(255,0,0,128))
+      tmp = Image.new('RGBA', poster_size, (0,0,0,0))
+      tmp.paste(src, (poster_x, poster_y))
+      self.poster.alpha_composite(tmp)
+      self.poster_paste_location = (poster_x + width, poster_y)
 
     # find a transparency color
     all_colors = set([rgba for rgba,i in self.rgba_to_pico.items() if i!=-1])
@@ -107,6 +144,12 @@ class ImageReader():
             tiles += 1
           # reference to corresponding tiles
           frame_tiles[j*tw+i] = tile_id
+        elif poster_mode:
+          draw = ImageDraw.Draw(self.poster)
+          x = poster_x + i*16
+          y = poster_y + j*16
+          draw.rectangle((x,y,x+15,y+15), width=0, fill=(255,255,255,0))
+
 
     if abs(xoffset)>127 or abs(yoffset)>127:
       raise Exception("Unsupported image offset: {}/{} - must be in [-127,127]".format(xoffset,yoffset))
