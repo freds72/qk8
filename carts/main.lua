@@ -1618,8 +1618,10 @@ function unpack_actors()
     -- A_Look
     function()
       return function(self)
+        local otherthing
+        -- find non dead target
         for ptgt in all{self.target,_plyr} do
-          if(ptgt and not ptgt.dead) otherthing=ptgt break
+          if(not ptgt.dead) otherthing=ptgt break
         end
         -- nothing to do?
         if(not otherthing) self.target=nil return
