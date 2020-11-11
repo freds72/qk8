@@ -1282,7 +1282,6 @@ def main():
   args = parser.parse_args()
 
   logging.basicConfig(level=logging.INFO)
-  print(args)
   
   pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress, release=args.release, skybox=args.sky, dump_sprites=args.dump_sprites)
   logging.info('DONE')
