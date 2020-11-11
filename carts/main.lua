@@ -1625,7 +1625,6 @@ function unpack_actors()
     -- A_Look
     function()
       return function(self)
-        local otherthing
         -- either we got something already or player
         local otherthing=self.target or _plyr
         -- if this is dead, try player
