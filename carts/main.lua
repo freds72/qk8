@@ -1601,7 +1601,7 @@ function unpack_actors()
       return function(thing)
         -- todo: optimize lookup!!!
         for _,otherthing in pairs(_things) do
-          if otherthing!=thing and otherthing.hit then
+          if otherthing.hit and otherthing!=thing then
             local n,d=line_of_sight(thing,otherthing,maxrange)
             if(d) otherthing:hit(dmg*(1-d/maxrange),n)
           end
