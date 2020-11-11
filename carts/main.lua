@@ -272,7 +272,9 @@ function polyfill(v,xoffset,yoffset,tex,light)
         -- limit visibility
         if w0>0.15 then
           -- collect boundaries + color shitfint + mode 7
-          local a,b,rz,pal1=x0,span,cy/(y-63.5),(light*min(15,w0<<5))\1
+          local wlight=w0<<5
+          if(wlight>15) wlight=15
+          local a,b,rz,pal1=x0,span,cy/(y-63.5),(light*wlight)\1
           if(a>b) a=span b=x0
           -- color shifing
           if(pal0!=pal1) _memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
@@ -385,12 +387,12 @@ function draw_flats(v_cache,segs)
         -- logical split or wall?
         -- front facing?
         if x0<x1 and ldef then
-          -- dual?
-          local facingside,otherside,otop,obottom=ldef[seg.side],ldef[not seg.side]
           -- peg bottom?
-          local yoffset,yoffsettop,_,toptex,midtex,bottomtex=bottom-top,bottom-top,unpack(facingside)
+          local _,toptex,midtex,bottomtex=unpack(ldef[seg.side])
           -- no need to draw untextured walls
           if toptex|midtex|bottomtex!=0 then
+            -- get other side (if any)
+            local yoffset,yoffsettop,otherside,otop,obottom=bottom-top,bottom-top,ldef[not seg.side]
             -- fix animated side walls (elevators)
             if ldef.flags&0x4!=0 then
               yoffset=0
@@ -425,7 +427,9 @@ function draw_flats(v_cache,segs)
             for x=cx0,x1\1 do
               if w0>2.4 then
                 -- top/bottom+perspective correct texture u+color shifing
-                local t,b,u,pal1=y0-top*w0,y0-bottom*w0,u0/(w0>>4),(light*min(15,w0<<1))\1
+                local wlight=w0<<1
+                if(wlight>15) wlight=15
+                local t,b,u,pal1=y0-top*w0,y0-bottom*w0,u0/(w0>>4),(light*wlight)\1
                 if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
     
                 -- top wall side between current sector and back sector
@@ -1239,7 +1243,6 @@ function play_state()
       _plyr=attach_plyr(thing,actor,_skill)
       _plyr:load(_actors)
       thing=_plyr
-      --add_thing(thing)
     end    
     if(actor.countkill) _monsters+=1
     add_thing(thing)
