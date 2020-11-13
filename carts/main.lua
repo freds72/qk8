@@ -791,8 +791,8 @@ function with_physic(thing)
     update=function(self)
       -- integrate forces
       v2_add(velocity,forces)
-      -- floating actor?
-      if actor.is_float and self.target then
+      -- alive floating actor? : track target height
+      if not self.dead and actor.is_float and self.target then
         dz+=mid((self.target[3]-self[3])>>4,-2,2)
         -- avoid woobling
         dz*=friction
@@ -1739,7 +1739,8 @@ function unpack_actors()
       -- attach actor to this thing
       attach=function(self,thing)
         -- vm state (starts at spawn)
-        local i,ticks,delay=state_labels[0],-2,flags&0x8!=0 and rnd(30)\1 or 0
+        local i,ticks,delay=state_labels[0],-2,self.is_monster and rnd(30)\1 or 0
+        if(self.randomize) delay=rnd(4)\1
 
         -- extend properties
         thing=inherit({
