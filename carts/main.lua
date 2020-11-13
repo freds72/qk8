@@ -839,7 +839,7 @@ function with_physic(thing)
               v2_add(self,move_dir,fix_move.ti)
               velocity={0,0}
               -- explosion sound (if any)
-              if(actor.deathsound) sfx(actor.deathsound)
+              if(actor.deathsound and ss:in_pvs(_plyr.ssector.id)) sfx(actor.deathsound)
               -- death state
               self:jump_to(5)
               -- hit thing
@@ -1558,8 +1558,9 @@ function unpack_actors()
     -- A_PlaySound
     function()
       local s=mpeek()
-      return function()
-        sfx(s)
+      return function(self)
+        -- play sound only if visible from player
+        if(self.ssector:in_pvs(_plyr.ssector.id)) sfx(s)
       end
     end,
     -- A_FireProjectile
