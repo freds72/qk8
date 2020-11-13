@@ -2046,8 +2046,7 @@ function unpack_map(skill,actors)
       -- pvs (packed as a bit array)
       unpack_array(function()
         local id=unpack_variant()
-        local mask=pvs[id\32] or 0
-        pvs[id\32]=mask|0x0.0001<<(id&31)
+        pvs[id\32]=bor(pvs[id\32],0x0.0001<<(id&31))
       end)
       -- normals
       local s0=segs[#segs]
