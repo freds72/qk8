@@ -791,7 +791,7 @@ function with_physic(thing)
       v2_add(velocity,forces)
       -- alive floating actor? : track target height
       if not self.dead and actor.floating and self.target then
-        dz+=mid((self.target[3]+rnd(16)-self[3])>>4,-2,2)
+        dz+=mid((self.target[3]+rnd(16)-self[3])>>8,-2,2)
         -- avoid woobling
         dz*=friction
       end
