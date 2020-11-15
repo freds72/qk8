@@ -498,12 +498,28 @@ def pack_zmap(map, textures, actors):
     s += "{:02x}".format(flags)
     s += special_data
   
-  sub_sectors_len = len(map.sub_sectors)
+  all_pvs = []
+  for i in tqdm(range(len(map.sub_sectors)), desc="PVS generation"):
+    # PVS
+    pvs,clips,vert = get_PVS(map, i)
+    all_pvs.append(pvs)
+  
+  for i in range(len(map.sub_sectors)):
+    src_pvs = all_pvs[i]
+    new_pvs = []
+    for j in src_pvs:
+      if i!=j:
+        dst_pvs = all_pvs[j]
+        if i in dst_pvs:
+          new_pvs.append(j)
+    # replace
+    all_pvs[i] = new_pvs
+
   s += pack_variant(len(map.sub_sectors))
   for i in tqdm(range(len(map.sub_sectors)), desc="Packing sub-sectors"):
     s += pack_segs(map.sub_sectors[i])
     # PVS
-    pvs,clips,vert = get_PVS(map, i)
+    pvs = all_pvs[i]
     s += pack_variant(len(pvs)+1)
     # record current sub-sector id
     s += pack_variant(i + 1)
@@ -1195,6 +1211,7 @@ def get_PVS(zmap, sub_id):
   # already processed portal pairs
   pairs = set()
   portals = []
+  clips = []
   # starting sub sector
   sub0 = zmap.sub_sectors[sub_id]
   s0 = sub0[len(sub0)-1]
@@ -1217,6 +1234,10 @@ def get_PVS(zmap, sub_id):
         if os0.partner!=-1:
           portal1 = Polygon(v0=os0.v1, v1=os1.v1, vertices=vertices)
           if portal0.classify(portal1)!=POLYGON_CLASSIFICATION.BACK:
+            
+            clips.append(Polygon(v0=portal1.v1,v1=portal0.v0, vertices=vertices))
+            clips.append(Polygon(v0=portal0.v1,v1=portal1.v0, vertices=vertices))
+
             portals.append(dotdict({
               'src':portal0,
               'dst':portal1,
@@ -1227,7 +1248,7 @@ def get_PVS(zmap, sub_id):
         os0 = os1
     s0 = s1
   
-  clips = []
+
   # clip portals
   while len(portals)>0:
     portal = portals.pop()
@@ -1248,9 +1269,9 @@ def get_PVS(zmap, sub_id):
         if front is not None:
           front, back = front.split(clip1)
           if front is not None:
-            clips.append(front)
             # anything remains?
             pvs.add(portal.sub_id)
+            clips.append(front)
             # is seg connected?
             # next_portal = "{}:{}".format(portal.sub_id, s0.partner)
             next_portal = "{}-{}:{}-{}".format(portal.src.v0, portal.src.v1, front.v0, front.v1)
