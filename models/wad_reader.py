@@ -504,6 +504,7 @@ def pack_zmap(map, textures, actors):
     pvs,clips,vert = get_PVS(map, i)
     all_pvs.append(pvs)
   
+  # optimize PVS (cross check)
   for i in range(len(map.sub_sectors)):
     src_pvs = all_pvs[i]
     new_pvs = []
@@ -512,7 +513,7 @@ def pack_zmap(map, textures, actors):
         dst_pvs = all_pvs[j]
         if i in dst_pvs:
           new_pvs.append(j)
-    # replace
+    # replace    
     all_pvs[i] = new_pvs
 
   s += pack_variant(len(map.sub_sectors))
