@@ -789,8 +789,9 @@ function with_physic(thing)
       -- integrate forces
       v2_add(velocity,forces)
       -- alive floating actor? : track target height
-      if not self.dead and actor.floating and self.target then
-        dz+=mid((self.target[3]-self[3])>>8,-2,2)-rnd()+0.5
+      if not self.dead and actor.floating then
+        dz+=rnd()-0.6
+        if(self.target) dz+=mid((self.target[3]-self[3])>>8,-2,2)
         -- avoid woobling
         dz*=friction
       end
@@ -799,8 +800,7 @@ function with_physic(thing)
 
       -- friction     
       velocity[1]*=friction
-      velocity[2]*=friction
-      
+      velocity[2]*=friction      
       -- check collision with world
       local move_dir,move_len=v2_normal(velocity)
       
