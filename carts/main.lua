@@ -1542,8 +1542,6 @@ function unpack_actors()
     function()
       local xspread,yspread,bullets,dmg,puff=unpack_fixed(),unpack_fixed(),mpeek(),mpeek(),unpack_actor_ref(actors)
       return function(owner)
-        -- find 'real' owner
-        owner=owner.owner or owner
         for i=1,bullets do
           hitscan_attack(owner,owner.angle+(rnd(2*xspread)-xspread)/360,1024,dmg,puff)
         end
@@ -1552,17 +1550,15 @@ function unpack_actors()
     -- A_PlaySound
     function()
       local s=mpeek()
-      return function(self)
+      return function(owner)
         -- play sound only if visible from player
-        if(self.ssector:in_pvs(_plyr.ssector.id)) sfx(s)
+        if(owner.ssector:in_pvs(_plyr.ssector.id)) sfx(s)
       end
     end,
     -- A_FireProjectile
     function()
       local projectile=unpack_actor_ref(actors)
       return function(owner)
-        -- find 'real' owner
-        owner=owner.owner or owner
         -- fire at 1/2 edge of owner radius (ensure collision when close to walls)
         local angle,speed,radius=owner.angle,projectile.speed,owner.actor.radius/2
         local ca,sa=cos(angle),-sin(angle)
@@ -1575,9 +1571,9 @@ function unpack_actors()
     end,
     -- A_WeaponReady
     function(item)
-      return function(weapon)
+      return function(owner,weapon)
         if not _wp_hud and btn(❎) then
-          local inventory,ammotype,newqty=weapon.owner.inventory,item.ammotype,0
+          local inventory,ammotype,newqty=owner.inventory,item.ammotype,0
           -- handle "fist" (eg weapon without ammotype)
           if(ammotype) newqty=inventory[ammotype]-item.ammouse
           if newqty>=0 then
@@ -1681,8 +1677,6 @@ function unpack_actors()
     function()
       local dmg,puff=mpeek(),unpack_actor_ref(actors)
       return function(owner)
-        -- find 'real' owner
-        owner=owner.owner or owner
         hitscan_attack(owner,owner.angle,owner.meleerange or 64,dmg,puff)
       end
     end,
@@ -1767,7 +1761,8 @@ function unpack_actors()
               -- get ticks
               ticks=state[1]
               -- trigger function (if any)
-              if(state.fn) state.fn(self)
+              -- provide owner and self (eg. for weapons)
+              if(state.fn) state.fn(self.owner or self,self)
             end
           end
         },thing)
