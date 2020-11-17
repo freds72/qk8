@@ -7,6 +7,7 @@ import random
 import math
 import socket
 import shutil
+from tqdm import tqdm
 
 def call(args):
     proc = Popen(args, stdout=PIPE, stderr=PIPE)
@@ -167,16 +168,16 @@ cstore(0, 0, 0x4300, "{}")
 def to_multicart(s,pico_path,carts_path,cart_name,boot_code=None,label=None):
   cart_id = 0
   cart_data = ""
-  for b in s:
-      cart_data += b
-      # full cart?
-      if len(cart_data)==2*0x4300:
-          to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_code=cart_id==0 and boot_code, label=cart_id==0 and label)
-          cart_id += 1
-          cart_data = ""
+  for b in tqdm(s, desc="Generating carts", unit="bytes"):
+    cart_data += b
+    # full cart?
+    if len(cart_data)==2*0x4300:
+        to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_code=cart_id==0 and boot_code, label=cart_id==0 and label)
+        cart_id += 1
+        cart_data = ""
   # remaining data?
   if len(cart_data)!=0:
-      to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_code=cart_id==0 and boot_code, label=cart_id==0 and label)
+    to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_code=cart_id==0 and boot_code, label=cart_id==0 and label)
   return cart_id
 
 def pack_release(modname, pico_path, carts_path, all_carts, release, mode="bin"):

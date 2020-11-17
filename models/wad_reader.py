@@ -499,7 +499,7 @@ def pack_zmap(map, textures, actors):
     s += special_data
   
   all_pvs = []
-  for i in tqdm(range(len(map.sub_sectors)), desc="PVS generation"):
+  for i in tqdm(range(len(map.sub_sectors)), desc="PVS generation",unit="sector"):
     # PVS
     pvs,clips,vert = get_PVS(map, i)
     all_pvs.append(pvs)
@@ -517,7 +517,7 @@ def pack_zmap(map, textures, actors):
     all_pvs[i] = new_pvs
 
   s += pack_variant(len(map.sub_sectors))
-  for i in tqdm(range(len(map.sub_sectors)), desc="Packing sub-sectors"):
+  for i in range(len(map.sub_sectors)):
     s += pack_segs(map.sub_sectors[i])
     # PVS
     pvs = all_pvs[i]

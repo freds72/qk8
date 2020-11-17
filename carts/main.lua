@@ -790,7 +790,7 @@ function with_physic(thing)
       v2_add(velocity,forces)
       -- alive floating actor? : track target height
       if not self.dead and actor.floating then
-        dz+=rnd()-0.6
+        dz+=rnd(1.8)-0.9
         if(self.target) dz+=mid((self.target[3]-self[3])>>8,-2,2)
         -- avoid woobling
         dz*=friction
@@ -1045,6 +1045,9 @@ function attach_plyr(thing,actor,skill)
             if(_btns[0]) da-=0.75
             if(_btns[1]) da+=0.75
           end
+          -- direct mouse input?
+          da+=peek(0x5f80)*(128-peek(0x5f81))/24
+
           if(_btns[2]) dz=1
           if(_btns[3]) dz=-1
 
@@ -1282,7 +1285,7 @@ function play_state()
     
       print(cpu,2,3,3)
       print(cpu,2,2,15)    
-      ]]
+      ]]      
     end
 end
 
