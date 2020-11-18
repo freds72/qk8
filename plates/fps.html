@@ -229,19 +229,23 @@
 		}
 	
 		function track_mouse(e) {
-			// clear fire button
-			pico8_buttons[0] &= ~0x20;
 	
 			// enable mouse reading
 			pico8_gpio[0] = 1;
 			// clamp value to -127/127
-			pico8_gpio[1] = 128 - Math.min(Math.max(-127,e.movementX),127);
+			var canvas = document.getElementById("canvas");
+			var scale = 128 / canvas.width;
+			pico8_gpio[1] = 128 - Math.min(Math.max(-127,Math.round(scale * e.movementX)),127);
+			pico8_gpio[2] = 128 - Math.min(Math.max(-127,Math.round(scale * e.movementY)),127);
 		}
 	
 		function track_click(e, step) {
 			if (!p8_is_running) return;
 	
-			if(e.button==0) {
+			// clear fire button
+			pico8_buttons[0] = 0;
+	
+			if(e.buttons & 0x1) {
 				pico8_buttons[0] |= 0x20;
 			}
 		}
@@ -539,8 +543,8 @@
 			addEventListener("touchmove",  function(event){ pico8_buttons_event(event, 1); }, {passive: false});
 			addEventListener("touchend",   function(event){ pico8_buttons_event(event, 2); }, {passive: false});
 	
-			// https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API
-			if(!p8_touch_detected) {
+						// https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API
+						if(!p8_touch_detected) {
 				// pointer lock object forking for cross browser
 				var canvas = document.getElementById("canvas");
 	
@@ -559,7 +563,8 @@
 					if (document.pointerLockElement === canvas ||
 							document.mozPointerLockElement === canvas) {
 						document.addEventListener("mousemove", track_mouse, false);
-						document.addEventListener("mouseup", function(event){ track_click(event, 0); });
+						document.addEventListener("mousedown", function(event){ track_click(event, 0); });
+						document.addEventListener("mouseup", function(event){ track_click(event, 1); });
 					} else {
 						// reset mouse values
 						pico8_gpio[0]=0
@@ -573,7 +578,7 @@
 				document.addEventListener('pointerlockchange', lockChangeAlert, false);
 				document.addEventListener('mozpointerlockchange', lockChangeAlert, false);
 			}
-	
+			
 			// load and run script
 			e = document.createElement("script");
 			p8_script = e;
@@ -587,8 +592,6 @@
 					p8_update_layout_hash = -77;
 				if (typeof(p8_buttons_hash) !== 'undefined')
 					p8_buttons_hash = -33;
-	
-	
 			}
 			e.type = "application/javascript";
 			e.src = "##js_file##";

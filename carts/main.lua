@@ -1020,7 +1020,7 @@ function attach_plyr(thing,actor,skill)
       if not self.dead then
         wp_y=lerp(wp_y,wp_yoffset,0.3)
 
-        local dx,dz=0,0
+        local dx,dz,daf=0,0,0.8
 
         if _wp_hud then
           -- slow mode: pico calls _update 2 times
@@ -1046,7 +1046,11 @@ function attach_plyr(thing,actor,skill)
             if(_btns[1]) da+=0.75
           end
           -- direct mouse input?
-          da+=peek(0x5f80)*(128-peek(0x5f81))/24
+          if peek(0x5f80)==1 then
+            da+=(128-peek(0x5f81))/8
+            daf=0.2
+            poke(0x5f80,0)
+          end
 
           if(_btns[2]) dz=1
           if(_btns[3]) dz=-1
@@ -1067,7 +1071,7 @@ function attach_plyr(thing,actor,skill)
 
         -- damping
         -- todo: move to physic code?
-        da*=0.8
+        da*=daf
 
         -- update weapon vm
         wp[wp_slot].owner=self
@@ -1285,7 +1289,7 @@ function play_state()
     
       print(cpu,2,3,3)
       print(cpu,2,2,15)    
-      ]]      
+      ]]     
     end
 end
 
