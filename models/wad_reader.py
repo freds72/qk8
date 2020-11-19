@@ -689,7 +689,7 @@ def pack_actors(image_reader, actors):
     flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2 | pack_flag(actor, 'ismonster')<<3 | pack_flag(actor, 'nogravity')<<4 | pack_flag(actor, 'float')<<5 | pack_flag(actor, 'dropoff')<<6 | pack_flag(actor, 'dontfall')<<7
     s += "{:02x}".format(flags)
     # behavior flags (cont.)
-    flags = pack_flag(actor, 'randomize') | pack_flag(actor, 'countkill')<<1
+    flags = pack_flag(actor, 'randomize') | pack_flag(actor, 'countkill')<<1 | pack_flag(actor, 'nosectordmg')<<2
     s += "{:02x}".format(flags)
     # mandatory/shared properties
     s += pack_fixed(actor.radius)
