@@ -160,9 +160,9 @@ actor ExplosiveBarrel 2035
 
 actor BulletPuff 9999
 {
+  VSpeed 1
   +NOGRAVITY
   +RANDOMIZE
-  VSpeed 1
   States
   {
   Spawn:
@@ -171,8 +171,11 @@ actor BulletPuff 9999
     // Intentional fall-through
   Melee:
     PUFF C 4
-	PUFF D 4
+		PUFF D 4
     Stop
+	Pain:
+		PUFB A 4 Bright
+		PUFB B 4
   }
 }
 
@@ -451,6 +454,7 @@ actor PoomGuy: PlayerPawn 1
 	StartItem "PlasmaRifle"
 	StartItem "Cell", 100
 	StartItem "Fist"
+	+NOSECTORDMG
 }
 
 actor ZombieMan : Monster 3004

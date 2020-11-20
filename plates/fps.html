@@ -240,15 +240,18 @@
 		}
 	
 		function track_click(e, step) {
-			if (!p8_is_running) return;
-	
-			// clear fire button
-			pico8_buttons[0] = 0;
-	
-			if(e.buttons & 0x1) {
-				pico8_buttons[0] |= 0x20;
-			}
+		if (!p8_is_running) return;
+
+		// clear fire button
+		pico8_buttons[0] = 0;
+
+		if(e.buttons & 0x1) {
+			pico8_buttons[0] |= 0x20;
 		}
+		if(e.buttons & 0x2) {
+			pico8_buttons[0] |= 0x40;
+		}
+	}
 		
 		// p8_update_layout_hash is used to decide when to update layout (expensive especially when part of a heavy page)
 		var p8_update_layout_hash = -1;
