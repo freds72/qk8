@@ -685,15 +685,15 @@ def pack_actors(image_reader, actors):
     # actor "class"
     s += pack_variant(actor.kind)
     s += pack_variant(actor.id)
+    # mandatory/shared properties
+    s += pack_fixed(actor.radius)
+    s += pack_fixed(actor.height)
     # behavior flags
     flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2 | pack_flag(actor, 'ismonster')<<3 | pack_flag(actor, 'nogravity')<<4 | pack_flag(actor, 'float')<<5 | pack_flag(actor, 'dropoff')<<6 | pack_flag(actor, 'dontfall')<<7
     s += "{:02x}".format(flags)
     # behavior flags (cont.)
     flags = pack_flag(actor, 'randomize') | pack_flag(actor, 'countkill')<<1 | pack_flag(actor, 'nosectordmg')<<2 | pack_flag(actor, 'noblood')<<3
     s += "{:02x}".format(flags)
-    # mandatory/shared properties
-    s += pack_fixed(actor.radius)
-    s += pack_fixed(actor.height)
     
     ################## properties
     properties = 0

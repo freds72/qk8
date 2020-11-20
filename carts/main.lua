@@ -393,7 +393,7 @@ function draw_flats(v_cache,segs)
             -- get other side (if any)
             local yoffset,yoffsettop,otherside,otop,obottom=bottom-top,bottom-top,ldef[not seg.side]
             -- fix animated side walls (elevators)
-            if ldef.flags&0x4!=0 then
+            if ldef.dontpegtop then
               yoffset=0
             end
             if otherside then
@@ -402,7 +402,7 @@ function draw_flats(v_cache,segs)
               obottom=otherside[1].floor>>4
               -- offset animated walls (doors)
               yoffset=0
-              if ldef.flags&0x4!=0 then
+              if ldef.dontpegtop then
                 yoffsettop=otop-top
               end
               -- make sure bottom is not crossing this side top
@@ -756,7 +756,7 @@ function intersect_line(seg,h,height,clearance,is_missile,is_dropoff)
 
   return otherside==nil or 
     -- impassable
-    (not is_missile and ldef.flags&0x40>0) or
+    (not is_missile and ldef.blocking) or
     h+height>otherside[1].ceil or 
     h+clearance<otherside[1].floor or 
     -- avoid monster jumping off cliffs
@@ -815,9 +815,8 @@ function with_physic(thing)
           if hit.seg then
             fix_move=intersect_line(hit.seg,h,height,stair_h,is_missile,actor.is_dropoff) and hit
             -- cross special?
-            -- todo: supports monster activated triggers
             local ldef=hit.seg.line
-            if is_player and ldef.trigger and ldef.flags&0x10>0 then
+            if is_player and ldef.trigger and ldef.playercross then
               ldef.trigger(self)
             end
           else
@@ -882,7 +881,7 @@ function with_physic(thing)
         intersect_sub_sector(ss,self,{cos(self.angle),-sin(self.angle)},0,radius+48,0,function(hit)
           local ldef=hit.seg.line
           -- buttons
-          if ldef.trigger and ldef.flags&0x8>0 then
+          if ldef.trigger and ldef.playeruse then
             -- use special?
             if btnp(🅾️) then
               ldef.trigger(self)
@@ -1410,6 +1409,14 @@ function unpack_chr()
   return chr(mpeek())
 end
 
+-- convert numeric flags to "not nil" tests
+function with_flags(item,flags,all_flags)
+  for i=1,#all_flags,2 do
+    if(flags&all_flags[i]!=0) item[all_flags[i+1]]=true
+  end
+  return item
+end
+
 -- inventory & things
 function unpack_ref(a)
   return a[unpack_variant()]
@@ -1713,9 +1720,9 @@ function unpack_actors()
   -- dontfall
   local all_flags=split("0x1,is_solid,0x2,is_shootable,0x4,is_missile,0x8,is_monster,0x10,is_nogravity,0x20,floating,0x40,is_dropoff,0x80,is_dontfall,0x100,randomize,0x200,countkill,0x400,nosectordmg,0x800,noblood",",",1)
   unpack_array(function()
-    local kind,id,flags,state_labels,states,weapons,active_slot,inventory=unpack_variant(),unpack_variant(),mpeek()|mpeek()<<8,{},{},{}
+    local kind,id,state_labels,states,weapons,active_slot,inventory=unpack_variant(),unpack_variant(),{},{},{}
 
-    local item={
+    local item=with_flags({
       id=id,
       kind=kind,
       radius=unpack_fixed(),
@@ -1773,11 +1780,7 @@ function unpack_actors()
 
         return thing
       end
-    }
-    -- convert numeric flags to "not nil" tests
-    for i=1,#all_flags,2 do
-      if(flags&all_flags[i]!=0) item[all_flags[i+1]]=true
-    end
+    },mpeek()|mpeek()<<8,all_flags)
 
     local properties=unpack_fixed()
     -- decode 
@@ -1956,14 +1959,14 @@ function unpack_map(skill,actors)
       add(verts,{unpack_fixed(),unpack_fixed()})
     end)
 
+    local all_flags=split("0x1,twosided,0x2,special,0x4,dontpegtop,0x8,playeruse,0x10,playercross,0x20,repeatspecial,0x40,blocking",",",1)
     unpack_array(function()
-      local line=add(lines,{
+      local line=add(lines,with_flags({
         -- sides
         [true]=unpack_ref(sides),
-        [false]=unpack_ref(sides),
-        flags=mpeek()}) 
+        [false]=unpack_ref(sides)},mpeek(),all_flags))
       -- special actions
-      if line.flags&0x2>0 then
+      if line.special then
         local special,actorlock=unpack_special(sectors,actors)             
         line.trigger=function(thing)
           -- need lock?
@@ -1991,7 +1994,7 @@ function unpack_map(skill,actors)
           -- do the action *outside* of a coroutine
           special()
           -- repeatable?
-          if line.flags&32>0 then
+          if line.repeatspecial then
             do_async(function()
               -- avoid player hitting trigger/button right away
               wait_async(30)

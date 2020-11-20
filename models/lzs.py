@@ -70,7 +70,8 @@ class Codec(object):
     bs.append(4, self.b_off) 
     bs.append(4, self.b_len) 
     bs.append(2, self.M)
-    bs.append(32, len(blk)) 
+    # total size: not needed for this project
+    # bs.append(32, len(blk)) 
     sched = self.compress(blk) 
     for c in sched: 
       if type(c) is tuple: 
