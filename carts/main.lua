@@ -1,5 +1,5 @@
 -- globals
-local _slow,_ambientlight,_ammo_factor,_intersectid,_onoff_textures,_transparent_textures,_bsp,_cam,_plyr,_things,_sprite_cache,_actors,_btns,_wp_hud,_msg=0,0,1,0,{[0]=0},{}
+local _slow,_ambientlight,_ammo_factor,_intersectid,_onoff_textures,_transparent_textures,_things,_btns,_bsp,_cam,_plyr,_sprite_cache,_actors,_wp_hud,_msg=0,0,1,0,{[0]=0},{},{},{}
 
 --local k_far,k_near=0,2
 --local k_right,k_left=4,8
@@ -371,8 +371,8 @@ function draw_flats(v_cache,segs)
     if #verts>2 then
       local sector,pal0=segs.sector
       local floor,ceil,light,things=sector.floor,sector.ceil,max(sector.lightlevel,_ambientlight),{}
-      -- not visible?
-      if(floor+m8<0) polyfill(verts,sector.tx or 0,floor,sector.floortex,light)
+      -- not visible or no texture?
+      if(sector.floortex!=0 and floor+m8<0) polyfill(verts,sector.tx or 0,floor,sector.floortex,light)
       if(ceil+m8>0) polyfill(verts,0,ceil,sector.ceiltex,light)
 
       -- draw walls
@@ -962,7 +962,7 @@ function with_health(thing)
       self.health=max(self.health-hp)\1
       if self.health==0 then
         -- register kill
-        if(instigator==_plyr and self.actor.countkill) _kills+=1
+        if(self.actor.countkill) _kills+=1
 
         die(self,dmg)
       end
@@ -1208,8 +1208,6 @@ end
 --_max_cpu,_max_cpu_ttl=0,0
 
 function play_state()
-  _things,_btns,_wp_hud={},{}
-  
   -- stop music (eg. restart game)
   music(-1)
 
@@ -1506,12 +1504,16 @@ function unpack_special(sectors,actors)
     end
   elseif special==243 then
     -- exit level
+    local delay=unpack_variant()    
     return function()
       -- save player's state
       _plyr:save()
-
-      -- record level completion time + send stats
-      load(mod_name.."_0.p8",nil,_skill..",".._map_id..",2,"..(time()-_start_time)..",".._kills..",".._monsters..",".._secrets)
+      local t=time()-_start_time
+      do_async(function()
+        wait_async(delay)
+        -- record level completion time + send stats
+        load(mod_name.."_0.p8",nil,_skill..",".._map_id..",2,"..t..",".._kills..",".._monsters..",".._secrets)
+      end)
     end
   end
 end
