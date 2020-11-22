@@ -45,4 +45,4 @@ if(slowflip)extcmd("rec")
 odraw()
 if(slowflip)for i=0,99 do flip() end extcmd("video")cls()stop("gif saved")
 end
-menuitem(1,"put a flip in it!",function() slowflip=not slowflip end)
+menuitem(2,"put a flip in it!",function() slowflip=not slowflip end)
