@@ -1019,7 +1019,7 @@ function attach_plyr(thing,actor,skill)
           -- but button state is updated only on first frame
           -- skip button state check in this case (e.g. keep hud open)
           if(_slow==0) _wp_hud=not (btn(6) or btn(6,1))
-          for i,k in pairs{0,3,1,2,4} do
+          for i,k in pairs{0,3,1,2,❎} do
             if btnp(k) or btnp(k,1) then
               -- only switch if we have the weapon and it's not the current weapon
               _wp_hud,_btns=(wp_slot!=i and wp[i]) and wp_switch(i),{}
@@ -1030,14 +1030,14 @@ function attach_plyr(thing,actor,skill)
           -- cursor+x: weapon switch+rotate
           -- wasd: fwd+strafe
           -- o: fire
-          if btn(🅾️) then
-            if(_btns[0]) dx=1
-            if(_btns[1]) dx=-1
           -- direct mouse input?
-          elseif peek(0x5f80)==1 then
+          if peek(0x5f80)==1 then
             da+=(128-peek(0x5f81))/8
             daf=0.2
             poke(0x5f80,0)
+          elseif btn(🅾️) then
+            if(_btns[0]) dx=1
+            if(_btns[1]) dx=-1
           else
             if(_btns[0]) da-=0.75
             if(_btns[1]) da+=0.75
@@ -1259,7 +1259,7 @@ function play_state()
       draw_bsp()
       _plyr:hud()
 
-      if(_msg) print(_msg,64-#_msg*2,120,15)
+      if(_msg) printb(_msg,64-#_msg*2,50,15)
 
       -- spr(0,0,64,16,8)
       -- debug messages
