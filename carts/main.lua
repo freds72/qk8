@@ -1035,7 +1035,7 @@ function attach_plyr(thing,actor,skill)
             da+=(128-peek(0x5f81))/8
             daf=0.2
             poke(0x5f80,0)
-          elseif btn(🅾️) then
+          elseif btn(❎) then
             if(_btns[0]) dx=1
             if(_btns[1]) dx=-1
           else

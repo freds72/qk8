@@ -217,9 +217,9 @@
 						if (abs(dy) > abs(dx) * 0.6) // vertical
 						{
 							// o button
-							if (dy < -deadzone) b |= 0x20;
+							if (dy < -deadzone) b |= 0x10;
 							// x button
-							if (dy > deadzone) b |= 0x10;
+							if (dy > deadzone) b |= 0x20;
 						}
 	
 						pico8_buttons[0] |= b;
