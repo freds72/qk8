@@ -68,14 +68,14 @@ function menu_state()
   local mouse_ttl,mouse_x,mouse_y=0,0,0
   local help_keyboard,help_mouse,help_i,help_ttl,help={
     "",
-    "🅾️/(c):SELECT",
-    "❎/(x):BACK",
-    "(p)AUSE:CONTROL OPTIONS"
+    "🅾️/(c)\23SELECT",
+    "❎/(x)\23BACK",
+    "(p)AUSE\23CONTROL OPTIONS"
   },
   {
     "",
-    "LEFT MOUSE: SELECT",
-    "RIGHT MOUSE: BACK"
+    "LEFT MOUSE\23SELECT",
+    "RIGHT MOUSE\23BACK"
   },0,90
   local menus,menu_i,anm_ttl={
     {"wHICH ePISODE?",_maps_label,sel=1,max=1},

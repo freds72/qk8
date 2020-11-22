@@ -1298,10 +1298,10 @@ function gameover_state(pos,angle,target,h)
       idle_ttl-=1
       -- avoid immediate button hit
       if idle_ttl<0 then
-        if btnp(❎) then
+        if btnp(_btnuse) then
           -- 1: gameover    
           load(mod_name.."_0.p8",nil,_skill..",".._map_id..",1")
-        elseif btnp(🅾️) then
+        elseif btnp(_btnfire) then
           -- 3: retry
           load(mod_name.."_0.p8",nil,_skill..",".._map_id..",3")
         end
@@ -1311,7 +1311,7 @@ function gameover_state(pos,angle,target,h)
     function()
       draw_bsp()
 
-      if(time()%4<2) printb("you died - 🅾️restart/❎menu",8,120,12)
+      if(time()%4<2) printb("      you died\n\nFIRE\23RESTART USE\23MENU",22,108,12)
 
       -- set screen palette
       -- pal({140,1,139,3,4,132,133,7,6,134,5,8,2,9,10},1)
@@ -1333,7 +1333,7 @@ function _init()
   -- launch params
   local p=split(stat(6))
   _skill,_map_id=tonum(p[1]) or 2,tonum(p[2]) or 1
-  -- sky texture
+  -- sky texture + load keyboard control mapping
   _sky_height,_sky_offset,_btnfire,_btnuse,_btndown,_btnup=_maps_sky[_map_id*2-1],_maps_sky[_map_id*2],dget(35),dget(36),dget(37),dget(38)
   -- skybox fill pattern
   fillp(0xaaaa)
