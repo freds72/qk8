@@ -1316,13 +1316,13 @@ def main():
   parser.add_argument("--compress", action='store_true', required=False, help="Enable compression (default: false)")
   parser.add_argument("--compress-more", action='store_true', required=False, help="Brute force search of best compression parameters. Warning: takes time (default: false)")
   parser.add_argument("--release", required=False,  type=str, help="Generate html+bin packages with given version. Note: compression mandatory if number of carts above 16.")
-  parser.add_argument("--sky", required=False, type=str, help="Skybox texture name")
+  parser.add_argument("--sky", required=False, type=str, help="Skybox texture name (only for single map compilation)")
   parser.add_argument("--dump-sprites", action='store_true', required=False, help="Writes all sprites to a single image with their 16x16 tile overlay.")
   args = parser.parse_args()
 
   logging.basicConfig(level=logging.INFO)
   
-  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress, release=args.release, skybox=args.sky, dump_sprites=args.dump_sprites, compress_more=args.compress_more)
+  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress or args.compress_more, release=args.release, skybox=args.sky, dump_sprites=args.dump_sprites, compress_more=args.compress_more)
   logging.info('DONE')
 
 if __name__ == '__main__':

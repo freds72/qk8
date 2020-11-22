@@ -789,7 +789,7 @@ function with_physic(thing)
       -- alive floating actor? : track target height
       if not self.dead and actor.floating then
         dz+=rnd(1.6)-0.9
-        if(self.target) dz+=mid((self.target[3]-self[3])>>8,-2,2)
+        if(self.target) dz+=mid(self.target[3]-self[3],-512,512)>>8
         -- avoid woobling
         dz*=friction
       end
@@ -883,7 +883,7 @@ function with_physic(thing)
           -- buttons
           if ldef.trigger and ldef.playeruse then
             -- use special?
-            if btnp(🅾️) then
+            if btnp(_btnuse) then
               ldef.trigger(self)
             end
             -- trigger/message only closest hit
@@ -991,8 +991,7 @@ function with_health(thing)
 end
 
 function attach_plyr(thing,actor,skill)
-  local dmg_factor=({0.5,1,1,2})[skill]
-  local bobx,boby,speed,da,wp,wp_slot,wp_yoffset,wp_y,hit_ttl,wp_switching=0,0,actor.speed,0,thing.weapons,thing.active_slot,0,0,0
+  local bobx,boby,speed,da,wp,wp_slot,wp_yoffset,wp_y,hit_ttl,dmg_factor,wp_switching=0,0,actor.speed,0,thing.weapons,thing.active_slot,0,0,0,pack(0.5,1,1,2)[skill]
 
   local function wp_switch(slot)
     if(wp_switching) return
@@ -1044,8 +1043,8 @@ function attach_plyr(thing,actor,skill)
             if(_btns[1]) da+=0.75
           end
 
-          if(_btns[2]) dz=1
-          if(_btns[3]) dz=-1
+          if(_btns[_btnup]) dz=1
+          if(_btns[_btndown]) dz=-1
 
           _wp_hud=btn(6)
           poke(0x5f30,1)
@@ -1299,10 +1298,10 @@ function gameover_state(pos,angle,target,h)
       idle_ttl-=1
       -- avoid immediate button hit
       if idle_ttl<0 then
-        if btnp(🅾️) then
+        if btnp(❎) then
           -- 1: gameover    
           load(mod_name.."_0.p8",nil,_skill..",".._map_id..",1")
-        elseif btnp(❎) then
+        elseif btnp(🅾️) then
           -- 3: retry
           load(mod_name.."_0.p8",nil,_skill..",".._map_id..",3")
         end
@@ -1312,7 +1311,7 @@ function gameover_state(pos,angle,target,h)
     function()
       draw_bsp()
 
-      if(time()%4<2) printb("you died - ❎ restart/🅾️ menu",8,120,12)
+      if(time()%4<2) printb("you died - 🅾️restart/❎menu",8,120,12)
 
       -- set screen palette
       -- pal({140,1,139,3,4,132,133,7,6,134,5,8,2,9,10},1)
@@ -1335,7 +1334,7 @@ function _init()
   local p=split(stat(6))
   _skill,_map_id=tonum(p[1]) or 2,tonum(p[2]) or 1
   -- sky texture
-  _sky_height,_sky_offset=_maps_sky[_map_id*2-1],_maps_sky[_map_id*2]
+  _sky_height,_sky_offset,_btnfire,_btnuse,_btndown,_btnup=_maps_sky[_map_id*2-1],_maps_sky[_map_id*2],dget(35),dget(36),dget(37),dget(38)
   -- skybox fill pattern
   fillp(0xaaaa)
 
@@ -1350,19 +1349,17 @@ function _update()
   end
 
   -- any futures?
-  local tmp={}
-  for k,async_handle in pairs(_futures) do
+  for i=#_futures,1,-1 do
     -- get actual coroutine
-    local f=async_handle.co
+    local f=_futures[i].co
     -- still active?
     if f and costatus(f)=="suspended" then
-      -- todo: remove assert for release
-      assert(coresume(f))
-      add(tmp,async_handle)
+      coresume(f)
+    else
+      deli(_futures,i)
     end
   end
-  _futures=tmp
-
+  
   -- decay flash light
   _ambientlight*=0.8
   -- keep world running
@@ -1580,7 +1577,7 @@ function unpack_actors()
     -- A_WeaponReady
     function(item)
       return function(owner,weapon)
-        if not _wp_hud and btn(❎) then
+        if not _wp_hud and btn(_btnfire) then
           local inventory,ammotype,newqty=owner.inventory,item.ammotype,0
           -- handle "fist" (eg weapon without ammotype)
           if(ammotype) newqty=inventory[ammotype]-item.ammouse
@@ -1823,7 +1820,7 @@ function unpack_actors()
       end
     end
     
-    local pickup_factory={
+    item.pickup=pack(
       -- default inventory item (ex: lock)
       function(thing,target)
         pickup(thing,target.inventory)
@@ -1846,8 +1843,7 @@ function unpack_actors()
       function(thing,target)
         pickup(thing,target,"armor")
       end
-    }
-    item.pickup=pickup_factory[kind+1]
+    )[kind+1]
     
     -- actor states
     unpack_array(function()

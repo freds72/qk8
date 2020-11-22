@@ -66,6 +66,17 @@ end
 
 function menu_state()
   local mouse_ttl,mouse_x,mouse_y=0,0,0
+  local help_keyboard,help_mouse,help_i,help_ttl,help={
+    "",
+    "🅾️/(c):SELECT",
+    "❎/(x):BACK",
+    "(p)AUSE:CONTROL OPTIONS"
+  },
+  {
+    "",
+    "LEFT MOUSE: SELECT",
+    "RIGHT MOUSE: BACK"
+  },0,90
   local menus,menu_i,anm_ttl={
     {"wHICH ePISODE?",_maps_label,sel=1,max=1},
     {"sELECT sKILL lEVEL",
@@ -86,6 +97,13 @@ function menu_state()
 
   return
     function()
+      help=help_keyboard
+      if help_ttl>0 then
+        help_ttl-=1
+      else
+        help_ttl=30
+        help_i+=1
+      end
       -- mouse?
       if peek(0x5f80)==1 then
         mouse_ttl=30
@@ -95,9 +113,14 @@ function menu_state()
         mouse_y=mid(mouse_y,0,126)
       end
       if mouse_ttl>0 then
-        mouse_ttl-=1        
+        mouse_ttl-=1
+        help=help_mouse
+        -- reset control scheme if using mouse
+        switch_scheme(0)
       end
       poke(0x5f80,0)
+
+      help_i=help_i%#help
 
       anm_ttl=(anm_ttl+1)%48
       if menu_i>0 then
@@ -125,10 +148,10 @@ function menu_state()
         menus[menu_i].sel=active_sel
       end
 
-      if btnp(🅾️) then
+      if btnp(❎) then
         if(menu_i>1)sfx(0)
         menu_i=max(1,menu_i-1)
-      elseif btnp(❎) then
+      elseif btnp(🅾️) then
         if(menu_i>0)sfx(1)
         menu_i+=1
         if menu_i>#menus then
@@ -174,6 +197,8 @@ function menu_state()
       
       if(mouse_ttl>0) palt(vcol(4),true) sspr(41,115,10,10,mouse_x,mouse_y) palt()
 
+      local s=help[help_i+1]
+      printb(s,64-#s*2,121,vcol(3),vcol(2))
       pal(title_gfx.pal,1)
     end,
     -- init
@@ -347,9 +372,28 @@ function slicefade_state(...)
       memcpy(0x0,0x6000,8192)
     end
 end
+local _scheme=0
+function switch_scheme(scheme)
+  local scheme_help={
+    {caption="keyboard mode 1",btnfire=🅾️,btnuse=❎,btndown=⬇️,btnup=⬆️},
+    {caption="keyboard mode 2",btnfire=⬆️,btnuse=⬇️,btndown=7,btnup=7}
+  }
+  _scheme=scheme or ((_scheme+1)%2)
+  local s=scheme_help[_scheme+1]
+  menuitem(1,s.caption,switch_scheme)
+  -- save scheme
+  dset(34,_scheme)
+  dset(35,s.btnfire)
+  dset(36,s.btnuse)
+  dset(37,s.btndown)
+  dset(38,s.btnup)
+end
 
 function _init()
   cartdata(mod_name)
+
+  -- control scheme
+  switch_scheme(dget(34))
 
   -- sound effects
   local addr=0x3200
