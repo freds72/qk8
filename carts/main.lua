@@ -1341,12 +1341,17 @@ function _init()
   next_state(play_state)
 end
 
+-- refresh button states
+function update_btns(p,mask)
+  for i=0,5 do
+    _btns[mask|i]=btnp(i,p) or _btns[mask|i] and btn(i,p)
+  end
+end
+
 function _update()
   -- get btn states and suppress pressed buttons until btnp occurs  
-  for i=0,5 do
-    _btns[i]=btnp(i) or _btns[i] and btn(i)
-    _btns[0x10|i]=btnp(i,1) or _btns[0x10|i] and btn(i,1)
-  end
+  update_btns(0,0)
+  update_btns(1,0x10)
 
   -- any futures?
   for i=#_futures,1,-1 do

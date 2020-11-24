@@ -229,7 +229,6 @@
 		}
 	
 		function track_mouse(e) {
-	
 			// enable mouse reading
 			pico8_gpio[0] = 1;
 			// clamp value to -127/127
@@ -240,24 +239,24 @@
 		}
 	
 		function track_click(e, step) {
-		if (!p8_is_running) return;
+			if (!p8_is_running) return;
 
-		// clear fire button
-		pico8_buttons[0] = 0;
+			// clear fire button
+			pico8_buttons[0] = 0;
 
-		// left (fire/ok)
-		if(e.buttons & 0x1) {
-			pico8_buttons[0] |= 0x10;
+			// left (fire/ok)
+			if(e.buttons & 0x1) {
+				pico8_buttons[0] |= 0x10;
+			}
+			// right (open/cancel)
+			if(e.buttons & (0x2|0x8)) {
+				pico8_buttons[0] |= 0x20;
+			}
+			// middle
+			if(e.buttons & 0x4) {
+				pico8_buttons[0] |= 0x40;
+			}
 		}
-		// right (open/cancel)
-		if(e.buttons & (0x2|0x8)) {
-			pico8_buttons[0] |= 0x20;
-		}
-		// middle
-		if(e.buttons & 0x4) {
-			pico8_buttons[0] |= 0x40;
-		}
-	}
 		
 		// p8_update_layout_hash is used to decide when to update layout (expensive especially when part of a heavy page)
 		var p8_update_layout_hash = -1;
@@ -671,13 +670,32 @@
 		// key blocker. prevent cursor keys from scrolling page while playing cart.
 		// also don't act on M, R so that can mute / reset cart
 		document.addEventListener('keydown',
-		function (event) {
-			event = event || window.event;
-			if (!p8_is_running) return;
-			if (pico8_state.has_focus == 1)
-				if ([32, 37, 38, 39, 40, 77, 82, 80, 9].indexOf(event.keyCode) > -1)       // block cursors, M R P, tab
-					if (event.preventDefault) event.preventDefault();
-		},{passive: false});
+			function (event) {
+				event = event || window.event;
+				if (!p8_is_running) return;
+				if (pico8_state.has_focus == 1) {
+					pico8_buttons[0] = 0;
+					if(event.keyCode==32) {
+						// gpio pin 3 contains "use" button code
+						pico8_buttons[0] |= pico8_gpio[3];
+					}
+
+					if ([37, 38, 39, 40, 77, 82, 80, 9].indexOf(event.keyCode) > -1)       // block cursors, M R P, tab
+						if (event.preventDefault) event.preventDefault();
+				}
+
+			},{passive: false});
+
+		document.addEventListener('keyup',
+			function (event) {
+				event = event || window.event;
+				if (!p8_is_running) return;
+				if (pico8_state.has_focus == 1)
+					if(event.keyCode==32) {
+						pico8_buttons[0] = 0;					
+						if (event.preventDefault) event.preventDefault();
+					}
+			},{passive: false});
 	
 		// when using codo_textarea to determine focus, need to explicitly hand focus back when clicking a p8_menu_button
 		function p8_give_focus()
