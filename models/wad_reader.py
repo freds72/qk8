@@ -297,7 +297,6 @@ def pack_special(owner, lines, sides, sectors):
       # find lowest surrouding ceiling
       target_height = min([other_sector.heightceiling for other_sector in other_sectors])
       target_heights[sector_id]=pack_fixed(target_height-4)
-    s += pack_sectors_by_tag(sector_ids,target_heights)
     # speed
     s += "{:02x}".format(128+get_safe_speed(owner,'arg1'))
     # delay (can be larger than 256)
@@ -308,6 +307,7 @@ def pack_special(owner, lines, sides, sectors):
       s += pack_variant(owner.get('arg2',0))
     # lock
     s += pack_variant(owner.get('arg3',0))
+    s += pack_sectors_by_tag(sector_ids,target_heights)
   elif special==10:
     # door close
     logging.debug("Special: Door_Close")
@@ -324,13 +324,13 @@ def pack_special(owner, lines, sides, sectors):
     for sector_id in sector_ids:
       sector = sectors[sector_id]
       target_heights[sector_id]=pack_fixed(sector.heightfloor)
-    s += pack_sectors_by_tag(sector_ids,target_heights)
     # speed
     s += "{:02x}".format(get_safe_speed(owner,'arg1'))
     # delay (not supported)
     s += pack_variant(0)
     # lock (not supported)
     s += pack_variant(0)
+    s += pack_sectors_by_tag(sector_ids,target_heights)
   elif special==64: 
     logging.debug("Sector: Plat_UpWaitDownStay")
     sector_ids = []
@@ -348,13 +348,13 @@ def pack_special(owner, lines, sides, sectors):
       # find floor just above elevator floor
       other_floor = min([other_sector.heightfloor for other_sector in other_sectors if other_sector.heightfloor>sector.heightfloor])
       target_heights[sector_id]=pack_fixed(other_floor)
-    s += pack_sectors_by_tag(sector_ids,target_heights)
     # speed
     s += "{:02x}".format(128+get_safe_speed(owner,'arg1'))
     # delay
     s += pack_variant(owner.get('arg2',0))
     # lock (not supported)
     s += pack_variant(0)
+    s += pack_sectors_by_tag(sector_ids,target_heights)
   elif special==62: 
     logging.debug("Special: Plat_DownWaitUpStay")
     sector_ids = []
@@ -372,13 +372,14 @@ def pack_special(owner, lines, sides, sectors):
       # find floor just below elevator floor
       other_floor = min([other_sector.heightfloor for other_sector in other_sectors if other_sector.heightfloor<sector.heightfloor])
       target_heights[sector_id]=pack_fixed(other_floor+8)
-    s += pack_sectors_by_tag(sector_ids,target_heights)
     # speed
     s += "{:02x}".format(get_safe_speed(owner,'arg1'))
     # delay (default: 3s)
     s += pack_variant(owner.get('arg2',0))
     # lock (not supported)
     s += pack_variant(0)
+    # sectors
+    s += pack_sectors_by_tag(sector_ids,target_heights)
   elif special==243:
     # exit level
     logging.debug("Special: exit level")
@@ -388,9 +389,10 @@ def pack_special(owner, lines, sides, sectors):
     logging.debug("Special: set light level")
     # set lightlevel
     sector_ids = find_sectors_by_tag(owner.arg0, sectors)
-    s += pack_sectors_by_tag(sector_ids)
     # light level
     s += "{:02x}".format(owner.get('arg1',0))
+    # sectors
+    s += pack_sectors_by_tag(sector_ids)
   return s
 
 def get_skillmask(thing, skill):

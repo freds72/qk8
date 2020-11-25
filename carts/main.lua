@@ -1,5 +1,5 @@
 -- globals
-local _slow,_ambientlight,_ammo_factor,_intersectid,_onoff_textures,_transparent_textures,_things,_btns,_bsp,_cam,_plyr,_sprite_cache,_actors,_wp_hud,_msg=0,0,1,0,{[0]=0},{},{},{}
+local _slow,_ambientlight,_ammo_factor,_intersectid,_onoff_textures,_transparent_textures,_futures,_things,_btns,_bsp,_cam,_plyr,_sprite_cache,_actors,_wp_hud,_msg=0,0,1,0,{[0]=0},{},{},{},{}
 
 --local k_far,k_near=0,2
 --local k_right,k_left=4,8
@@ -61,8 +61,6 @@ function shortest_angle(target_angle,angle)
 	return angle
 end
 
--- coroutine helpers
-local _futures={}
 -- registers a new coroutine
 -- returns a handle to the coroutine
 -- used to cancel a coroutine
@@ -1341,17 +1339,13 @@ function _init()
   next_state(play_state)
 end
 
--- refresh button states
-function update_btns(p,mask)
-  for i=0,5 do
-    _btns[mask|i]=btnp(i,p) or _btns[mask|i] and btn(i,p)
-  end
-end
-
 function _update()
   -- get btn states and suppress pressed buttons until btnp occurs  
-  update_btns(0,0)
-  update_btns(1,0x10)
+  for p,mask in pairs{[0]=0,0x10} do
+    for i=0,5 do
+      _btns[mask|i]=btnp(i,p) or _btns[mask|i] and btn(i,p)
+    end
+  end
 
   -- any futures?
   for i=#_futures,1,-1 do
@@ -1373,6 +1367,8 @@ function _update()
   end
 
   _update_state()
+  -- capture video!
+  if(btnp(4,2)) extcmd("video")
   _slow+=1
 end
 
@@ -1412,7 +1408,7 @@ end
 -- convert numeric flags to "not nil" tests
 function with_flags(item,flags,all_flags)
   for i=1,#all_flags,2 do
-    if(flags&all_flags[i]!=0) item[all_flags[i+1]]=true
+    item[all_flags[i+1]]=flags&all_flags[i]!=0 and true 
   end
   return item
 end
@@ -1425,8 +1421,10 @@ end
 function unpack_special(sectors,actors)
   local special=mpeek()
   local function unpack_moving_sectors(what)
+    -- door speed: https://zdoom.org/wiki/Map_translator#Constants
+    -- speed is signed (]-32;32[)
+    local moving_sectors,moving_speed,delay,lock={},(mpeek()-128)/8,unpack_variant(),unpack_variant()
     -- sectors
-    local moving_sectors={}
     -- backup heights
     unpack_array(function()
       local sector=unpack_ref(sectors)
@@ -1435,9 +1433,6 @@ function unpack_special(sectors,actors)
       sector.target=unpack_fixed()
       add(moving_sectors,sector)
     end)
-    -- door speed: https://zdoom.org/wiki/Map_translator#Constants
-    -- speed is signed (]-32;32[)
-    local moving_speed,delay,lock=(mpeek()-128)/8,unpack_variant(),unpack_variant()
     local function move_sector_async(sector,to,speed,no_crush)
       -- play open/close sound
       sfx(63)
@@ -1494,11 +1489,10 @@ function unpack_special(sectors,actors)
     return unpack_moving_sectors("floor")
   elseif special==112 then
     -- sectors
-    local target_sectors={}
+    local target_sectors,lightlevel={},mpeek()/255
     unpack_array(function()
       add(target_sectors,unpack_ref(sectors))
     end)
-    local lightlevel=mpeek()/255
     return function()
       for _,sector in pairs(target_sectors) do
         sector.lightlevel=lightlevel
@@ -1671,9 +1665,8 @@ function unpack_actors()
           end
         end
         -- lost/dead?
-        self.target=nil
-        -- idle state
-        self:jump_to(0)
+        -- !! token saving hack !! assumes jump returns nothing
+        self.target=self:jump_to(0)        
       end
     end,
     -- A_Light
