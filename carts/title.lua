@@ -26,9 +26,12 @@ function next_state(fn,...)
     -- init function (if any)
     if(i) i()
     -- 
-    _update,_draw=u,d
+    _draw=d
     -- actually run the update
     u()
+        
+    -- gif capture handling
+    if(peek(0x5f83)==1) extcmd("video") poke(0x5f83)
   end
 end
 

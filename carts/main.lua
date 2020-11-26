@@ -104,8 +104,8 @@ end
 
 -- bold print helper
 function printb(txt,x,y,c1,c2)
-  print(txt,x,y+1,c2)
-  print(txt,x,y,c1)
+  ?txt,x,y+1,c2
+  ?txt,x,y,c1
 end
 
 -->8
@@ -350,8 +350,7 @@ function draw_flats(v_cache,segs)
       -- near clipping required?
       local res,v0={},verts[#verts]
       local d0=v0.zz-8
-      for i=1,#verts do
-        local v1=verts[i]
+      for i,v1 in ipairs(verts) do
         local d1=v1.zz-8
         if d1>0 then
           if d0<=0 then
@@ -1368,7 +1367,7 @@ function _update()
 
   _update_state()
   -- capture video!
-  if(btnp(4,2)) extcmd("video")
+  if(peek(0x5f83)==1) extcmd("video") poke(0x5f83)
   _slow+=1
 end
 
