@@ -8,19 +8,15 @@ actors:
   ;
 
 block:
-  ('ACTOR'|'actor') name (':' parent)? uid? '{' pair* flags* states? '}'
+  ('ACTOR'|'actor') name (':' parent)? uid? '{' pair* states? '}'
   ;
 
 pair:
-  (parent '.')? keyword value (',' value)* ';'?
+  (parent '.')? keyword value (',' value)* | ENABLED keyword ';'?
   ;
   
 keyword:
   KEYWORD
-  ;
-
-flags:
-  ENABLED keyword ';'?
   ;
 
 states:

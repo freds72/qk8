@@ -29,11 +29,6 @@ class DECORATEVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by DECORATEParser#flags.
-    def visitFlags(self, ctx:DECORATEParser.FlagsContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by DECORATEParser#states.
     def visitStates(self, ctx:DECORATEParser.StatesContext):
         return self.visitChildren(ctx)

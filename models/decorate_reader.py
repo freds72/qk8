@@ -128,44 +128,40 @@ class DecorateWalker(DECORATEListener):
 
       for pair in ctx.pair():
         attribute = pair.keyword().getText().lower()
-        value = pair.value(0).getText().lower().strip('"')
-        # note: flags are handled outside of regular properties (see below)
-        if attribute in []:
-          value = value=='true'
-        elif attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound','meleerange','maxtargetrange']:
-          value = int(value)
-        elif attribute in ['ammotype','trailtype']:
-          if value not in self.result:
-            raise Exception("Actor: {} references unknown: {}".format(name, value))
-          otheractor = self.result[value]
-          value = otheractor.id
-        elif attribute in ['startitem']:
-          if value not in self.result:
-            raise Exception("Actor: {} references unknown start item: {}".format(name, value))
-          otheractor = self.result[value]
-          startitems = properties.get('startitems',[])
-          # default amount
-          amount = 1
-          # so far, only ammo can have startitem params
-          if otheractor.kind == ACTOR_KIND.AMMO:
-            amount = int(pair.value(1).getText())
-          startitems.append((otheractor.id, amount))
-          value = startitems
-          attribute = 'startitems'
+        value = None
         
-        # else string
-        properties[attribute] = value
+        if pair.ENABLED():
+          value = pair.ENABLED().getText()=='+'
+        else:
+          value = pair.value(0).getText().lower().strip('"')
+          if attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound','meleerange','maxtargetrange']:
+            value = int(value)
+          elif attribute in ['ammotype','trailtype']:
+            if value not in self.result:
+              raise Exception("Actor: {} references unknown: {}".format(name, value))
+            otheractor = self.result[value]
+            value = otheractor.id
+          elif attribute in ['startitem']:
+            if value not in self.result:
+              raise Exception("Actor: {} references unknown start item: {}".format(name, value))
+            otheractor = self.result[value]
+            startitems = properties.get('startitems',[])
+            # default amount
+            amount = 1
+            # so far, only ammo can have startitem params
+            if otheractor.kind == ACTOR_KIND.AMMO:
+              amount = int(pair.value(1).getText())
+            startitems.append((otheractor.id, amount))
+            value = startitems
+            attribute = 'startitems'
+          
+        # persist value
+        if value: properties[attribute] = value
       
       if properties.kind==ACTOR_KIND.AMMO:
         # ammo must have a "single" ammo type
         # override anything from decorate
         properties['ammotype']=properties.get('parent',properties.id)
-
-      # flags
-      for flag in ctx.flags():
-        activated = flag.ENABLED().getText()
-        attribute = flag.keyword().getText().lower()
-        properties[attribute] = activated=='+'
       
       # loop/goto index is encoded in a byte
       if len(self.states)>255:
