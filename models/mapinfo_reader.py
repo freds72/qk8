@@ -25,9 +25,11 @@ class MAPINFO(MAPINFOListener):
     properties = {}
     for pair in ctx.pair():
       attribute = pair.keyword().getText().lower()
-      value = pair.value().getText().strip('"')
+      value = pair.value(0).getText().strip('"')
       if attribute in ['levelnum','music']:
         value = int(value)
+      elif attribute in ['location']:
+        value = (int(value), int(pair.value(1).getText().strip('"')))
       
       # else string
       properties[attribute] = value
@@ -36,6 +38,8 @@ class MAPINFO(MAPINFOListener):
       'name': lump,
       'group': lump[:2].lower(),
       'label': label,
+      # map location (optional)
+      'location': properties.get('location', (-1,-1)),
       # background sky (optional)
       'sky': properties.get('sky1',None),
       # need first entry only
@@ -48,10 +52,9 @@ class MAPINFO(MAPINFOListener):
   def exitInfoblock(self, ctx):
     for pair in ctx.pair():
       attribute = pair.keyword().getText().lower()
-      value = pair.value().getText().strip('"')
+      value = pair.value(0).getText().strip('"')
       self.gameinfo[attribute] = value
 
-  
 # Converts a TEXTURE file definition into a set of unique tiles + map index
 class MapinfoReader(MAPINFOListener):
   def __init__(self, stream):

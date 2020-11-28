@@ -11,27 +11,28 @@ else:
 
 def serializedATN():
     with StringIO() as buf:
-        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\17")
-        buf.write("@\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7\4\b")
+        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\20")
+        buf.write("D\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7\4\b")
         buf.write("\t\b\4\t\t\t\3\2\3\2\7\2\25\n\2\f\2\16\2\30\13\2\3\2\3")
         buf.write("\2\3\3\3\3\3\3\3\3\3\3\7\3!\n\3\f\3\16\3$\13\3\3\3\3\3")
         buf.write("\3\4\3\4\3\4\7\4+\n\4\f\4\16\4.\13\4\3\4\3\4\3\5\3\5\3")
-        buf.write("\5\3\5\5\5\66\n\5\3\6\3\6\3\7\3\7\3\b\3\b\3\t\3\t\3\t")
-        buf.write("\2\2\n\2\4\6\b\n\f\16\20\2\3\3\2\t\13\2<\2\26\3\2\2\2")
-        buf.write("\4\33\3\2\2\2\6\'\3\2\2\2\b\61\3\2\2\2\n\67\3\2\2\2\f")
-        buf.write("9\3\2\2\2\16;\3\2\2\2\20=\3\2\2\2\22\25\5\4\3\2\23\25")
-        buf.write("\5\6\4\2\24\22\3\2\2\2\24\23\3\2\2\2\25\30\3\2\2\2\26")
-        buf.write("\24\3\2\2\2\26\27\3\2\2\2\27\31\3\2\2\2\30\26\3\2\2\2")
-        buf.write("\31\32\7\2\2\3\32\3\3\2\2\2\33\34\7\3\2\2\34\35\5\n\6")
-        buf.write("\2\35\36\5\16\b\2\36\"\7\4\2\2\37!\5\b\5\2 \37\3\2\2\2")
-        buf.write("!$\3\2\2\2\" \3\2\2\2\"#\3\2\2\2#%\3\2\2\2$\"\3\2\2\2")
-        buf.write("%&\7\5\2\2&\5\3\2\2\2\'(\7\6\2\2(,\7\4\2\2)+\5\b\5\2*")
-        buf.write(")\3\2\2\2+.\3\2\2\2,*\3\2\2\2,-\3\2\2\2-/\3\2\2\2.,\3")
-        buf.write("\2\2\2/\60\7\5\2\2\60\7\3\2\2\2\61\62\5\f\7\2\62\63\7")
-        buf.write("\7\2\2\63\65\5\20\t\2\64\66\7\b\2\2\65\64\3\2\2\2\65\66")
-        buf.write("\3\2\2\2\66\t\3\2\2\2\678\7\f\2\28\13\3\2\2\29:\7\f\2")
-        buf.write("\2:\r\3\2\2\2;<\7\13\2\2<\17\3\2\2\2=>\t\2\2\2>\21\3\2")
-        buf.write("\2\2\7\24\26\",\65")
+        buf.write("\5\3\5\3\5\5\5\67\n\5\3\5\5\5:\n\5\3\6\3\6\3\7\3\7\3\b")
+        buf.write("\3\b\3\t\3\t\3\t\2\2\n\2\4\6\b\n\f\16\20\2\3\3\2\n\f\2")
+        buf.write("A\2\26\3\2\2\2\4\33\3\2\2\2\6\'\3\2\2\2\b\61\3\2\2\2\n")
+        buf.write(";\3\2\2\2\f=\3\2\2\2\16?\3\2\2\2\20A\3\2\2\2\22\25\5\4")
+        buf.write("\3\2\23\25\5\6\4\2\24\22\3\2\2\2\24\23\3\2\2\2\25\30\3")
+        buf.write("\2\2\2\26\24\3\2\2\2\26\27\3\2\2\2\27\31\3\2\2\2\30\26")
+        buf.write("\3\2\2\2\31\32\7\2\2\3\32\3\3\2\2\2\33\34\7\3\2\2\34\35")
+        buf.write("\5\n\6\2\35\36\5\16\b\2\36\"\7\4\2\2\37!\5\b\5\2 \37\3")
+        buf.write("\2\2\2!$\3\2\2\2\" \3\2\2\2\"#\3\2\2\2#%\3\2\2\2$\"\3")
+        buf.write("\2\2\2%&\7\5\2\2&\5\3\2\2\2\'(\7\6\2\2(,\7\4\2\2)+\5\b")
+        buf.write("\5\2*)\3\2\2\2+.\3\2\2\2,*\3\2\2\2,-\3\2\2\2-/\3\2\2\2")
+        buf.write(".,\3\2\2\2/\60\7\5\2\2\60\7\3\2\2\2\61\62\5\f\7\2\62\63")
+        buf.write("\7\7\2\2\63\66\5\20\t\2\64\65\7\b\2\2\65\67\5\20\t\2\66")
+        buf.write("\64\3\2\2\2\66\67\3\2\2\2\679\3\2\2\28:\7\t\2\298\3\2")
+        buf.write("\2\29:\3\2\2\2:\t\3\2\2\2;<\7\r\2\2<\13\3\2\2\2=>\7\r")
+        buf.write("\2\2>\r\3\2\2\2?@\7\f\2\2@\17\3\2\2\2AB\t\2\2\2B\21\3")
+        buf.write("\2\2\2\b\24\26\",\669")
         return buf.getvalue()
 
 
@@ -46,12 +47,12 @@ class MAPINFOParser ( Parser ):
     sharedContextCache = PredictionContextCache()
 
     literalNames = [ "<INVALID>", "'map'", "'{'", "'}'", "'gameinfo'", "'='", 
-                     "';'" ]
+                     "','", "';'" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                      "<INVALID>", "<INVALID>", "<INVALID>", "NUMBER", "BOOLEAN_VALUE", 
-                      "QUOTED_STRING", "KEYWORD", "BLOCKCOMMENT", "LINECOMMENT", 
-                      "WS" ]
+                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
+                      "NUMBER", "BOOLEAN_VALUE", "QUOTED_STRING", "KEYWORD", 
+                      "BLOCKCOMMENT", "LINECOMMENT", "WS" ]
 
     RULE_maps = 0
     RULE_mapblock = 1
@@ -72,13 +73,14 @@ class MAPINFOParser ( Parser ):
     T__3=4
     T__4=5
     T__5=6
-    NUMBER=7
-    BOOLEAN_VALUE=8
-    QUOTED_STRING=9
-    KEYWORD=10
-    BLOCKCOMMENT=11
-    LINECOMMENT=12
-    WS=13
+    T__6=7
+    NUMBER=8
+    BOOLEAN_VALUE=9
+    QUOTED_STRING=10
+    KEYWORD=11
+    BLOCKCOMMENT=12
+    LINECOMMENT=13
+    WS=14
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -324,8 +326,11 @@ class MAPINFOParser ( Parser ):
             return self.getTypedRuleContext(MAPINFOParser.KeywordContext,0)
 
 
-        def value(self):
-            return self.getTypedRuleContext(MAPINFOParser.ValueContext,0)
+        def value(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(MAPINFOParser.ValueContext)
+            else:
+                return self.getTypedRuleContext(MAPINFOParser.ValueContext,i)
 
 
         def getRuleIndex(self):
@@ -361,12 +366,22 @@ class MAPINFOParser ( Parser ):
             self.match(MAPINFOParser.T__4)
             self.state = 49
             self.value()
-            self.state = 51
+            self.state = 52
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             if _la==MAPINFOParser.T__5:
                 self.state = 50
                 self.match(MAPINFOParser.T__5)
+                self.state = 51
+                self.value()
+
+
+            self.state = 55
+            self._errHandler.sync(self)
+            _la = self._input.LA(1)
+            if _la==MAPINFOParser.T__6:
+                self.state = 54
+                self.match(MAPINFOParser.T__6)
 
 
         except RecognitionException as re:
@@ -413,7 +428,7 @@ class MAPINFOParser ( Parser ):
         self.enterRule(localctx, 8, self.RULE_maplump)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 53
+            self.state = 57
             self.match(MAPINFOParser.KEYWORD)
         except RecognitionException as re:
             localctx.exception = re
@@ -459,7 +474,7 @@ class MAPINFOParser ( Parser ):
         self.enterRule(localctx, 10, self.RULE_keyword)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 55
+            self.state = 59
             self.match(MAPINFOParser.KEYWORD)
         except RecognitionException as re:
             localctx.exception = re
@@ -505,7 +520,7 @@ class MAPINFOParser ( Parser ):
         self.enterRule(localctx, 12, self.RULE_label)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 57
+            self.state = 61
             self.match(MAPINFOParser.QUOTED_STRING)
         except RecognitionException as re:
             localctx.exception = re
@@ -558,7 +573,7 @@ class MAPINFOParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 59
+            self.state = 63
             _la = self._input.LA(1)
             if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << MAPINFOParser.NUMBER) | (1 << MAPINFOParser.BOOLEAN_VALUE) | (1 << MAPINFOParser.QUOTED_STRING))) != 0)):
                 self._errHandler.recoverInline(self)

@@ -2,6 +2,7 @@ map E1M1 "Hangar"
 {
 	levelnum = 1
 	next = "E1M3"
+	location = 20,100
 	music = 0
 	sky1 = "SKYBOX"
 }

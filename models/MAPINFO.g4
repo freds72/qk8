@@ -16,7 +16,7 @@ infoblock:
   ;
 
 pair:
-  keyword '=' value ';'?
+  keyword '=' value (',' value)? ';'?
   ;
 
 maplump:

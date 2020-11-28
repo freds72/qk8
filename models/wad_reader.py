@@ -1047,6 +1047,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
       'name': mapname,
       'group' : mapname[:2].lower(),
       'label': mapname,
+      'location': (-1,-1),
       'sky': skybox,
       'music': -1
     })]
@@ -1190,13 +1191,15 @@ __lua__
 #include {0}_atlas.lua
 {1}
 _maps_label=split"{2}"
-_credits=split"{3}"
-_secrets=split("{4}",",",1)
-#include {5}
+_maps_loc=split("{3}",",",1)
+_credits=split"{4}"
+_secrets=split("{5}",",",1)
+#include {6}
 """.format(
   modname,
   "\n".join(['{0}_gfx={{bytes="{1}",pal={{{2}}},w={3[0]},h={3[1]}}}'.format(k,bytes_to_base255(bytes.fromhex(data[0])),data[1],data[2]) for k,data in title_images.items()]),
   ",".join(["{}".format(m.label) for m in all_maps]),
+  ",".join(["{0[0]},{0[1]}".format(m.location) for m in all_maps]),
   gameinfo.get('credits',""),
   ",".join(["{}".format(m.secrets) for m in all_maps]),
   release and "{}_title_mini.lua".format(modname) or "title.lua")
