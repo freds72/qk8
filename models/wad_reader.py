@@ -886,6 +886,7 @@ def pack_p8image(stream, asset, palette=None, swap=False, min_size=(0,0), max_si
     size = max_size
   if size>max_size or size<min_size:
     raise Exception("Image: {} invalid size: {} - Must be between {} and {}".format(asset, size, min_size, max_size))
+
   img = Image.new('RGBA', size, (0,0,0,0))
   img.paste(src)
   data,autopalette = pack_image(img, palette=palette, label=label)
@@ -1159,7 +1160,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
 -- *********************************
 -- generated code - do not edit
 -- *********************************
-mod_name="{0}"
+mod_name,title_cart="{0}","{0}_0.p8"
 _maps_group=split"{1}"
 _maps_cart=split"{2}"
 _maps_offset=split"{3}"

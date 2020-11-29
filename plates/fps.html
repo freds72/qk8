@@ -695,7 +695,6 @@
 				event = event || window.event;
 				if (!p8_is_running) return;
 				if (pico8_state.has_focus == 1) {
-					pico8_buttons[0] = 0;
 					if(event.keyCode==32) {
 						// gpio pin 3 contains "use" button code
 						pico8_buttons[0] |= pico8_gpio[3];
@@ -713,7 +712,7 @@
 				if (!p8_is_running) return;
 				if (pico8_state.has_focus == 1)
 					if(event.keyCode==32) {
-						pico8_buttons[0] = 0;					
+						pico8_buttons[0] &= ~pico8_gpio[3];
 						if (event.preventDefault) event.preventDefault();
 					}
 			},{passive: false});
