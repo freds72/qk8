@@ -136,6 +136,8 @@ class DecorateWalker(DECORATEListener):
           value = pair.value(0).getText().lower().strip('"')
           if attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound','meleerange','maxtargetrange']:
             value = int(value)
+          elif attribute in ['drag']:
+            value = float(value)
           elif attribute in ['ammotype','trailtype']:
             if value not in self.result:
               raise Exception("Actor: {} references unknown: {}".format(name, value))

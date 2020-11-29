@@ -701,16 +701,6 @@ def pack_actors(image_reader, actors):
     
     ################## properties
     properties = 0
-#{0x0.0001,"health"},
-#{0x0.0002,"armor"},
-#{0x0.0004,"amount"},
-#{0x0.0008,maxamount"},
-#{0x0.000a,"icon",function() return chr(mpeek()) end},
-#{0x0.000c,"slot",mpeek},
-#{0x0.000f,"ammouse",unpack_actor_ref},
-#{0x0.0010,"speed"},
-#{0x0.0020,"damage"},
-#{0x0.0040,"ammotype"},
     properties_data = ""
     if actor.get('health'):
       properties |= 0x1
@@ -769,6 +759,9 @@ def pack_actors(image_reader, actors):
     if actor.get('trailtype'):
       properties |= 0x80000
       properties_data += pack_variant(actor.trailtype)     
+    if actor.get('drag'):
+      properties |= 0x100000
+      properties_data += pack_fixed(actor.drag)     
 
     # must be at the end 
     if actor.get('startitems'):
