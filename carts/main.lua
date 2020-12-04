@@ -80,22 +80,18 @@ function v2_dot(a,b)
 end
 
 function v2_normal(v)
-  local d=v2_len(v)
-  return {v[1]/d,v[2]/d},d
+  -- safe vector len
+  local dx,dy=abs(v[1]),abs(v[2])
+  local d=max(dx,dy)
+  local n=min(dx,dy)/d
+  local len=d*sqrt(n*n + 1)
+  return {v[1]/len,v[2]/len},len
 end
 
 function v2_add(a,b,scale)
   scale=scale or 1
   a[1]+=scale*b[1]
   a[2]+=scale*b[2]
-end
-
--- safe vector len
-function v2_len(a)
-  local dx,dy=abs(a[1]),abs(a[2])
-  local d=max(dx,dy)
-  local n=min(dx,dy)/d
-  return d*sqrt(n*n + 1)
 end
 
 function v2_make(a,b)
@@ -1396,12 +1392,6 @@ function unpack_array(fn)
 	end
 end
 
--- returns an array of 2d vectors 
-function unpack_bbox()
-  local t,b,l,r=unpack_fixed(),unpack_fixed(),unpack_fixed(),unpack_fixed()
-  return {l,b,l,t,r,t,r,b}
-end
-
 function unpack_chr()
   return chr(mpeek())
 end
@@ -2013,7 +2003,8 @@ function unpack_map()
       local segs={
         id=i,
         in_pvs=function(self,id)
-          return band(pvs[id\32],0x0.0001<<(id&31))!=0
+          -- avoid band (costly in 0.2.2)
+          return pvs[id\32] and pvs[id\32]&0x0.0001<<(id&31)!=0
         end}
       unpack_array(function()
         local v,flags=unpack_ref(verts),mpeek()
@@ -2084,15 +2075,18 @@ function unpack_map()
       leaf={}
     }),mpeek()
     local function unpack_node(side,leaf)
+      local refs=sub_sectors
       if leaf then
         node.leaf[side]=true
-        node[side]=unpack_ref(sub_sectors)
       else
         -- bounding box only on non-leaves
         node.bbox=node.bbox or {}
-        node.bbox[side]=unpack_bbox()
-        node[side]=unpack_ref(nodes)
+        -- returns an array of 2d vectors 
+        local t,b,l,r=unpack_fixed(),unpack_fixed(),unpack_fixed(),unpack_fixed()
+        node.bbox[side]={l,b,l,t,r,t,r,b}
+        refs=nodes
       end
+      node[side]=unpack_ref(refs)
     end
     unpack_node(true,flags&0x1>0)
     unpack_node(false,flags&0x2>0)
