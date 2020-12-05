@@ -279,6 +279,9 @@ def pack_special(owner, lines, sides, sectors):
   if special==202:
     logging.error("Unsupported special: {}".format(special))
   elif special in [11,12,13]:
+    # start delay (poom extension!)
+    s += pack_variant(owner.get('arg4',0))
+
     # door open
     logging.debug("Special: Door_Open/Door_Raise/Door_LockedRaise")
     sector_ids = []
@@ -305,7 +308,7 @@ def pack_special(owner, lines, sides, sectors):
       s += pack_variant(0)
     else:  
       s += pack_variant(owner.get('arg2',0))
-    # lock
+    # lock (if any)
     s += pack_variant(owner.get('arg3',0))
     s += pack_sectors_by_tag(sector_ids,target_heights)
   elif special==10:

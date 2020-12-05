@@ -1411,7 +1411,7 @@ end
 
 function unpack_special(sectors)
   local special=mpeek()
-  local function unpack_moving_sectors(what)
+  local function unpack_moving_sectors(what,trigger_delay)
     -- door speed: https://zdoom.org/wiki/Map_translator#Constants
     -- speed is signed (]-32;32[)
     local moving_sectors,moving_speed,delay,lock={},(mpeek()-128)/8,unpack_variant(),unpack_variant()
@@ -1461,6 +1461,7 @@ function unpack_special(sectors)
         if(sector.action) sector.action.co=nil
         -- register an async routine
         sector.action=do_async(function()
+          wait_async(trigger_delay)
           move_sector_async(sector,"target",moving_speed,special==13 and moving_speed<0)
           if delay>0 then
             wait_async(delay)
@@ -1475,9 +1476,9 @@ function unpack_special(sectors)
   end
 
   if special==13 then
-    return unpack_moving_sectors("ceil")
+    return unpack_moving_sectors("ceil",unpack_variant())
   elseif special==64 then
-    return unpack_moving_sectors("floor")
+    return unpack_moving_sectors("floor",0)
   elseif special==112 then
     -- sectors
     local target_sectors,lightlevel={},mpeek()/255
