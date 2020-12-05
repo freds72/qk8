@@ -232,10 +232,8 @@
 			// enable mouse reading
 			pico8_gpio[0] = 1;
 			// clamp value to -127/127
-			var canvas = document.getElementById("canvas");
-			var scale = 128 / canvas.width;
-			pico8_gpio[1] = 128 - Math.min(Math.max(-127,Math.round(scale * e.movementX)),127);
-			pico8_gpio[2] = 128 - Math.min(Math.max(-127,Math.round(scale * e.movementY)),127);
+			pico8_gpio[1] = 128 - Math.min(Math.max(-127,Math.round(e.movementX)),127);
+			pico8_gpio[2] = 128 - Math.min(Math.max(-127,Math.round(e.movementY)),127);
 		}
 	
 		function track_click(e, step) {
