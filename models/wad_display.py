@@ -142,7 +142,8 @@ def display_WAD(root, mapname, ssid):
 
       for portal in clips:
         # draw frustrum
-        pygame.draw.line(screen, blue, project(vertices[portal.v0]), project(vertices[portal.v1]), 2)
+        # pygame.draw.line(screen, blue, project(vertices[portal.v0]), project(vertices[portal.v1]), 2)
+        draw_plane(screen, vertices[portal.v0], vertices[portal.v1], yellow)
 
       pygame.display.update()
       pygame.display.flip()

@@ -122,7 +122,7 @@ function intersect_sub_sectors(segs,p,d,tmin,tmax,radius,hits)
         s0.txt=dist_a.."\n"..dist_b
         if s0.line and (dist_a<radius or dist_b<radius) then
           d=mid(d,0,s0.len)
-          add(hits,{ti=t,t=mid((dist_a-1/8)/(dist_a-dist_b),0,1),seg=s0,thing={s0[1]+d*s0.dir[1],s0[2]+d*s0.dir[2]}})
+          add(hits,{ti=t,t=mid((dist_a-1/8)/(dist_a-dist_b),0,1),seg=s0,c={s0[1]+d*s0.dir[1],s0[2]+d*s0.dir[2]}})
         end
         -- exact segment
         if d>=0 and d<s0.len then
@@ -162,11 +162,12 @@ function _update()
 
   if move_len>1/32 then
 
-    local tgt={plyr[1]+velocity[1],plyr[2]+velocity[2]}
     local radius=8
 
+    --[[
     -- find intersection with walls
-    
+    local tgt={plyr[1]+velocity[1],plyr[2]+velocity[2]}
+    local tmax,hitwall=32000
     local w0=walls[#walls]
     for i,w1 in ipairs(walls) do
       w0.hit=nil
@@ -179,32 +180,27 @@ function _update()
 
         if (a_dist>0 or b_dist>0) then
           local s,t=ClosestPtSegmentSegment(w0,w1,plyr,tgt)
-
           local c1,c2=v2_lerp(w0,w1,s),v2_lerp(plyr,tgt,t)
-          local _,dist=v2_normal(v2_make(c1,plyr))
+          local n,dist=v2_normal(v2_make(c1,plyr))
           if dist<=radius then
+            if(t<tmax) tmax=t hitwall=w0
             -- collision
             --w0.txt=dist
 
-            -- impact point
-            local t=(a_dist+1/8)/(a_dist-b_dist)
+            -- impact point            
             --if(abs(a_dist-b_dist)<EPSILON) t=1
             --local ti=(a_dist-min_distance)/(a_dist-b_dist)
-            add(hits,{ti=t,t=mid(t,0,1),n=w0.n,c=c1,dist=(radius-dist)})
-            w0.hit=true
-            w0.txt=t
+            add(hits,{ti=t,t=mid((a_dist+1/8)/(a_dist-b_dist),0,1),n=n,c=c1,dist=(radius-dist)})
           end
         end
       end
 
       w0=w1
     end
-
-    --[[
-    hits={}
-    intersect_sub_sectors(walls,plyr,move_dir,0,move_len,radius,hits)
+    if(hitwall) hitwall.hit=true
     ]]
 
+    intersect_sub_sectors(walls,plyr,move_dir,0,move_len,radius,hits)
 
     local frac=1
     for i,hit in ipairs(hits) do
