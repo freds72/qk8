@@ -3,8 +3,10 @@ local snd="36530600324c000000000000000000000000000000000000000000000000000000000
 
 -- supports player 1 or player 2 input
 local _btnp=btnp
+local _mb=0
 function btnp(b)
-  return _btnp(b,0) or _btnp(b,1)
+  local mask,mb=pack(1,2,4)[b-3],stat(34)
+  return _btnp(b,0) or _btnp(b,1) or (band(_mb,mask)!=0 and band(mb,mask)==0)
 end
 
 -- copy image text to spritesheet/memory
@@ -53,7 +55,7 @@ function start_state()
   return
     -- update
     function()    
-      if btnp()!=0 then
+      if btnp(4) or btnp(5) then
         next_state(menu_state)
       end  
     end,
@@ -99,19 +101,16 @@ function menu_state()
   return
     function()
       -- mouse?
-      if peek(0x5f80)==1 then
+      if stat(38)!=0 then
         mouse_ttl=30
-        mouse_x+=(128-peek(0x5f81))/2
-        mouse_y+=(128-peek(0x5f82))/2
-        mouse_x=mid(mouse_x,0,126)
-        mouse_y=mid(mouse_y,0,126)
+        mouse_x=mid(mouse_x+stat(38),0,126)
+        mouse_y=mid(mouse_y+stat(39),0,126)
       end
       if mouse_ttl>0 then
         mouse_ttl-=1
         -- reset control scheme if using mouse
         switch_scheme(0)
       end
-      poke(0x5f80,0)
 
       anm_ttl=(anm_ttl+1)%48
       if menu_i>0 then
@@ -149,6 +148,8 @@ function menu_state()
           next_state(launch_state,menus[2].sel,menus[1].sel)
         end
       end
+
+      _mb=stat(34)
     end,
     function()
       -- exit early because state will have been change to launch_state
@@ -396,6 +397,8 @@ function switch_scheme(scheme)
 end
 
 function _init()
+  poke(0x5f2d, 1)
+
   cartdata(mod_name)
 
   -- control scheme

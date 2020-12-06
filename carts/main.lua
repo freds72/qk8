@@ -1,11 +1,18 @@
 -- globals
-local _slow,_ambientlight,_drag,_ammo_factor,_intersectid,_onoff_textures,_transparent_textures,_futures,_things,_btns,_bsp,_cam,_plyr,_sprite_cache,_actors,_wp_hud,_msg=0,0,0,1,0,{[0]=0},{},{},{},{}
+local _mb,_slow,_ambientlight,_drag,_ammo_factor,_intersectid,_onoff_textures,_transparent_textures,_futures,_things,_btns,_bsp,_cam,_plyr,_sprite_cache,_actors,_wp_hud,_msg=0,0,0,0,1,0,{[0]=0},{},{},{},{}
 
 --local k_far,k_near=0,2
 --local k_right,k_left=4,8
 
 -- copy color gradients (16*16 colors x 2) to memory + skybox image (if any)
 memcpy(0x4300,0x0,4096)
+
+function mb(mask)
+  return stat(34)&mask!=0
+end
+function mbp(mask)
+  return _mb&mask!=0 and not mb(mask)
+end
 
 -- create a new instance with parent properties
 function inherit(t,parent)
@@ -844,7 +851,7 @@ function with_physic(thing)
           -- buttons
           if ldef.trigger and ldef.playeruse then
             -- use special?
-            if btnp(_btnuse) then
+            if btnp(_btnuse) or mbp(2) then
               ldef.trigger(self)
             end
             -- trigger/message only closest hit
@@ -979,7 +986,7 @@ function attach_plyr(thing,actor)
           -- slow mode: pico calls _update 2 times
           -- but button state is updated only on first frame
           -- skip button state check in this case (e.g. keep hud open)
-          if(_slow==0) _wp_hud=not (btn(6) or btn(6,1))
+          if(_slow==0) _wp_hud=not (btn(6) or btn(6,1) or mbp(4))
           for i,k in pairs{0,3,1,2,❎} do
             if btnp(k) or btnp(k,1) then
               -- only switch if we have the weapon and it's not the current weapon
@@ -992,10 +999,9 @@ function attach_plyr(thing,actor)
           -- wasd: fwd+strafe
           -- o: fire
           -- direct mouse input?
-          if peek(0x5f80)==1 then
-            da+=(128-peek(0x5f81))/8
+          if stat(38)!=0 then
+            da+=stat(38)/8
             daf=0.2
-            poke(0x5f80,0)
           elseif btn(❎) then
             if(_btns[0]) dx=1
             if(_btns[1]) dx=-1
@@ -1007,7 +1013,7 @@ function attach_plyr(thing,actor)
           if(_btns[_btnup]) dz=1
           if(_btns[_btndown]) dz=-1
 
-          _wp_hud=btn(6)
+          _wp_hud=btn(6) or mb(4)
           poke(0x5f30,1)
 
           -- wasd
@@ -1285,10 +1291,10 @@ function gameover_state(pos,angle,target,h)
       idle_ttl-=1
       -- avoid immediate button hit
       if idle_ttl<0 then
-        if btnp(_btnuse) then
+        if btnp(_btnuse) or mbp(2) then
           -- 1: gameover    
           load(title_cart,nil,_skill..",".._map_id..",1")
-        elseif btnp(_btnfire) then
+        elseif btnp(_btnfire) or mbp(1) then
           -- 3: retry
           load(title_cart,nil,_skill..",".._map_id..",3")
         end
@@ -1310,6 +1316,9 @@ end
 -->8
 -- game loop
 function _init()
+  -- mouse 
+  poke(0x5f2d, 1)
+
   cartdata(mod_name)
 
   -- exit menu entry
@@ -1358,8 +1367,6 @@ function _update()
   end
 
   _update_state()
-  -- capture video!
-  if(peek(0x5f83)==1) poke(0x5f83,0) extcmd("video") 
   _slow+=1
 end
 
@@ -1562,7 +1569,7 @@ function unpack_actors()
     -- A_WeaponReady
     function(item)
       return function(owner,weapon)
-        if not _wp_hud and btn(_btnfire) then
+        if not _wp_hud and (btn(_btnfire) or mb(1)) then
           local inventory,ammotype,newqty=owner.inventory,item.ammotype,0
           -- handle "fist" (eg weapon without ammotype)
           if(ammotype) newqty=inventory[ammotype]-item.ammouse
