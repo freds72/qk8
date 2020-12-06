@@ -2,11 +2,17 @@
 local snd="36530600324c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060100003e0c3fa445d819c0158b1589158515841583158215811381138003800380538000000000000000000000000000000000000000000000000000000000000000000301000"
 
 -- supports player 1 or player 2 input
-local _btnp=btnp
-local _mb=0
+local _btnp,_mb=btnp,0
+-- mouse function helpers
+function mbtn(mask)
+  return stat(34)&mask!=0
+end
+function mbtnp(mask)
+  return _mb&mask!=0 and not mbtn(mask)
+end
+
 function btnp(b)
-  local mask,mb=pack(1,2,4)[b-3],stat(34)
-  return _btnp(b,0) or _btnp(b,1) or (band(_mb,mask)!=0 and band(mb,mask)==0)
+  return _btnp(b,0) or _btnp(b,1) 
 end
 
 -- copy image text to spritesheet/memory
@@ -44,20 +50,22 @@ function next_state(fn,...)
         
     -- gif capture handling
     if(peek(0x5f83)==1) poke(0x5f83,0) extcmd("video") 
+    _mb=stat(34)
   end
 end
 
 -- intro screen
 function start_state()
-  -- reset saved state
+  local ttl=300  -- reset saved state
   dset(0,-1)
 
   return
     -- update
     function()    
-      if btnp(4) or btnp(5) then
+      if ttl<0 or btnp(4) or btnp(5) or mbtnp(1) then
         next_state(menu_state)
       end  
+      ttl-=1
     end,
     -- draw
     function()
@@ -138,18 +146,16 @@ function menu_state()
         menus[menu_i].sel=active_sel
       end
 
-      if btnp(❎) then
+      if btnp(❎) or mbtnp(2) then
         if(menu_i>1)sfx(0)
         menu_i=max(1,menu_i-1)
-      elseif btnp(🅾️) then
+      elseif btnp(🅾️) or mbtnp(1) then
         if(menu_i>0)sfx(1)
         menu_i+=1
         if menu_i>#menus then
           next_state(launch_state,menus[2].sel,menus[1].sel)
         end
       end
-
-      _mb=stat(34)
     end,
     function()
       -- exit early because state will have been change to launch_state
@@ -165,7 +171,8 @@ function menu_state()
         pal(vcol(i),sget(112+i,128-11))
         --pset(i,0,i)
       end
-      sspr(12,51,104,15+#menus[menu_i][2]*8,12,64)
+      palt(0,false)
+      sspr(12,52,104,15+#menus[menu_i][2]*8,12,64)
       pal()
       
       -- title
@@ -228,7 +235,7 @@ function stats_state(skill,id,level_time,kills,monsters,secrets,all_secrets)
 
   return
     function()
-      if ttl>600 or btnp(4) or btnp(5) then
+      if ttl>600 or btnp(4) or btnp(5) or mbtnp(1) then
         next_state(launch_state,skill,id+1)
       end
       ttl+=1
@@ -297,7 +304,7 @@ function credits_state()
   return
     -- update
     function()
-      if ttl>3000 or btnp(4) or btnp(5) then
+      if ttl>3000 or btnp(4) or btnp(5) or btnp(1) then
         -- back to startup screen
         next_state(start_state)
       end
@@ -333,7 +340,7 @@ function credits_state()
       end
       print(sp,64-#sp*2,80,15)
 
-      if(ttl>0 and time()%4<2) print("🅾️/❎\23MENU",44,122,15)
+      if(ttl>0 and time()%4<2) print("FIRE/USE\23MENU",38,122,15)
 
       pal(endgame_gfx.pal,1)      
     end,
@@ -397,6 +404,7 @@ function switch_scheme(scheme)
 end
 
 function _init()
+  -- mouse suport
   poke(0x5f2d, 1)
 
   cartdata(mod_name)
