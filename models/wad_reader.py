@@ -1126,7 +1126,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
     "{0}|rectfill|{1},102,{2},110,0|{0}|print|⬇️,60,94,5|{0}|print|{3},{4},104,11",
     "{0}|rectfill|{1},86,{2},94,0|{0}|print|➡️,68,88,5|{0}|print|{3},{4},88,11",
     "{0}|rectfill|{1},70,{2},78,0|{0}|print|⬆️,60,82,5|{0}|print|{3},{4},72,11",
-    "{0}|print|❎,60,88,5"
+    "{0}|print|🅾️,60,88,5"
   ]
   wp_wheel_data = "-1|ovalfill|51,81,75,99,0x22"
   for i,wp in enumerate(sorted([wp for wp in actors.values() if 'slotnumber' in wp and wp.kind==ACTOR_KIND.WEAPON], key=lambda wp: wp.slotnumber)):
