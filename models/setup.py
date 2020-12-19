@@ -12,7 +12,7 @@ import setuptools
 # >>
 setuptools.setup(
     name="wad_reader",
-    version="3.8",
+    version="3.9",
     author="https://twitter.com/FSouchu",
     description="POOM archive compiler for PICO8",
     url="https://github.com/freds72/qk8",
@@ -54,7 +54,9 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        'antlr4-python3-runtime>=4.8',
+        # must match java libs version
+        # fixes 
+        'antlr4-python3-runtime==4.8',
         'Pillow>=7.2.0',
         'tqdm>=4.49.0'
     ],
