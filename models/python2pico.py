@@ -131,7 +131,7 @@ cstore(0, 0, 0x4300, "{}")
     with open(cart_path, "w") as f:
         f.write(cart.format(cart_name, sfx_data, cart_filename))
     # run cart
-    subprocess.run([os.path.join(pico_path,"pico8.exe"),"-x",os.path.abspath(cart_path)], stdout=PIPE, stderr=PIPE, check=True)
+    subprocess.run([os.path.join(pico_path,"pico8"),"-x",os.path.abspath(cart_path)], stdout=PIPE, stderr=PIPE, check=True)
 
     if cart_code:
         cart = cart_code
@@ -190,7 +190,7 @@ def pack_release(modname, pico_path, carts_path, all_carts, release, mode="bin")
     option = ""
     if mode == "html":
         option = "-p fps"
-    cmd = " ".join([os.path.join(pico_path,"pico8.exe"),main_cart,"-export","\"{}_{}.{} {} {}\"".format(modname, release, mode,option," ".join(all_carts))])
+    cmd = " ".join([os.path.join(pico_path,"pico8"),main_cart,"-export","\"{}_{}.{} {} {}\"".format(modname, release, mode,option," ".join(all_carts))])
     print(cmd)
     subprocess.run(cmd, cwd=os.path.join(carts_path), check=True)
 
