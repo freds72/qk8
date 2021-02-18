@@ -16,7 +16,8 @@ models/__pycache__
 *.bak
 *.egg-info
 _label.png
-/carts/*_[0-9]+.p8
+/carts/poom_*.p8
+/carts/poom_*.lua
 
 
 

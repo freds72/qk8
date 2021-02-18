@@ -1215,8 +1215,9 @@ function play_state()
         if(ax>az) code|=4
         if(-ax>az) code|=8
         outcode&=code
-      end
-      return outcode==0
+        -- any corner visible?
+        if(outcode==0) return true
+      end      
     end
   }
 
