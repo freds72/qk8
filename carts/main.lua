@@ -1512,7 +1512,7 @@ function unpack_actors()
     -- width/transparent color
     -- xoffset/yoffset in tiles unit (16x16)
     local wtc=mpeek()
-		local frame=add(frames,{wtc&0xf,(mpeek()-128)/16,(mpeek()-128)/16,flr(wtc>>4),{}})
+		local frame=add(frames,{wtc&0xf,(mpeek()-128)/16,(mpeek()-128)/16,wtc\16,{}})
 		unpack_array(function()
 			-- tiles index
 			frame[5][mpeek()]=unpack_variant()
@@ -1848,12 +1848,9 @@ function unpack_actors()
       local ctrl,cmd=flags&0x3,{jmp=-1}
       if ctrl==2 then
         -- loop or goto label id   
-        cmd={jmp=flr(flags>>4)}
+        cmd={jmp=flags\16}
       elseif ctrl==0 then
-        -- normal command
-        -- todo: use a reference to sprite sides (too many duplicates for complex states)
-        -- or merge sides into array
-        -- layout:
+        -- normal command bytes layout:
         -- 1 ticks
         -- 2 flipx
         -- 3 light level (bright/normal)

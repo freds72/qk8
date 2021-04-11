@@ -1,14 +1,14 @@
 pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
-#include lzs.lua
+#include plain.lua
 
 local _sprite_cache
 local _frames,_tiles
 function _init()
 	-- multicart peek global function
 	_frames,_tiles=decompress("vsspr",0,0,unpack_sprites)
-	_sprite_cache=make_sprite_cache(_tiles,32)
+	_sprite_cache=make_sprite_cache(_tiles)
 end
 
 function vspr(frame,sx,sy,scale,flipx)
@@ -63,12 +63,17 @@ function _draw()
 end
 -->8
 -- https://github.com/luapower/linkedlist/blob/master/linkedlist.lua
-function make_sprite_cache(tiles,maxlen)
-	local len,index,first,last=0,{}
+function make_sprite_cache(tiles)
+  -- pre-generated poke4 offsets
+  -- for j=0,31 do
+  --   poke4(mem|(j&1)<<2|(j\2)<<6,tiles[id+j])
+  -- end	
+	local len,index,offsets,first,last=0,{},split("4,64,68,128,132,192,196,256,260,320,324,384,388,448,452,512,516,576,580,640,644,704,708,768,772,832,836,896,900,960,964",",",1)
+  offsets[0]=0
 
-  -- note: keep multiline assignments, they are *faster*
-	local function remove(t)
-		if t._next then
+  local function remove(t)
+    -- note: keep multiline assignments, they are *faster*
+    if t._next then
 			if t._prev then
 				t._next._prev = t._prev
 				t._prev._next = t._next
@@ -99,22 +104,22 @@ function make_sprite_cache(tiles,maxlen)
 				remove(entry)
 			else
 				-- allocate a new 16x16 entry
-				-- todo: optimize
-				local sx,sy=(len<<4)&127,64+(((len<<4)\128)<<4)
-				-- list too large?
-				if len+1>maxlen then
+				local sx,sy=(len<<4)&127,(len\8)<<4
+        -- list too large?
+        -- 32: cache max entry size
+				if len>31 then
 					local old=remove(first)
 					-- reuse cache entry
-					sx,sy,index[old.id]=old[1],old[2]
+					sx,sy,index[old.id]=old.sx,old.sy
 				end
 				-- new (or relocate)
 				-- copy data to sprite sheet
 				local mem=sx\2|sy<<6
-				for j=0,31 do
-					poke4(mem|(j&1)<<2|(j\2)<<6,tiles[id+j])
+				for j,offset in pairs(offsets) do
+					poke4(mem|offset,tiles[id+j])
 				end		
 				--
-				entry={sx,sy,id=id}
+				entry={sx=sx,sy=sy,id=id}
 				-- reverse lookup
 				index[id]=entry
 			end
@@ -135,7 +140,7 @@ function make_sprite_cache(tiles,maxlen)
 			end
 			len+=1
 			-- return sprite sheet coords
-			return entry[1],entry[2]
+			return entry.sx,entry.sy
 		end
 	}
 end
@@ -178,7 +183,7 @@ function unpack_sprites()
     -- width/transparent color
     -- xoffset/yoffset in tiles unit (16x16)
     local wtc=mpeek()
-		local frame=add(frames,{wtc&0xf,(mpeek()-128)/16,(mpeek()-128)/16,flr(wtc>>4),{}})
+		local frame=add(frames,{wtc&0xf,(mpeek()-128)/16,(mpeek()-128)/16,wtc\16,{}})
 		unpack_array(function()
 			-- tiles index
 			frame[5][mpeek()]=unpack_variant()
@@ -191,6 +196,7 @@ function unpack_sprites()
 			add(tiles,unpack_fixed())
 		end
   end)
+
 	printh("frames#:"..#frames)
 	printh("tiles#:"..#tiles)
 
