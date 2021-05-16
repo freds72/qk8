@@ -1,5 +1,5 @@
 -- globals
-local _slow,_ambientlight,_drag,_ammo_factor,_intersectid,_onoff_textures,_transparent_textures,_futures,_things,_btns,_bsp,_cam,_plyr,_sprite_cache,_actors,_wp_hud,_msg=0,0,0,1,0,{[0]=0},{},{},{},{}
+local _ammoused,_slow,_ambientlight,_drag,_ammo_factor,_intersectid,_onoff_textures,_transparent_textures,_futures,_things,_btns,_bsp,_cam,_plyr,_sprite_cache,_actors,_wp_hud,_msg=0,0,0,0,1,0,{[0]=0},{},{},{},{}
 
 --local k_far,k_near=0,2
 --local k_right,k_left=4,8
@@ -76,12 +76,12 @@ end
 function vspr(frame,sx,sy,scale,flipx)
   -- faster equivalent to: palt(0,false)
   poke(0x5f00,0)
-  local xscale,w,xoffset,yoffset,tc,tiles=scale,unpack(frame)
-  palt(tc,true)
+  local xscale,w,xoffset=scale,frame[1],frame[2]
+  palt(frame[4],true)
   if(flipx) xoffset,xscale=1-xoffset,-scale
   sx-=xoffset*scale
-  sy-=yoffset*scale
-	for i,tile in pairs(tiles) do
+  sy-=frame[3]*scale
+	for i,tile in pairs(frame[5]) do
     local dx,dy,ssx,ssy=sx+(i%w)*xscale,sy+(i\w)*scale,_sprite_cache:use(tile)
     -- scale sub-pixel fix 
     sspr(ssx,ssy,16,16,dx,dy,scale+dx%1,scale+dy%1,flipx)
@@ -210,14 +210,13 @@ function polyfill(v,xoffset,yoffset,tex,light)
     end
   end
 
-  local r0,spans,ca,sa,cx,cy,cz,pal0=v[#v],{},_cam.u,_cam.v,(_plyr[1]>>4)+xoffset,(-_cam.m[4]-yoffset)<<3,_plyr[2]>>4
-  local x0,w0=r0.x,r0.w
-  local y0,maxlight=r0.y-yoffset*w0,light\0.066666
-  for i,v1 in ipairs(v) do
-    local x1,w1=v1.x,v1.w
-    local y1=v1.y-yoffset*w1
-    local _y1=y1
-    if(y0>y1) x1=x0 y1=y0 w1=w0 x0=v1.x y0=_y1 w0=v1.w
+  local nverts,spans,ca,sa,cx,cy,cz,pal0=#v,{},_cam.u,_cam.v,(_plyr[1]>>4)+xoffset,(-_cam.m[4]-yoffset)<<3,_plyr[2]>>4
+  local maxlight=light\0.066666
+  for i,r0 in pairs(v) do
+    local v1=v[i%nverts+1] 
+    local x0,w0,x1,w1=r0.x,r0.w,v1.x,v1.w
+    local y0,y1=r0.y-yoffset*w0,v1.y-yoffset*w1
+    if(y0>y1) x1=x0 w1=w0 x0=v1.x y0,y1=y1,y0 w0=v1.w
     local dy=y1-y0
     local cy0,dx,dw=y0\1+1,(x1-x0)/dy,(w1-w0)/dy
     local sy=cy0-y0
@@ -251,9 +250,6 @@ function polyfill(v,xoffset,yoffset,tex,light)
       x0+=dx
       w0+=dw
     end		
-    x0=v1.x
-    y0=_y1
-    w0=v1.w
   end  
 end
 
@@ -276,7 +272,7 @@ local function v_clip(v0,v1,t)
     }
 end
 -- ceil/floor/wall rendering
-function draw_flats(v_cache,segs)
+function draw_flats(v_cache,segs,nearest_things)
   local verts,outcode,nearclip,px,py,m1,m3,m4,m8,m9,m11,m12={},0xffff,0,_plyr[1],_plyr[2],unpack(_cam.m)
   
   -- to cam space + clipping flags
@@ -335,16 +331,18 @@ function draw_flats(v_cache,segs)
 
       -- draw walls
       -- get heights
-      local v0,top,bottom=verts[#verts],ceil>>4,floor>>4
-      local x0,y0,w0,maxlight=v0.x,v0.y,v0.w,light\0.066666
-      for i,v1 in ipairs(verts) do
-        local seg,x1,y1,w1=v0.seg,v1.x,v1.y,v1.w
-        local _x1,ldef=x1,seg.line
+      local nverts,top,bottom=#verts,ceil>>4,floor>>4
+      local maxlight=light\0.066666
+      for i,v0 in ipairs(verts) do
+        local v1=verts[i%nverts+1]
+        local seg,x0,y0,w0,x1,y1,w1=v0.seg,v0.x,v0.y,v0.w,v1.x,v1.y,v1.w
+        local ldef=seg.line
         -- logical split or wall?
         -- front facing?
         if x0<x1 and ldef then
           -- peg bottom?
-          local _,toptex,midtex,bottomtex=unpack(ldef[seg.side])
+          local linedef=ldef[seg.side]
+          local toptex,midtex,bottomtex=linedef[2],linedef[3],linedef[4]
           -- no need to draw untextured walls
           if toptex|midtex|bottomtex!=0 then
             -- get other side (if any)
@@ -420,71 +418,36 @@ function draw_flats(v_cache,segs)
             end
           end
         end
-        v0=v1
-        x0=_x1
-        y0=y1
-        w0=w1
       end
 
       -- draw things (if any) in this convex space
-      for thing,_ in pairs(segs.things) do
-        -- todo: cache thing projection
-        -- done: not sure if faster (90% of things are single sub-sector...)
-        --[[        
-        local v=v_cache[thing]
-        if not v then
+      for thing in pairs(segs.things) do
+        -- is thing on its nearest visible sector?
+        if nearest_things[thing]==segs then
           local x,y=thing[1],thing[2]
           local ax,az=m1*x+m3*y+m4,m9*x+m11*y+m12
           -- todo: take radius into account 
           if az>8 and az<854 and ax<az and -ax<az then
-            -- h: thing offset+cam offset
-            local w,h=128/az,thing[3]+m8
-            local x,y=63.5+ax*w,63.5-h*w
-            -- visible
-            v={x=x,y=y,w=w}
-          else
-            v={}
+            -- default: insert at end of sorted array
+            local w,thingi=128/az,#things+1
+            -- basic insertion sort
+            for i,otherthing in ipairs(things) do          
+              if(otherthing[1]>w) thingi=i break
+            end
+
+            -- thing offset+cam offset
+            add(things,{w,thing,63.5+ax*w,63.5-(thing[3]+m8)*w},thingi)
           end
-          v_cache[thing]=v
-        end
-        -- visible?
-        local w=v.w
-        if w then
-          -- get start of linked list
-          local head=things[1]
-          -- empty list case
-          local prev=head
-          while head and head.w<w do
-            -- swap/advance
-            prev,head=head,head.next
-          end
-          -- insert new thing
-          prev.next={thing=thing,x=v.x,y=v.y,w=w,next=prev.next}
-        end
-      end          
-      ]]
-        local x,y=thing[1],thing[2]
-        local ax,az=m1*x+m3*y+m4,m9*x+m11*y+m12
-        -- todo: take radius into account 
-        if az>8 and az<854 and ax<az and -ax<az then
-          -- default: insert at end of sorted array
-          local w,thingi=128/az,#things+1
-          -- basic insertion sort
-          for i,otherthing in ipairs(things) do          
-            if(otherthing[1]>w) thingi=i break
-          end
-          -- thing offset+cam offset
-          add(things,{w,thing,63.5+ax*w,63.5-(thing[3]+m8)*w},thingi)
         end
       end
       -- things are sorted, draw them
       for _,head in ipairs(things) do
-        local w0,thing,x0,y0=unpack(head)
+        local w0,thing=head[1],head[2]
         -- get image from current state
         local frame=thing.state
-        local side,_,flipx,bright,sides=0,unpack(frame)
+        local side,flipx,sides=0,frame[2],frame[4]
         -- use frame brightness level
-        local pal1=bright and 8 or (light*min(15,w0<<5))\1
+        local pal1=frame[3] and 8 or (light*min(15,w0<<5))\1
         if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1            
         -- pick side (if any)
         if sides>1 then
@@ -495,7 +458,7 @@ function draw_flats(v_cache,segs)
         else
           flipx=nil
         end
-        vspr(frame[side+5],x0,y0,w0<<5,flipx)
+        vspr(frame[side+5],head[3],head[4],w0<<5,flipx)
         
         -- thing:draw_vm(x0,y0)
         -- print(thing.angle,x0,y0,8)
@@ -516,7 +479,7 @@ function del_thing(thing)
 end
 
 function unregister_thing_subs(thing)
-  for node,_ in pairs(thing.subs) do
+  for node in pairs(thing.subs) do
     if(node.things) node.things[thing]=nil
     -- remove self from sectors (multiple)
     if(thing.actor.is_solid) node.sector.things-=1
@@ -557,7 +520,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,intersect_cb,skipthings)
 
   if not skipthings then
     local hits={}
-    for thing,_ in pairs(segs.things) do
+    for thing in pairs(segs.things) do
       -- not already "hit"
       -- not a missile
       -- not dead
@@ -582,7 +545,7 @@ function intersect_sub_sector(segs,p,d,tmin,tmax,radius,intersect_cb,skipthings)
                 if(t<hits[i].t) thingi=i break
               end
               -- insert new thing
-              add(hits,{ti=t,t=(radius-t)/radius,thing=thing},thingi)
+              add(hits,{ti=t,t=1-t/radius,thing=thing},thingi)
             end
           end
         end
@@ -905,7 +868,7 @@ function with_health(thing)
 
       -- avoid automatic infight
       -- + override when player
-      if(self==_plyr or instigator==_plyr or rnd()>0.8) self.target=instigator
+      if(self==_plyr or instigator==_plyr or rnd()>0.75) self.target=instigator
 
       -- damage reduction?
       local hp,armor=dmg,self.armor or 0
@@ -980,15 +943,15 @@ function attach_plyr(thing,actor)
             end
           end
         else
-          -- cursor: fwd+rotate
-          -- cursor+x: weapon switch+rotate
-          -- wasd: fwd+strafe
-          -- o: fire
           -- direct mouse input?
           if stat(38)!=0 then
             da+=stat(38)/_mouse_acc
             daf=0.2
           else
+            -- cursor: fwd+rotate
+            -- cursor+x: weapon switch+rotate
+            -- wasd: fwd+strafe
+            -- o: fire
             if btn(🅾️) then
               if(_btns[0]) dx=1
               if(_btns[1]) dx=-1
@@ -1129,19 +1092,27 @@ function draw_bsp()
   cls()
   --
   -- draw bsp & visible things
-  local id,v_cache=_plyr.ssector.id,{}
+  local id,v_cache,active_subs,nearest_things=_plyr.ssector.id,{},{},{}
 
-  -- visit bsp
+  -- visit bsp (back to front)
   visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
     if node.leaf[side] then
       local subs=node[side]
       if subs:in_pvs(id) then
-        draw_flats(v_cache,subs)
+        -- register closest subs this thing is
+        for thing in pairs(subs.things) do
+          nearest_things[thing]=subs
+        end
+        add(active_subs,subs)
       end
     elseif _cam:is_visible(node.bbox[side]) then
       visit_bsp(node[side],pos,visitor)
     end
   end)
+
+  for i,subs in ipairs(active_subs) do
+    draw_flats(v_cache,subs,nearest_things)
+  end
 end
 
 -->8
@@ -1215,9 +1186,9 @@ function play_state()
         if(ax>az) code|=4
         if(-ax>az) code|=8
         outcode&=code
-        -- any corner visible?
+        -- early exit?
         if(outcode==0) return true
-      end      
+      end
     end
   }
 
@@ -1498,7 +1469,7 @@ function unpack_special(sectors)
       do_async(function()
         wait_async(delay)
         -- record level completion time + send stats
-        load(title_cart,nil,_skill..",".._map_id..",2,"..t..",".._kills..",".._monsters..",".._secrets)
+        load(title_cart,nil,_skill..",".._map_id..",2,"..t..",".._kills..",".._monsters..",".._secrets..",".._ammoused)
       end)
     end
   end
@@ -1512,7 +1483,7 @@ function unpack_actors()
     -- width/transparent color
     -- xoffset/yoffset in tiles unit (16x16)
     local wtc=mpeek()
-		local frame=add(frames,{wtc&0xf,(mpeek()-128)/16,(mpeek()-128)/16,wtc\16,{}})
+		local frame=add(frames,{wtc&0xf,(mpeek()-128)/16,(mpeek()-128)/16,flr(wtc>>4),{}})
 		unpack_array(function()
 			-- tiles index
 			frame[5][mpeek()]=unpack_variant()
@@ -1571,7 +1542,7 @@ function unpack_actors()
           -- handle "fist" (eg weapon without ammotype)
           if(ammotype) newqty=inventory[ammotype]-item.ammouse
           if newqty>=0 then
-            if(ammotype) inventory[ammotype]=newqty
+            if(ammotype) inventory[ammotype]=newqty _ammoused+=item.ammouse
             -- play attack sound
             if(item.attacksound) sfx(item.attacksound)
             -- drag?
@@ -1648,7 +1619,7 @@ function unpack_actors()
           elseif ttl>0 then
             ttl-=1
             -- zigzag toward target
-            local nx,ny,dir=n[1]*0.5,n[2]*0.5,rnd{1,-1}
+            local nx,ny,dir=n[1]>>1,n[2]>>1,rnd{1,-1}
             local mx,my=ny*dir+nx,nx*-dir+ny
             local target_angle=atan2(mx,-my)
             self.angle=lerp(shortest_angle(target_angle,self.angle),target_angle,0.5)
@@ -1848,9 +1819,12 @@ function unpack_actors()
       local ctrl,cmd=flags&0x3,{jmp=-1}
       if ctrl==2 then
         -- loop or goto label id   
-        cmd={jmp=flags\16}
+        cmd={jmp=flr(flags>>4)}
       elseif ctrl==0 then
-        -- normal command bytes layout:
+        -- normal command
+        -- todo: use a reference to sprite sides (too many duplicates for complex states)
+        -- or merge sides into array
+        -- layout:
         -- 1 ticks
         -- 2 flipx
         -- 3 light level (bright/normal)

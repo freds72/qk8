@@ -5,7 +5,7 @@ local schemes={
   {caption="esdf+⬅️➡️\nfire\023⬆️ use\023⬇️",btnfire=⬆️,btnuse=⬇️,btndown=7,btnup=7,space=0x8}
 }
 
-local leaderboard_pins,medals,leaderboard={
+local leaderboard_pins,leaderboard={
   victory1=3,
   victory2=4,
   victory3=5,
@@ -26,18 +26,18 @@ local leaderboard_pins,medals,leaderboard={
   -- todo: generate from mapinfo?
   punch1=23,
   punch2=24,
-  punch2=25,
-  punch2=26,
-  punch2=27,
-  punch2=28
-},{}
+  punch3=25,
+  punch4=26,
+  punch5=27,
+  punch6=28
+}
 
 function leaderboard_pack_fixed(key,value)
   -- export a 16:16 number
   poke4(0x5f80+leaderboard_pins[key],value)
 end
 
-function update_map_leaderboard(skill,id,level_time,total_time,kills,perfect_kills,perfect_secret)
+function update_map_leaderboard(skill,id,level_time,total_time,kills,perfect_kills,perfect_secret,perfect_punch)
   -- update leaderboard (if any)
   poke(0x5f80+leaderboard_pins.map,id)
   -- assumes number of kills < 255!
@@ -45,6 +45,7 @@ function update_map_leaderboard(skill,id,level_time,total_time,kills,perfect_kil
   leaderboard_pack_fixed("time",level_time)
   --
   poke(0x5f80+leaderboard_pins["secrets"..id],perfect_secret and 1 or 0)
+  poke(0x5f80+leaderboard_pins["punch"..id],perfect_punch and 1 or 0)
   leaderboard_pack_fixed("total_time",total_time or 0)
 end
 
@@ -89,12 +90,8 @@ function next_state(fn,...)
     -- gif capture handling
     if(peek(0x5f81)==1) poke(0x5f81,0) extcmd("video") 
 
-    -- leaderboard?
+    -- leaderboard enabled?
     if not leaderboard and peek(0x5f82)>0 then
-      -- medals status
-      for i=0,peek(0x5f82)-1 do
-        medals[i]=peek(0x5f83+i)
-      end
       -- enable
       leaderboard=true
     end
@@ -365,19 +362,21 @@ function fadetoblack_state(...)
     end
 end
 
-function stats_state(skill,id,level_time,kills,monsters,secrets,all_secrets)
+function stats_state(skill,id,level_time,kills,monsters,secrets,all_secrets,ammoused)
   local ttl,msg_ttl,max_msg=0,0,2
+  local punch_perfect=kills==monsters and ammoused==0
+  local secret_perfect=all_secrets>0 and secrets==all_secrets
   local msgs={
-    "completed:",
-    _maps_label[id],
-    "time: "..time_tostr(level_time),
-    "kills: "..kills.."/"..monsters,
-    all_secrets>0 and "secrets: "..secrets.."/"..all_secrets or nil
+    {txt="completed:"},
+    {txt=_maps_label[id]},
+    {txt="time: "..time_tostr(level_time)},
+    {txt="kills: "..kills.."/"..monsters},
+    all_secrets>0 and {txt="secrets: "..secrets.."/"..all_secrets,unlocked=secret_perfect} or nil,
+    punch_perfect and {txt="punch perfect",unlocked=true} or nil
   }
-
   -- record per level play time
   dset(16+id,level_time)
-  update_map_leaderboard(skill,id,level_time,nil,kills,kills==monsters,secrets==all_secrets)
+  update_map_leaderboard(skill,id,level_time,nil,kills,kills==monsters,secret_perfect,punch_perfect)
 
   return
     function()
@@ -390,14 +389,23 @@ function stats_state(skill,id,level_time,kills,monsters,secrets,all_secrets)
         sfx(0)
         max_msg+=1
         msg_ttl=0
+        -- skip empty entries
+        if(not msgs[max_msg]) max_msg=min(max_msg+1,#msgs)
       end
     end,
     function()   
       local y=40   
       for i=1,max_msg do
-        local s=msgs[i]
-        printb(s,63-#s*2,y,15)
-        y+=10
+        if msgs[i] then
+          local s=msgs[i].txt
+          local x=63-#s*2
+          printb(s,x,y,15)      
+          if msgs[i].unlocked then
+            printb("★",x-8,y,rnd()>0.5 and 11 or 10)
+            printb("★",x+#s*4,y,rnd()>0.5 and 11 or 10)
+          end
+          y+=10
+        end
       end
     end
 end
@@ -448,7 +456,7 @@ function credits_state(skill,id,level_time,kills,monsters,secrets,all_secrets)
   local ttl,t,creditsi=0,{},0
 
   -- update leaderboard (if any)
-  poke(0x5f83+leaderboard_pins["victory"..skill],1)
+  poke(0x5f80+leaderboard_pins["victory"..skill],1)
 
   local total_time=level_time
   for i=1,id-1 do
@@ -573,8 +581,9 @@ function _init()
     poke2(addr+i*2,tonum("0x"..sub(snd,i*4+1,i*4+4)))
   end
 
+  -- get command line args
   local p=split(stat(6))  
-  local skill,mapid,state,level_time,kills,monsters,secrets=tonum(p[1]) or 2,tonum(p[2]) or 1,tonum(p[3]) or 0,tonum(p[4]) or 0,tonum(p[5]) or 0,tonum(p[6]) or 0,tonum(p[7]) or 0
+  local skill,mapid,state,level_time,kills,monsters,secrets,ammoused=tonum(p[1]) or 2,tonum(p[2]) or 1,tonum(p[3]) or 0,tonum(p[4]) or 0,tonum(p[5]) or 0,tonum(p[6]) or 0,tonum(p[7]) or 0,tonum(p[8]) or 0
   
   -- special case for end game state
   if(state==2 and mapid+1>#_maps_group) state=4
@@ -585,7 +594,7 @@ function _init()
     -- 1: game over
     {fadetoblack_state,start_state},
     -- 2: next level
-    {slicefade_state,stats_state,skill,mapid,level_time,kills,monsters,secrets,_secrets[mapid]},
+    {slicefade_state,stats_state,skill,mapid,level_time,kills,monsters,secrets,_secrets[mapid],ammoused},
     -- 3: retry
     {slicefade_state,launch_state,skill,mapid},    
     -- 4: end game
@@ -595,7 +604,7 @@ function _init()
   -- wait time before launching (15 frames when loading from menu to prevent audio from getting cut too short)
   launch_ttl=(state==2 or state==3) and 1 or 15
 
-  next_state(unpack(states[state]))    
+  next_state(unpack(states[state]))      
 end
 
 -->8
