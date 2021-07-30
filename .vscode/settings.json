@@ -1,3 +1,3 @@
 {
-  "pico8vscodeeditor.pico8additionalParameters": "-home ${workspaceFolder}"
+  "pico8vscodeeditor.pico8additionalParameters": "-home C:\\Users\\fsouchu\\Documents\\GitHub\\qk8"
 }
