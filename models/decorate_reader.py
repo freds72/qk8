@@ -134,7 +134,7 @@ class DecorateWalker(DECORATEListener):
           value = pair.ENABLED().getText()=='+'
         else:
           value = pair.value(0).getText().lower().strip('"')
-          if attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound','meleerange','maxtargetrange']:
+          if attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound','meleerange','maxtargetrange','respawntics']:
             value = int(value)
           elif attribute in ['drag']:
             value = float(value)

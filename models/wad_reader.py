@@ -765,6 +765,9 @@ def pack_actors(image_reader, actors):
     if actor.get('drag'):
       properties |= 0x100000
       properties_data += pack_fixed(actor.drag)     
+    if actor.get('respawntics'):
+      properties |= 0x200000
+      properties_data += pack_variant(actor.respawntics)     
 
     # must be at the end 
     if actor.get('startitems'):
@@ -1049,6 +1052,9 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
       'music': -1
     })]
 
+  if len(all_maps)>1:
+    raise Exception("Too many maps: {} - BBS supports only 1 map.".format(len(all_maps)))
+
   # extract palette
   colormap = ColormapReader(file_stream)
   gradients = colormap.read("PLAYPAL", use_palette=True) + colormap.read("PAINPAL")
@@ -1152,30 +1158,27 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
     'endgame': pack_p8image(graphics_stream, "G_END", swap=True, mandatory=True)
   })
 
+  m = all_maps[0]
   atlas_code="""
 -- *********************************
 -- generated code - do not edit
 -- *********************************
 mod_name,title_cart="{0}","{0}_0.p8"
-_maps_group=split"{1}"
-_maps_cart=split"{2}"
-_maps_offset=split"{3}"
-_maps_sky=split("{4}",",",1)
-_maps_music=split"{5}"
-_wp_wheel=split("{6}","|")
+_map_offset=0x{1:04x}
+local _sky_height,_sky_offset={2},0x{3:04x}
+_map_music={4}
+_wp_wheel=split("{5}","|")
   """.format(
   modname,
-  ",".join(["{}".format("{}_{}".format(modname,m.group)) for m in all_maps]),
-  ",".join(["{}".format(m.cart_id) for m in all_maps]),
-  ",".join(["{}".format(m.cart_offset) for m in all_maps]),
-  ",".join(["{},0x{:04x}".format(m.sky.height,m.sky.offset) for m in all_maps]),
-  ",".join(["{}".format(m.music) for m in all_maps]),
+  0x8000 + m.cart_id * 0x4300 + m.cart_offset,
+  m.sky.height,m.sky.offset,
+  m.music,
   wp_wheel_data)
 
   with open(os.path.join(carts_path, "{}_atlas.lua".format(modname)), "w", encoding='utf-8') as f:
     f.write(atlas_code)
 
-  boot_code="""\
+  title_code="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
@@ -1201,7 +1204,23 @@ _secrets=split("{5}",",",1)
   ",".join(["{}".format(m.secrets) for m in all_maps]),
   release and "{}_title_mini.lua".format(modname) or "title.lua")
 
-  to_multicart(game_data, pico_path, carts_path, modname, boot_code=boot_code, label=label_image)
+  dat1_code="""\
+pico-8 cartridge // http://www.pico-8.com
+version 29
+__lua__
+-- {0}
+-- by @freds72
+-- bootstrap cart
+-- *********************************
+-- generated code - do not edit
+-- *********************************
+-- extended memory support
+poke(0x5f36,0x10)
+memcpy(0xc300,0x0,0x3d00)
+load("{0}_{1}.p8",nil,stat(6)) 
+""".format(modname, m.group)
+
+  to_multicart(game_data, pico_path, carts_path, modname, boot_code=(title_code, dat1_code), label=label_image)
 
   if release:
     all_carts = []
