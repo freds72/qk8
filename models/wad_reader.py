@@ -820,7 +820,10 @@ def pack_actors(image_reader, actors):
         flipbits = 0
         for i,frame in enumerate(frames):
           flipbits|=(frame[1]==True and 1 or 0)<<i
-        state_s += "{:02x}".format(flipbits)
+        state_s += "{:02x}".format(flipbits) 
+        # transparency
+        state_s += "{:04x}".format(state.alpha)
+        # images references
         state_s += pack_variant(len(frames))
         for frame in frames:
           # index to sprite metadata

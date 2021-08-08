@@ -116,6 +116,15 @@ class DECORATEListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by DECORATEParser#alpha_modifier.
+    def enterAlpha_modifier(self, ctx:DECORATEParser.Alpha_modifierContext):
+        pass
+
+    # Exit a parse tree produced by DECORATEParser#alpha_modifier.
+    def exitAlpha_modifier(self, ctx:DECORATEParser.Alpha_modifierContext):
+        pass
+
+
     # Enter a parse tree produced by DECORATEParser#image.
     def enterImage(self, ctx:DECORATEParser.ImageContext):
         pass

@@ -69,6 +69,11 @@ class DECORATEVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by DECORATEParser#alpha_modifier.
+    def visitAlpha_modifier(self, ctx:DECORATEParser.Alpha_modifierContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by DECORATEParser#image.
     def visitImage(self, ctx:DECORATEParser.ImageContext):
         return self.visitChildren(ctx)

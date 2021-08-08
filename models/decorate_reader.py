@@ -216,6 +216,7 @@ class DecorateWalker(DECORATEListener):
           'image': state.image().getText(),
           'variant': state.variant().getText(),
           'bright': state.image_modifier() is not None,
+          'alpha': state.alpha_modifier() is not None and int(state.alpha_modifier().HEXA().getText(),16) or 0x0,
           'ticks': int(state.ticks().getText()),
           'function': fn,
           'args': args
