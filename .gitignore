@@ -8,6 +8,7 @@ activity_log.txt
 *.blend1
 sdl_controllers.txt
 .antlr
+.vscode
 models/__pycache__
 /models/resized
 /models/orig
