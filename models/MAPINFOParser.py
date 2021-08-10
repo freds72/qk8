@@ -11,28 +11,42 @@ else:
 
 def serializedATN():
     with StringIO() as buf:
-        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\20")
-        buf.write("D\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7\4\b")
-        buf.write("\t\b\4\t\t\t\3\2\3\2\7\2\25\n\2\f\2\16\2\30\13\2\3\2\3")
-        buf.write("\2\3\3\3\3\3\3\3\3\3\3\7\3!\n\3\f\3\16\3$\13\3\3\3\3\3")
-        buf.write("\3\4\3\4\3\4\7\4+\n\4\f\4\16\4.\13\4\3\4\3\4\3\5\3\5\3")
-        buf.write("\5\3\5\3\5\5\5\67\n\5\3\5\5\5:\n\5\3\6\3\6\3\7\3\7\3\b")
-        buf.write("\3\b\3\t\3\t\3\t\2\2\n\2\4\6\b\n\f\16\20\2\3\3\2\n\f\2")
-        buf.write("A\2\26\3\2\2\2\4\33\3\2\2\2\6\'\3\2\2\2\b\61\3\2\2\2\n")
-        buf.write(";\3\2\2\2\f=\3\2\2\2\16?\3\2\2\2\20A\3\2\2\2\22\25\5\4")
-        buf.write("\3\2\23\25\5\6\4\2\24\22\3\2\2\2\24\23\3\2\2\2\25\30\3")
-        buf.write("\2\2\2\26\24\3\2\2\2\26\27\3\2\2\2\27\31\3\2\2\2\30\26")
-        buf.write("\3\2\2\2\31\32\7\2\2\3\32\3\3\2\2\2\33\34\7\3\2\2\34\35")
-        buf.write("\5\n\6\2\35\36\5\16\b\2\36\"\7\4\2\2\37!\5\b\5\2 \37\3")
-        buf.write("\2\2\2!$\3\2\2\2\" \3\2\2\2\"#\3\2\2\2#%\3\2\2\2$\"\3")
-        buf.write("\2\2\2%&\7\5\2\2&\5\3\2\2\2\'(\7\6\2\2(,\7\4\2\2)+\5\b")
-        buf.write("\5\2*)\3\2\2\2+.\3\2\2\2,*\3\2\2\2,-\3\2\2\2-/\3\2\2\2")
-        buf.write(".,\3\2\2\2/\60\7\5\2\2\60\7\3\2\2\2\61\62\5\f\7\2\62\63")
-        buf.write("\7\7\2\2\63\66\5\20\t\2\64\65\7\b\2\2\65\67\5\20\t\2\66")
-        buf.write("\64\3\2\2\2\66\67\3\2\2\2\679\3\2\2\28:\7\t\2\298\3\2")
-        buf.write("\2\29:\3\2\2\2:\t\3\2\2\2;<\7\r\2\2<\13\3\2\2\2=>\7\r")
-        buf.write("\2\2>\r\3\2\2\2?@\7\f\2\2@\17\3\2\2\2AB\t\2\2\2B\21\3")
-        buf.write("\2\2\2\b\24\26\",\669")
+        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\23")
+        buf.write("u\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7\4\b")
+        buf.write("\t\b\4\t\t\t\4\n\t\n\4\13\t\13\4\f\t\f\4\r\t\r\4\16\t")
+        buf.write("\16\3\2\3\2\3\2\7\2 \n\2\f\2\16\2#\13\2\3\2\3\2\3\3\3")
+        buf.write("\3\3\3\3\3\3\3\7\3,\n\3\f\3\16\3/\13\3\3\3\3\3\3\4\3\4")
+        buf.write("\3\4\7\4\66\n\4\f\4\16\49\13\4\3\4\3\4\3\5\3\5\3\5\3\5")
+        buf.write("\3\5\7\5B\n\5\f\5\16\5E\13\5\3\5\3\5\3\6\3\6\3\6\3\6\7")
+        buf.write("\6M\n\6\f\6\16\6P\13\6\3\6\3\6\3\7\3\7\3\7\3\7\7\7X\n")
+        buf.write("\7\f\7\16\7[\13\7\3\7\3\7\3\b\3\b\3\b\3\b\3\b\5\bd\n\b")
+        buf.write("\3\b\5\bg\n\b\3\t\3\t\3\n\3\n\3\13\3\13\3\f\3\f\3\r\3")
+        buf.write("\r\3\16\3\16\3\16\2\2\17\2\4\6\b\n\f\16\20\22\24\26\30")
+        buf.write("\32\2\3\3\2\r\17\2s\2!\3\2\2\2\4&\3\2\2\2\6\62\3\2\2\2")
+        buf.write("\b<\3\2\2\2\nH\3\2\2\2\fS\3\2\2\2\16^\3\2\2\2\20h\3\2")
+        buf.write("\2\2\22j\3\2\2\2\24l\3\2\2\2\26n\3\2\2\2\30p\3\2\2\2\32")
+        buf.write("r\3\2\2\2\34 \5\4\3\2\35 \5\6\4\2\36 \5\b\5\2\37\34\3")
+        buf.write("\2\2\2\37\35\3\2\2\2\37\36\3\2\2\2 #\3\2\2\2!\37\3\2\2")
+        buf.write("\2!\"\3\2\2\2\"$\3\2\2\2#!\3\2\2\2$%\7\2\2\3%\3\3\2\2")
+        buf.write("\2&\'\7\3\2\2\'(\5\20\t\2()\5\26\f\2)-\7\4\2\2*,\5\16")
+        buf.write("\b\2+*\3\2\2\2,/\3\2\2\2-+\3\2\2\2-.\3\2\2\2.\60\3\2\2")
+        buf.write("\2/-\3\2\2\2\60\61\7\5\2\2\61\5\3\2\2\2\62\63\7\6\2\2")
+        buf.write("\63\67\7\4\2\2\64\66\5\16\b\2\65\64\3\2\2\2\669\3\2\2")
+        buf.write("\2\67\65\3\2\2\2\678\3\2\2\28:\3\2\2\29\67\3\2\2\2:;\7")
+        buf.write("\5\2\2;\7\3\2\2\2<=\7\7\2\2=C\7\4\2\2>B\5\16\b\2?B\5\n")
+        buf.write("\6\2@B\5\f\7\2A>\3\2\2\2A?\3\2\2\2A@\3\2\2\2BE\3\2\2\2")
+        buf.write("CA\3\2\2\2CD\3\2\2\2DF\3\2\2\2EC\3\2\2\2FG\7\5\2\2G\t")
+        buf.write("\3\2\2\2HI\7\b\2\2IJ\5\22\n\2JN\7\4\2\2KM\5\16\b\2LK\3")
+        buf.write("\2\2\2MP\3\2\2\2NL\3\2\2\2NO\3\2\2\2OQ\3\2\2\2PN\3\2\2")
+        buf.write("\2QR\7\5\2\2R\13\3\2\2\2ST\7\t\2\2TU\5\32\16\2UY\7\4\2")
+        buf.write("\2VX\5\16\b\2WV\3\2\2\2X[\3\2\2\2YW\3\2\2\2YZ\3\2\2\2")
+        buf.write("Z\\\3\2\2\2[Y\3\2\2\2\\]\7\5\2\2]\r\3\2\2\2^_\5\24\13")
+        buf.write("\2_`\7\n\2\2`c\5\30\r\2ab\7\13\2\2bd\5\30\r\2ca\3\2\2")
+        buf.write("\2cd\3\2\2\2df\3\2\2\2eg\7\f\2\2fe\3\2\2\2fg\3\2\2\2g")
+        buf.write("\17\3\2\2\2hi\7\20\2\2i\21\3\2\2\2jk\7\20\2\2k\23\3\2")
+        buf.write("\2\2lm\7\20\2\2m\25\3\2\2\2no\7\17\2\2o\27\3\2\2\2pq\t")
+        buf.write("\2\2\2q\31\3\2\2\2rs\7\r\2\2s\33\3\2\2\2\f\37!-\67ACN")
+        buf.write("Ycf")
         return buf.getvalue()
 
 
@@ -46,25 +60,32 @@ class MAPINFOParser ( Parser ):
 
     sharedContextCache = PredictionContextCache()
 
-    literalNames = [ "<INVALID>", "'map'", "'{'", "'}'", "'gameinfo'", "'='", 
-                     "','", "';'" ]
+    literalNames = [ "<INVALID>", "'map'", "'{'", "'}'", "'gameinfo'", "'round'", 
+                     "'actor'", "'sector'", "'='", "','", "';'" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                      "NUMBER", "BOOLEAN_VALUE", "QUOTED_STRING", "KEYWORD", 
-                      "BLOCKCOMMENT", "LINECOMMENT", "WS" ]
+                      "<INVALID>", "<INVALID>", "<INVALID>", "NUMBER", "BOOLEAN_VALUE", 
+                      "QUOTED_STRING", "KEYWORD", "BLOCKCOMMENT", "LINECOMMENT", 
+                      "WS" ]
 
     RULE_maps = 0
     RULE_mapblock = 1
     RULE_infoblock = 2
-    RULE_pair = 3
-    RULE_maplump = 4
-    RULE_keyword = 5
-    RULE_label = 6
-    RULE_value = 7
+    RULE_roundblock = 3
+    RULE_actorblock = 4
+    RULE_sectorblock = 5
+    RULE_pair = 6
+    RULE_maplump = 7
+    RULE_name = 8
+    RULE_keyword = 9
+    RULE_label = 10
+    RULE_value = 11
+    RULE_uid = 12
 
-    ruleNames =  [ "maps", "mapblock", "infoblock", "pair", "maplump", "keyword", 
-                   "label", "value" ]
+    ruleNames =  [ "maps", "mapblock", "infoblock", "roundblock", "actorblock", 
+                   "sectorblock", "pair", "maplump", "name", "keyword", 
+                   "label", "value", "uid" ]
 
     EOF = Token.EOF
     T__0=1
@@ -74,13 +95,16 @@ class MAPINFOParser ( Parser ):
     T__4=5
     T__5=6
     T__6=7
-    NUMBER=8
-    BOOLEAN_VALUE=9
-    QUOTED_STRING=10
-    KEYWORD=11
-    BLOCKCOMMENT=12
-    LINECOMMENT=13
-    WS=14
+    T__7=8
+    T__8=9
+    T__9=10
+    NUMBER=11
+    BOOLEAN_VALUE=12
+    QUOTED_STRING=13
+    KEYWORD=14
+    BLOCKCOMMENT=15
+    LINECOMMENT=16
+    WS=17
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -114,6 +138,13 @@ class MAPINFOParser ( Parser ):
                 return self.getTypedRuleContext(MAPINFOParser.InfoblockContext,i)
 
 
+        def roundblock(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(MAPINFOParser.RoundblockContext)
+            else:
+                return self.getTypedRuleContext(MAPINFOParser.RoundblockContext,i)
+
+
         def getRuleIndex(self):
             return MAPINFOParser.RULE_maps
 
@@ -141,29 +172,33 @@ class MAPINFOParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 20
+            self.state = 31
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            while _la==MAPINFOParser.T__0 or _la==MAPINFOParser.T__3:
-                self.state = 18
+            while (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << MAPINFOParser.T__0) | (1 << MAPINFOParser.T__3) | (1 << MAPINFOParser.T__4))) != 0):
+                self.state = 29
                 self._errHandler.sync(self)
                 token = self._input.LA(1)
                 if token in [MAPINFOParser.T__0]:
-                    self.state = 16
+                    self.state = 26
                     self.mapblock()
                     pass
                 elif token in [MAPINFOParser.T__3]:
-                    self.state = 17
+                    self.state = 27
                     self.infoblock()
+                    pass
+                elif token in [MAPINFOParser.T__4]:
+                    self.state = 28
+                    self.roundblock()
                     pass
                 else:
                     raise NoViableAltException(self)
 
-                self.state = 22
+                self.state = 33
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
-            self.state = 23
+            self.state = 34
             self.match(MAPINFOParser.EOF)
         except RecognitionException as re:
             localctx.exception = re
@@ -222,25 +257,25 @@ class MAPINFOParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 25
+            self.state = 36
             self.match(MAPINFOParser.T__0)
-            self.state = 26
+            self.state = 37
             self.maplump()
-            self.state = 27
+            self.state = 38
             self.label()
-            self.state = 28
+            self.state = 39
             self.match(MAPINFOParser.T__1)
-            self.state = 32
+            self.state = 43
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             while _la==MAPINFOParser.KEYWORD:
-                self.state = 29
+                self.state = 40
                 self.pair()
-                self.state = 34
+                self.state = 45
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
-            self.state = 35
+            self.state = 46
             self.match(MAPINFOParser.T__2)
         except RecognitionException as re:
             localctx.exception = re
@@ -291,21 +326,258 @@ class MAPINFOParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 37
+            self.state = 48
             self.match(MAPINFOParser.T__3)
-            self.state = 38
+            self.state = 49
             self.match(MAPINFOParser.T__1)
-            self.state = 42
+            self.state = 53
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             while _la==MAPINFOParser.KEYWORD:
-                self.state = 39
+                self.state = 50
                 self.pair()
-                self.state = 44
+                self.state = 55
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
-            self.state = 45
+            self.state = 56
+            self.match(MAPINFOParser.T__2)
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class RoundblockContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+
+        def pair(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(MAPINFOParser.PairContext)
+            else:
+                return self.getTypedRuleContext(MAPINFOParser.PairContext,i)
+
+
+        def actorblock(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(MAPINFOParser.ActorblockContext)
+            else:
+                return self.getTypedRuleContext(MAPINFOParser.ActorblockContext,i)
+
+
+        def sectorblock(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(MAPINFOParser.SectorblockContext)
+            else:
+                return self.getTypedRuleContext(MAPINFOParser.SectorblockContext,i)
+
+
+        def getRuleIndex(self):
+            return MAPINFOParser.RULE_roundblock
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterRoundblock" ):
+                listener.enterRoundblock(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitRoundblock" ):
+                listener.exitRoundblock(self)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitRoundblock" ):
+                return visitor.visitRoundblock(self)
+            else:
+                return visitor.visitChildren(self)
+
+
+
+
+    def roundblock(self):
+
+        localctx = MAPINFOParser.RoundblockContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 6, self.RULE_roundblock)
+        self._la = 0 # Token type
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 58
+            self.match(MAPINFOParser.T__4)
+            self.state = 59
+            self.match(MAPINFOParser.T__1)
+            self.state = 65
+            self._errHandler.sync(self)
+            _la = self._input.LA(1)
+            while (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << MAPINFOParser.T__5) | (1 << MAPINFOParser.T__6) | (1 << MAPINFOParser.KEYWORD))) != 0):
+                self.state = 63
+                self._errHandler.sync(self)
+                token = self._input.LA(1)
+                if token in [MAPINFOParser.KEYWORD]:
+                    self.state = 60
+                    self.pair()
+                    pass
+                elif token in [MAPINFOParser.T__5]:
+                    self.state = 61
+                    self.actorblock()
+                    pass
+                elif token in [MAPINFOParser.T__6]:
+                    self.state = 62
+                    self.sectorblock()
+                    pass
+                else:
+                    raise NoViableAltException(self)
+
+                self.state = 67
+                self._errHandler.sync(self)
+                _la = self._input.LA(1)
+
+            self.state = 68
+            self.match(MAPINFOParser.T__2)
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class ActorblockContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+
+        def name(self):
+            return self.getTypedRuleContext(MAPINFOParser.NameContext,0)
+
+
+        def pair(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(MAPINFOParser.PairContext)
+            else:
+                return self.getTypedRuleContext(MAPINFOParser.PairContext,i)
+
+
+        def getRuleIndex(self):
+            return MAPINFOParser.RULE_actorblock
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterActorblock" ):
+                listener.enterActorblock(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitActorblock" ):
+                listener.exitActorblock(self)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitActorblock" ):
+                return visitor.visitActorblock(self)
+            else:
+                return visitor.visitChildren(self)
+
+
+
+
+    def actorblock(self):
+
+        localctx = MAPINFOParser.ActorblockContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 8, self.RULE_actorblock)
+        self._la = 0 # Token type
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 70
+            self.match(MAPINFOParser.T__5)
+            self.state = 71
+            self.name()
+            self.state = 72
+            self.match(MAPINFOParser.T__1)
+            self.state = 76
+            self._errHandler.sync(self)
+            _la = self._input.LA(1)
+            while _la==MAPINFOParser.KEYWORD:
+                self.state = 73
+                self.pair()
+                self.state = 78
+                self._errHandler.sync(self)
+                _la = self._input.LA(1)
+
+            self.state = 79
+            self.match(MAPINFOParser.T__2)
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class SectorblockContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+
+        def uid(self):
+            return self.getTypedRuleContext(MAPINFOParser.UidContext,0)
+
+
+        def pair(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(MAPINFOParser.PairContext)
+            else:
+                return self.getTypedRuleContext(MAPINFOParser.PairContext,i)
+
+
+        def getRuleIndex(self):
+            return MAPINFOParser.RULE_sectorblock
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterSectorblock" ):
+                listener.enterSectorblock(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitSectorblock" ):
+                listener.exitSectorblock(self)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitSectorblock" ):
+                return visitor.visitSectorblock(self)
+            else:
+                return visitor.visitChildren(self)
+
+
+
+
+    def sectorblock(self):
+
+        localctx = MAPINFOParser.SectorblockContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 10, self.RULE_sectorblock)
+        self._la = 0 # Token type
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 81
+            self.match(MAPINFOParser.T__6)
+            self.state = 82
+            self.uid()
+            self.state = 83
+            self.match(MAPINFOParser.T__1)
+            self.state = 87
+            self._errHandler.sync(self)
+            _la = self._input.LA(1)
+            while _la==MAPINFOParser.KEYWORD:
+                self.state = 84
+                self.pair()
+                self.state = 89
+                self._errHandler.sync(self)
+                _la = self._input.LA(1)
+
+            self.state = 90
             self.match(MAPINFOParser.T__2)
         except RecognitionException as re:
             localctx.exception = re
@@ -356,32 +628,32 @@ class MAPINFOParser ( Parser ):
     def pair(self):
 
         localctx = MAPINFOParser.PairContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 6, self.RULE_pair)
+        self.enterRule(localctx, 12, self.RULE_pair)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 47
+            self.state = 92
             self.keyword()
-            self.state = 48
-            self.match(MAPINFOParser.T__4)
-            self.state = 49
+            self.state = 93
+            self.match(MAPINFOParser.T__7)
+            self.state = 94
             self.value()
-            self.state = 52
+            self.state = 97
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if _la==MAPINFOParser.T__5:
-                self.state = 50
-                self.match(MAPINFOParser.T__5)
-                self.state = 51
+            if _la==MAPINFOParser.T__8:
+                self.state = 95
+                self.match(MAPINFOParser.T__8)
+                self.state = 96
                 self.value()
 
 
-            self.state = 55
+            self.state = 100
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if _la==MAPINFOParser.T__6:
-                self.state = 54
-                self.match(MAPINFOParser.T__6)
+            if _la==MAPINFOParser.T__9:
+                self.state = 99
+                self.match(MAPINFOParser.T__9)
 
 
         except RecognitionException as re:
@@ -425,10 +697,56 @@ class MAPINFOParser ( Parser ):
     def maplump(self):
 
         localctx = MAPINFOParser.MaplumpContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 8, self.RULE_maplump)
+        self.enterRule(localctx, 14, self.RULE_maplump)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 57
+            self.state = 102
+            self.match(MAPINFOParser.KEYWORD)
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class NameContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+
+        def KEYWORD(self):
+            return self.getToken(MAPINFOParser.KEYWORD, 0)
+
+        def getRuleIndex(self):
+            return MAPINFOParser.RULE_name
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterName" ):
+                listener.enterName(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitName" ):
+                listener.exitName(self)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitName" ):
+                return visitor.visitName(self)
+            else:
+                return visitor.visitChildren(self)
+
+
+
+
+    def name(self):
+
+        localctx = MAPINFOParser.NameContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 16, self.RULE_name)
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 104
             self.match(MAPINFOParser.KEYWORD)
         except RecognitionException as re:
             localctx.exception = re
@@ -471,10 +789,10 @@ class MAPINFOParser ( Parser ):
     def keyword(self):
 
         localctx = MAPINFOParser.KeywordContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 10, self.RULE_keyword)
+        self.enterRule(localctx, 18, self.RULE_keyword)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 59
+            self.state = 106
             self.match(MAPINFOParser.KEYWORD)
         except RecognitionException as re:
             localctx.exception = re
@@ -517,10 +835,10 @@ class MAPINFOParser ( Parser ):
     def label(self):
 
         localctx = MAPINFOParser.LabelContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 12, self.RULE_label)
+        self.enterRule(localctx, 20, self.RULE_label)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 61
+            self.state = 108
             self.match(MAPINFOParser.QUOTED_STRING)
         except RecognitionException as re:
             localctx.exception = re
@@ -569,17 +887,63 @@ class MAPINFOParser ( Parser ):
     def value(self):
 
         localctx = MAPINFOParser.ValueContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 14, self.RULE_value)
+        self.enterRule(localctx, 22, self.RULE_value)
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 63
+            self.state = 110
             _la = self._input.LA(1)
             if not((((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << MAPINFOParser.NUMBER) | (1 << MAPINFOParser.BOOLEAN_VALUE) | (1 << MAPINFOParser.QUOTED_STRING))) != 0)):
                 self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
                 self.consume()
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class UidContext(ParserRuleContext):
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+
+        def NUMBER(self):
+            return self.getToken(MAPINFOParser.NUMBER, 0)
+
+        def getRuleIndex(self):
+            return MAPINFOParser.RULE_uid
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterUid" ):
+                listener.enterUid(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitUid" ):
+                listener.exitUid(self)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitUid" ):
+                return visitor.visitUid(self)
+            else:
+                return visitor.visitChildren(self)
+
+
+
+
+    def uid(self):
+
+        localctx = MAPINFOParser.UidContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 24, self.RULE_uid)
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 112
+            self.match(MAPINFOParser.NUMBER)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)

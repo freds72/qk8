@@ -17,6 +17,50 @@ class MAPINFO(MAPINFOListener):
     self.gameinfo = dotdict({
       "credits":"gAME eNGINE:,@fsouchu"
     })
+    self.rounds = []
+
+  def decodePair(self, pair):
+    attribute = pair.keyword().getText().lower()
+    value = pair.value(0).getText().strip('"')
+    return (attribute, value)
+  
+  def newRound(self):
+    self.round = dotdict({
+      'sectors': [],
+      'actors': []
+    })
+
+  def enterRoundblock(self, ctx):
+    self.newRound()
+
+  def exitRoundblock(self, ctx):
+    for pair in ctx.pair():
+      attribute, value = self.decodePair(pair)
+      if attribute in ['duration']:
+        value = int(value)
+      self.round[attribute] = value
+    self.rounds.append(self.round)
+    self.newRound()
+  
+  def exitActorblock(self, ctx):
+    actor = dotdict({
+      'name': ctx.name().getText().lower()
+    })
+    for pair in ctx.pair():
+      attribute, value = self.decodePair(pair)
+      actor[attribute] = value
+    self.round.actors.append(actor)
+
+  def exitSectorblock(self, ctx):
+    sector = dotdict({
+      'id': int(ctx.uid().getText())
+    })
+    for pair in ctx.pair():
+      attribute, value = self.decodePair(pair)
+      if attribute in ['floor']:
+        value = int(value)
+      sector[attribute] = value
+    self.round.sectors.append(sector)
 
   def exitMapblock(self, ctx):  
     lump = ctx.maplump().getText()
@@ -51,8 +95,7 @@ class MAPINFO(MAPINFOListener):
   
   def exitInfoblock(self, ctx):
     for pair in ctx.pair():
-      attribute = pair.keyword().getText().lower()
-      value = pair.value(0).getText().strip('"')
+      attribute, value = self.decodePair(pair)
       self.gameinfo[attribute] = value
 
 # Converts a TEXTURE file definition into a set of unique tiles + map index
@@ -86,5 +129,5 @@ class MapinfoReader(MAPINFOListener):
       curmap = listener.maps[curmap.next]
       allmaps.append(curmap)
 
-    return allmaps,listener.gameinfo
+    return allmaps,listener.gameinfo,listener.rounds
 

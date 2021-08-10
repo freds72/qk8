@@ -4,7 +4,7 @@ grammar MAPINFO;
 
 // parser
 maps:
-  (mapblock|infoblock)* EOF
+  (mapblock|infoblock|roundblock)* EOF
   ;
 
 mapblock:
@@ -15,11 +15,27 @@ infoblock:
   'gameinfo' '{' pair* '}'
   ;
 
+roundblock:
+  'round' '{' (pair|actorblock|sectorblock)* '}'
+  ;
+
+actorblock:
+  'actor' name '{' pair* '}'
+  ;
+
+sectorblock:
+  'sector' uid '{' pair* '}'
+  ;
+
 pair:
   keyword '=' value (',' value)? ';'?
   ;
 
 maplump:
+  KEYWORD
+  ;
+
+name:
   KEYWORD
   ;
 
@@ -35,6 +51,10 @@ value:
   NUMBER |
   BOOLEAN_VALUE |
   QUOTED_STRING
+  ;
+
+uid:
+  NUMBER
   ;
 
 NUMBER

@@ -35,6 +35,33 @@ class MAPINFOListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by MAPINFOParser#roundblock.
+    def enterRoundblock(self, ctx:MAPINFOParser.RoundblockContext):
+        pass
+
+    # Exit a parse tree produced by MAPINFOParser#roundblock.
+    def exitRoundblock(self, ctx:MAPINFOParser.RoundblockContext):
+        pass
+
+
+    # Enter a parse tree produced by MAPINFOParser#actorblock.
+    def enterActorblock(self, ctx:MAPINFOParser.ActorblockContext):
+        pass
+
+    # Exit a parse tree produced by MAPINFOParser#actorblock.
+    def exitActorblock(self, ctx:MAPINFOParser.ActorblockContext):
+        pass
+
+
+    # Enter a parse tree produced by MAPINFOParser#sectorblock.
+    def enterSectorblock(self, ctx:MAPINFOParser.SectorblockContext):
+        pass
+
+    # Exit a parse tree produced by MAPINFOParser#sectorblock.
+    def exitSectorblock(self, ctx:MAPINFOParser.SectorblockContext):
+        pass
+
+
     # Enter a parse tree produced by MAPINFOParser#pair.
     def enterPair(self, ctx:MAPINFOParser.PairContext):
         pass
@@ -50,6 +77,15 @@ class MAPINFOListener(ParseTreeListener):
 
     # Exit a parse tree produced by MAPINFOParser#maplump.
     def exitMaplump(self, ctx:MAPINFOParser.MaplumpContext):
+        pass
+
+
+    # Enter a parse tree produced by MAPINFOParser#name.
+    def enterName(self, ctx:MAPINFOParser.NameContext):
+        pass
+
+    # Exit a parse tree produced by MAPINFOParser#name.
+    def exitName(self, ctx:MAPINFOParser.NameContext):
         pass
 
 
@@ -77,6 +113,15 @@ class MAPINFOListener(ParseTreeListener):
 
     # Exit a parse tree produced by MAPINFOParser#value.
     def exitValue(self, ctx:MAPINFOParser.ValueContext):
+        pass
+
+
+    # Enter a parse tree produced by MAPINFOParser#uid.
+    def enterUid(self, ctx:MAPINFOParser.UidContext):
+        pass
+
+    # Exit a parse tree produced by MAPINFOParser#uid.
+    def exitUid(self, ctx:MAPINFOParser.UidContext):
         pass
 
 

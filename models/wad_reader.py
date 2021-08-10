@@ -611,6 +611,74 @@ def pack_ratio(x):
     raise Exception("Invalid ratio: {}, must be in range [0;1]".format(x))
   return pack_byte(int(255*x))
 
+def pack_actor_properties(actor):
+  properties = 0
+  properties_data = ""
+  if actor.get('health'):
+    properties |= 0x1
+    properties_data += pack_variant(actor.health)
+  if actor.get('armor'):
+    properties |= 0x2
+    properties_data += pack_variant(actor.armor)
+  if actor.get('amount'):
+    properties |= 0x4
+    properties_data += pack_variant(actor.amount)
+  if actor.get('maxamount'):
+    properties |= 0x8
+    properties_data += pack_variant(actor.maxamount)
+  if actor.get('icon'):
+    properties |= 0x10
+    properties_data += "{:02x}".format(actor.get('icon',63))
+  if actor.get('slotnumber'):
+    properties |= 0x20
+    properties_data += "{:02x}".format(actor.slotnumber)
+  if actor.get('ammouse'):
+    properties |= 0x40
+    properties_data += pack_variant(actor.ammouse)
+  if actor.get('speed'):
+    properties |= 0x80
+    properties_data += pack_variant(actor.speed)
+  if actor.get('damage'):
+    properties |= 0x100
+    properties_data += pack_variant(actor.damage)
+  if actor.get('ammotype'):
+    properties |= 0x200
+    properties_data += pack_variant(actor.ammotype)
+  if actor.get('mass'):
+    properties |= 0x800
+    properties_data += pack_variant(actor.mass)      
+  if actor.get('pickupsound'):
+    properties |= 0x1000
+    properties_data += pack_variant(actor.pickupsound)      
+  if actor.get('attacksound'):
+    properties |= 0x2000
+    properties_data += pack_variant(actor.attacksound)      
+  if actor.get('hudcolor'):
+    properties |= 0x4000
+    properties_data += pack_variant(actor.hudcolor)      
+  if actor.get('deathsound'):
+    properties |= 0x8000
+    properties_data += pack_variant(actor.deathsound)      
+  if actor.get('meleerange'):
+    properties |= 0x10000
+    properties_data += pack_variant(actor.meleerange)      
+  if actor.get('maxtargetrange'):
+    properties |= 0x20000
+    properties_data += pack_variant(actor.maxtargetrange)      
+  if actor.get('ammogive'):
+    properties |= 0x40000
+    properties_data += pack_variant(actor.ammogive)     
+  if actor.get('trailtype'):
+    properties |= 0x80000
+    properties_data += pack_variant(actor.trailtype)     
+  if actor.get('drag'):
+    properties |= 0x100000
+    properties_data += pack_fixed(actor.drag)     
+  if actor.get('respawntics'):
+    properties |= 0x200000
+    properties_data += pack_variant(actor.respawntics)     
+  return (properties, properties_data)
+
 def pack_actors(image_reader, actors):
   s = ""
   # actors/inventory (e.g. items with assigned unique id)
@@ -703,71 +771,7 @@ def pack_actors(image_reader, actors):
     s += "{:02x}".format(flags)
     
     ################## properties
-    properties = 0
-    properties_data = ""
-    if actor.get('health'):
-      properties |= 0x1
-      properties_data += pack_variant(actor.health)
-    if actor.get('armor'):
-      properties |= 0x2
-      properties_data += pack_variant(actor.armor)
-    if actor.get('amount'):
-      properties |= 0x4
-      properties_data += pack_variant(actor.amount)
-    if actor.get('maxamount'):
-      properties |= 0x8
-      properties_data += pack_variant(actor.maxamount)
-    if actor.get('icon'):
-      properties |= 0x10
-      properties_data += "{:02x}".format(actor.get('icon',63))
-    if actor.get('slotnumber'):
-      properties |= 0x20
-      properties_data += "{:02x}".format(actor.slotnumber)
-    if actor.get('ammouse'):
-      properties |= 0x40
-      properties_data += pack_variant(actor.ammouse)
-    if actor.get('speed'):
-      properties |= 0x80
-      properties_data += pack_variant(actor.speed)
-    if actor.get('damage'):
-      properties |= 0x100
-      properties_data += pack_variant(actor.damage)
-    if actor.get('ammotype'):
-      properties |= 0x200
-      properties_data += pack_variant(actor.ammotype)
-    if actor.get('mass'):
-      properties |= 0x800
-      properties_data += pack_variant(actor.mass)      
-    if actor.get('pickupsound'):
-      properties |= 0x1000
-      properties_data += pack_variant(actor.pickupsound)      
-    if actor.get('attacksound'):
-      properties |= 0x2000
-      properties_data += pack_variant(actor.attacksound)      
-    if actor.get('hudcolor'):
-      properties |= 0x4000
-      properties_data += pack_variant(actor.hudcolor)      
-    if actor.get('deathsound'):
-      properties |= 0x8000
-      properties_data += pack_variant(actor.deathsound)      
-    if actor.get('meleerange'):
-      properties |= 0x10000
-      properties_data += pack_variant(actor.meleerange)      
-    if actor.get('maxtargetrange'):
-      properties |= 0x20000
-      properties_data += pack_variant(actor.maxtargetrange)      
-    if actor.get('ammogive'):
-      properties |= 0x40000
-      properties_data += pack_variant(actor.ammogive)     
-    if actor.get('trailtype'):
-      properties |= 0x80000
-      properties_data += pack_variant(actor.trailtype)     
-    if actor.get('drag'):
-      properties |= 0x100000
-      properties_data += pack_fixed(actor.drag)     
-    if actor.get('respawntics'):
-      properties |= 0x200000
-      properties_data += pack_variant(actor.respawntics)     
+    properties, properties_data = pack_actor_properties(actor)
 
     # must be at the end 
     if actor.get('startitems'):
@@ -844,7 +848,7 @@ def pack_actors(image_reader, actors):
 
 # generate main game cart
 def pack_sprite(arr):
-    return ["".join(map("{:02x}".format,arr[i*4:i*4+4])) for i in range(8)]
+  return ["".join(map("{:02x}".format,arr[i*4:i*4+4])) for i in range(8)]
 
 
 # remap image to given palette and export to byte string
@@ -1039,10 +1043,14 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
 
   all_maps = []
   gameinfo = {}
+  rounds = [dotdict({
+    'duration': 100,
+    'label': 'test'
+  })]
   if mapname=="":
     # all maps
     logging.info("Packing all mod maps")
-    all_maps,gameinfo = MapinfoReader(file_stream).read()
+    all_maps,gameinfo,rounds = MapinfoReader(file_stream).read()
   else:
     # single map
     logging.info("Packing single map: {}".format(mapname))
@@ -1127,6 +1135,38 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
       
       # export game cart (hub for maps from same group)
       to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, gradients, skybox_data, compress, release)
+
+  # rounds (modifiers)
+  rounds_data = ""
+  rounds_data += pack_variant(len(rounds))
+  for round in rounds:
+    logging.info("Packing round: {}".format(round.label))
+    rounds_data += pack_variant(round.duration)
+    # sector modifiers
+    rounds_data += pack_variant(len(round.sectors))
+    for sector in round.sectors:
+      rounds_data += pack_variant(sector.id)
+      properties, properties_data = 0, ""
+      if sector.get('floor'):
+        properties |= 0x1
+        properties_data += pack_fixed(sector.floor)
+      if sector.get('ceiling'):
+        properties |= 0x2
+        properties_data += pack_fixed(sector.ceiling)
+      rounds_data += pack_int32(properties)
+      rounds_data += properties_data
+
+    # actor modifiers
+    for actor in round.actors:
+      if actor.name not in actors:
+        raise Exception("Invalid actor name: {} in round: {}.".format(actor.name, round.label))
+      actor_id = actors[actor.name].id
+      rounds_data += pack_variant(actor_id)
+      properties, properties_data = pack_actor_properties(actor)
+      rounds_data += pack_int32(properties)
+      rounds_data += properties_data
+
+  # game_data += rounds_data
 
   # list of weapons
   wp_anchors = [50,64,78,64,64]
