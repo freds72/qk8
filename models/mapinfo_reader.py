@@ -48,6 +48,11 @@ class MAPINFO(MAPINFOListener):
     })
     for pair in ctx.pair():
       attribute, value = self.decodePair(pair)
+      # todo: factor in "header"
+      if attribute in ['health','armor','height','radius','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound','meleerange','maxtargetrange','respawntics']:
+        value = int(value)
+      elif attribute in ['drag']:
+        value = float(value)
       actor[attribute] = value
     self.round.actors.append(actor)
 
@@ -57,7 +62,9 @@ class MAPINFO(MAPINFOListener):
     })
     for pair in ctx.pair():
       attribute, value = self.decodePair(pair)
-      if attribute in ['floor']:
+      if attribute in ['floor','ceil']:
+        value = float(value)
+      elif attribute in ['lightlevel']:
         value = int(value)
       sector[attribute] = value
     self.round.sectors.append(sector)

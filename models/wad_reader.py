@@ -846,10 +846,45 @@ def pack_actors(image_reader, actors):
 
   return s
 
+def pack_rules(rounds, actors):
+  # rounds (modifiers)
+  logging.info("Packing round rules")
+  blob = ""
+  blob += pack_variant(len(rounds))
+  for round in rounds:
+    blob += pack_variant(round.duration)
+    # sector modifiers
+    blob += pack_variant(len(round.sectors))
+    for sector in round.sectors:
+      blob += pack_variant(sector.id+1)
+      properties, properties_data = 0, ""
+      if sector.get('floor'):
+        properties |= 0x1
+        properties_data += pack_fixed(sector.floor)
+      if sector.get('ceil'):
+        properties |= 0x2
+        properties_data += pack_fixed(sector.ceil)
+      if sector.get('lightlevel'):
+        properties |= 0x4
+        properties_data += pack_byte(sector.lightlevel)
+      blob += pack_int32(properties)
+      blob += properties_data
+
+    # actor modifiers
+    for actor in round.actors:
+      if actor.name not in actors:
+        raise Exception("Invalid actor name: {} in round: {}.".format(actor.name, round.label))
+      actor_id = actors[actor.name].id
+      blob += pack_variant(actor_id)
+      properties, properties_data = pack_actor_properties(actor)
+      blob += pack_int32(properties)
+      blob += properties_data
+
+  return blob
+
 # generate main game cart
 def pack_sprite(arr):
   return ["".join(map("{:02x}".format,arr[i*4:i*4+4])) for i in range(8)]
-
 
 # remap image to given palette and export to byte string
 # if palette is not given, produces a dynamic palette
@@ -1131,42 +1166,13 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
           }) 
         # compress each map separately 
         map_data = pack_zmap(m.zmap, textures, actors)
+        # 
+        map_data += pack_rules(rounds,actors)
+
         game_data += compress and compress_byte_str(map_data, more=compress_more) or map_data
       
       # export game cart (hub for maps from same group)
       to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, gradients, skybox_data, compress, release)
-
-  # rounds (modifiers)
-  rounds_data = ""
-  rounds_data += pack_variant(len(rounds))
-  for round in rounds:
-    logging.info("Packing round: {}".format(round.label))
-    rounds_data += pack_variant(round.duration)
-    # sector modifiers
-    rounds_data += pack_variant(len(round.sectors))
-    for sector in round.sectors:
-      rounds_data += pack_variant(sector.id)
-      properties, properties_data = 0, ""
-      if sector.get('floor'):
-        properties |= 0x1
-        properties_data += pack_fixed(sector.floor)
-      if sector.get('ceiling'):
-        properties |= 0x2
-        properties_data += pack_fixed(sector.ceiling)
-      rounds_data += pack_int32(properties)
-      rounds_data += properties_data
-
-    # actor modifiers
-    for actor in round.actors:
-      if actor.name not in actors:
-        raise Exception("Invalid actor name: {} in round: {}.".format(actor.name, round.label))
-      actor_id = actors[actor.name].id
-      rounds_data += pack_variant(actor_id)
-      properties, properties_data = pack_actor_properties(actor)
-      rounds_data += pack_int32(properties)
-      rounds_data += properties_data
-
-  # game_data += rounds_data
 
   # list of weapons
   wp_anchors = [50,64,78,64,64]
