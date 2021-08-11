@@ -448,7 +448,7 @@ def get_zmap_textures(map):
 
   return textures|onoff_textures
 
-def pack_zmap(map, textures, actors):
+def pack_zmap(map, textures):
   # shortcut to wall textures
   flats = textures.flats
 
@@ -579,6 +579,10 @@ def pack_zmap(map, textures, actors):
   for texture in transparent_textures:
     s+= pack_texture(texture)
 
+  return s
+
+def pack_things(map, actors):
+  s = ""
   # things
   things = []
   actors = [actor.get('id',-1) for actor in actors.values()]
@@ -871,6 +875,7 @@ def pack_rules(rounds, actors):
       blob += properties_data
 
     # actor modifiers
+    blob += pack_variant(len(round.actors))
     for actor in round.actors:
       if actor.name not in actors:
         raise Exception("Invalid actor name: {} in round: {}.".format(actor.name, round.label))
@@ -1165,9 +1170,11 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
             'offset': 0
           }) 
         # compress each map separately 
-        map_data = pack_zmap(m.zmap, textures, actors)
-        # 
-        map_data += pack_rules(rounds,actors)
+        map_data = pack_zmap(m.zmap, textures)
+        # rules
+        map_data += pack_rules(rounds, actors)
+        # things
+        map_data += pack_things(m.zmap, actors)
 
         game_data += compress and compress_byte_str(map_data, more=compress_more) or map_data
       
