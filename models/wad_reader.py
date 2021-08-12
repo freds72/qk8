@@ -856,7 +856,13 @@ def pack_rules(rounds, actors):
   blob = ""
   blob += pack_variant(len(rounds))
   for round in rounds:
-    blob += pack_variant(round.duration)
+    properties, properties_data = 0, ""
+    if round.get('duration'):
+      properties |= 0x1
+      properties_data += pack_variant(round.duration)
+    blob += pack_int32(properties)
+    blob += properties_data
+
     # sector modifiers
     blob += pack_variant(len(round.sectors))
     for sector in round.sectors:
@@ -1026,7 +1032,6 @@ __lua__
   cart_path = os.path.join(carts_path, "{}_{}.p8".format(name, group_name))
   with open(cart_path, "w") as f:
     f.write(cart)
-
 
 def load_WAD(stream, mapname):
   with stream.open(mapname) as file:
