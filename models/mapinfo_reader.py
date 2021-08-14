@@ -51,7 +51,7 @@ class MAPINFO(MAPINFOListener):
       # todo: factor in "header"
       if attribute in ['health','armor','height','radius','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound','meleerange','maxtargetrange','respawntics']:
         value = int(value)
-      elif attribute in ['drag']:
+      elif attribute in ['drag','recoil']:
         value = float(value)
       actor[attribute] = value
     self.round.actors.append(actor)

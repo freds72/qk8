@@ -618,69 +618,36 @@ def pack_ratio(x):
 def pack_actor_properties(actor):
   properties = 0
   properties_data = ""
-  if actor.get('health'):
-    properties |= 0x1
-    properties_data += pack_variant(actor.health)
-  if actor.get('armor'):
-    properties |= 0x2
-    properties_data += pack_variant(actor.armor)
-  if actor.get('amount'):
-    properties |= 0x4
-    properties_data += pack_variant(actor.amount)
-  if actor.get('maxamount'):
-    properties |= 0x8
-    properties_data += pack_variant(actor.maxamount)
-  if actor.get('icon'):
-    properties |= 0x10
-    properties_data += "{:02x}".format(actor.get('icon',63))
-  if actor.get('slotnumber'):
-    properties |= 0x20
-    properties_data += "{:02x}".format(actor.slotnumber)
-  if actor.get('ammouse'):
-    properties |= 0x40
-    properties_data += pack_variant(actor.ammouse)
-  if actor.get('speed'):
-    properties |= 0x80
-    properties_data += pack_variant(actor.speed)
-  if actor.get('damage'):
-    properties |= 0x100
-    properties_data += pack_variant(actor.damage)
-  if actor.get('ammotype'):
-    properties |= 0x200
-    properties_data += pack_variant(actor.ammotype)
-  if actor.get('mass'):
-    properties |= 0x800
-    properties_data += pack_variant(actor.mass)      
-  if actor.get('pickupsound'):
-    properties |= 0x1000
-    properties_data += pack_variant(actor.pickupsound)      
-  if actor.get('attacksound'):
-    properties |= 0x2000
-    properties_data += pack_variant(actor.attacksound)      
-  if actor.get('hudcolor'):
-    properties |= 0x4000
-    properties_data += pack_variant(actor.hudcolor)      
-  if actor.get('deathsound'):
-    properties |= 0x8000
-    properties_data += pack_variant(actor.deathsound)      
-  if actor.get('meleerange'):
-    properties |= 0x10000
-    properties_data += pack_variant(actor.meleerange)      
-  if actor.get('maxtargetrange'):
-    properties |= 0x20000
-    properties_data += pack_variant(actor.maxtargetrange)      
-  if actor.get('ammogive'):
-    properties |= 0x40000
-    properties_data += pack_variant(actor.ammogive)     
-  if actor.get('trailtype'):
-    properties |= 0x80000
-    properties_data += pack_variant(actor.trailtype)     
-  if actor.get('drag'):
-    properties |= 0x100000
-    properties_data += pack_fixed(actor.drag)     
-  if actor.get('respawntics'):
-    properties |= 0x200000
-    properties_data += pack_variant(actor.respawntics)     
+  actor_properties={
+    0x1     :('health',pack_variant),
+    0x2     :('armor',pack_variant),
+    0x4     :('amount',pack_variant),
+    0x8     :('maxamount',pack_variant),
+    0x10    :('icon',lambda v:"{:02x}".format(v)),
+    0x20    :('slotnumber',pack_byte),
+    0x40    :('ammouse',pack_variant),
+    0x80    :('speed',pack_variant),
+    0x100   :('damage',pack_variant),
+    0x200   :('ammotype',pack_variant),
+    # 0x400 custom format
+    0x800   :('mass',pack_variant),
+    0x1000  :('pickupsound',pack_variant),
+    0x2000  :('attacksound',pack_variant),
+    0x4000  :('hudcolor',pack_variant),
+    0x8000  :('deathsound',pack_variant),
+    0x10000 :('meleerange',pack_variant),
+    0x20000 :('maxtargetrange',pack_variant),
+    0x40000 :('ammogive',pack_variant),
+    0x80000 :('trailtype',pack_variant),
+    0x100000:('drag',pack_fixed),
+    0x200000:('respawntics',pack_variant),
+    0x400000:('recoil',pack_fixed)
+  }
+  for mask,info in actor_properties.items():
+    name, packer = info
+    if actor.get(name):
+      properties |= mask
+      properties_data += packer(actor.get(name))
   return (properties, properties_data)
 
 def pack_actors(image_reader, actors):
