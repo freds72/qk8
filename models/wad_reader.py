@@ -817,49 +817,6 @@ def pack_actors(image_reader, actors):
 
   return s
 
-def pack_rules(rounds, actors):
-  # rounds (modifiers)
-  logging.info("Packing round rules")
-  blob = ""
-  blob += pack_variant(len(rounds))
-  for round in rounds:
-    properties, properties_data = 0, ""
-    if round.get('duration'):
-      properties |= 0x1
-      properties_data += pack_variant(round.duration)
-    blob += pack_int32(properties)
-    blob += properties_data
-
-    # sector modifiers
-    blob += pack_variant(len(round.sectors))
-    for sector in round.sectors:
-      blob += pack_variant(sector.id+1)
-      properties, properties_data = 0, ""
-      if sector.get('floor'):
-        properties |= 0x1
-        properties_data += pack_fixed(sector.floor)
-      if sector.get('ceil'):
-        properties |= 0x2
-        properties_data += pack_fixed(sector.ceil)
-      if sector.get('lightlevel'):
-        properties |= 0x4
-        properties_data += pack_byte(sector.lightlevel)
-      blob += pack_int32(properties)
-      blob += properties_data
-
-    # actor modifiers
-    blob += pack_variant(len(round.actors))
-    for actor in round.actors:
-      if actor.name not in actors:
-        raise Exception("Invalid actor name: {} in round: {}.".format(actor.name, round.label))
-      actor_id = actors[actor.name].id
-      blob += pack_variant(actor_id)
-      properties, properties_data = pack_actor_properties(actor)
-      blob += pack_int32(properties)
-      blob += properties_data
-
-  return blob
-
 # generate main game cart
 def pack_sprite(arr):
   return ["".join(map("{:02x}".format,arr[i*4:i*4+4])) for i in range(8)]
@@ -1143,8 +1100,6 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
           }) 
         # compress each map separately 
         map_data = pack_zmap(m.zmap, textures)
-        # rules
-        map_data += pack_rules(rounds, actors)
         # things
         map_data += pack_things(m.zmap, actors)
 
@@ -1182,8 +1137,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
   logging.info("Packing title images")  
   title_images = dotdict({
     'title': pack_p8image(graphics_stream, "G_TITLE", swap=True, mandatory=True, min_size=(128,140),max_size=(128,140)),    
-    'loading': pack_p8image(graphics_stream, "G_LOAD", palette=colormap.palette, swap=True, mandatory=True),
-    'endgame': pack_p8image(graphics_stream, "G_END", swap=True, mandatory=True)
+    'loading': pack_p8image(graphics_stream, "G_LOAD", palette=colormap.palette, swap=True, mandatory=True)
   })
 
   m = all_maps[0]
