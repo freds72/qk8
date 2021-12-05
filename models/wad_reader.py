@@ -1111,11 +1111,11 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
   # list of weapons
   wp_anchors = [50,64,78,64,64]
   wp_templates=[
-    "{0}|rectfill|{1},86,{2},94,0|{0}|print|⬅️,52,88,5|{0}|print|{3},{4},88,11",
-    "{0}|rectfill|{1},102,{2},110,0|{0}|print|⬇️,60,94,5|{0}|print|{3},{4},104,11",
-    "{0}|rectfill|{1},86,{2},94,0|{0}|print|➡️,68,88,5|{0}|print|{3},{4},88,11",
-    "{0}|rectfill|{1},70,{2},78,0|{0}|print|⬆️,60,82,5|{0}|print|{3},{4},72,11",
-    "{0}|print|🅾️,60,88,5"
+    "1|rectfill|{1},86,{2},94,0|{0}|print|⬅️,52,88,5|{0}|print|{3},{4},88,11",
+    "2|rectfill|{1},102,{2},110,0|{0}|print|⬇️,60,94,5|{0}|print|{3},{4},104,11",
+    "3|rectfill|{1},86,{2},94,0|{0}|print|➡️,68,88,5|{0}|print|{3},{4},88,11",
+    "4|rectfill|{1},70,{2},78,0|{0}|print|⬆️,60,82,5|{0}|print|{3},{4},72,11",
+    "5|print|🅾️,60,88,5"
   ]
   wp_wheel_data = "-1|ovalfill|51,81,75,99,0x22"
   for i,wp in enumerate(sorted([wp for wp in actors.values() if 'slotnumber' in wp and wp.kind==ACTOR_KIND.WEAPON], key=lambda wp: wp.slotnumber)):
@@ -1131,7 +1131,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
     else:
       x0 -= len(name)*2
       x1 += len(name)*2
-    wp_wheel_data += "|" + wp_templates[i].format(wp.slotnumber,x0-1,x1-1,name,x0)
+    wp_wheel_data += "|" + wp_templates[wp.slotnumber-1].format(wp.slotnumber,x0-1,x1-1,name,x0)
 
   # get loading game image
   logging.info("Packing title images")  
@@ -1145,7 +1145,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
 -- *********************************
 -- generated code - do not edit
 -- *********************************
-mod_name,title_cart="{0}","{0}_0.p8"
+mod_name,title_cart="{0}","{0}_0"
 _map_offset=0x{1:04x}
 local _sky_height,_sky_offset={2},0x{3:04x}
 _map_music={4}
