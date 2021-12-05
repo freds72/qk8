@@ -383,10 +383,10 @@ function draw_flats(v_cache,segs,nearest_things)
                 local yc=y0+xratio*dy
                 local t,b,u,pal1=yc-top*wc,yc-bottom*wc,(u0+xratio*du)/(wc>>4),wc>7.5 and maxlight or (light*wc)\0.5
                 if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1
-    
+                
                 -- top wall side between current sector and back sector
                 local ct=t\1+1
-                
+
                 if otop then
                   poke4(0x5f38,toptex)             
                   local ot=yc-otop*wc
@@ -1819,7 +1819,7 @@ function unpack_actors()
       local ctrl,cmd=flags&0x3,{jmp=-1}
       if ctrl==2 then
         -- loop or goto label id   
-        cmd={jmp=flr(flags>>4)}
+        cmd={jmp=flags\16}
       elseif ctrl==0 then
         -- normal command
         -- todo: use a reference to sprite sides (too many duplicates for complex states)
