@@ -96,7 +96,7 @@ function make_sprite_cache(tiles)
   -- for j=0,31 do
   --   poke4(mem|(j&1)<<2|(j\2)<<6,tiles[id+j])
   -- end	
-	local len,index,offsets,first,last=0,{},split("4,64,68,128,132,192,196,256,260,320,324,384,388,448,452,512,516,576,580,640,644,704,708,768,772,832,836,896,900,960,964",",",1)
+	local len,index,offsets,first,last=0,{},split"4,64,68,128,132,192,196,256,260,320,324,384,388,448,452,512,516,576,580,640,644,704,708,768,772,832,836,896,900,960,964"
   offsets[0]=0
 
   local function remove(t)
@@ -199,12 +199,13 @@ end
 -- xoffset: used as texture offset
 -- yoffset: height
 -- if tex is 0: renders skybox gradient
+function nop() end
 function polyfill(v,xoffset,yoffset,tex,light)
   poke4(0x5f38,tex)
   local _tline,_memcpy=tline,memcpy
   if tex==0 then
     pal()
-    _memcpy,_tline=peek,function(x0,y0,x1) 
+    _memcpy,_tline=nop,function(x0,y0,x1) 
       if(y0>_sky_height) y0=_sky_height
       rectfill(x0,y0,x1,y0,@(_sky_offset+y0))
     end
@@ -272,7 +273,7 @@ local function v_clip(v0,v1,t)
     }
 end
 -- ceil/floor/wall rendering
-function draw_flats(v_cache,segs,nearest_things)
+function draw_flats(v_cache,segs)
   local verts,outcode,nearclip,px,py,m1,m3,m4,m8,m9,m11,m12={},0xffff,0,_plyr[1],_plyr[2],unpack(_cam.m)
   
   -- to cam space + clipping flags
@@ -308,13 +309,10 @@ function draw_flats(v_cache,segs,nearest_things)
       local res,v0={},verts[#verts]
       local d0=v0.zz-8
       for i,v1 in ipairs(verts) do
+        local side=d0>0
+        if(side) res[#res+1]=v0
         local d1=v1.zz-8
-        if d1>0 then
-          if d0<=0 then
-            res[#res+1]=v_clip(v0,v1,d0/(d0-d1))
-          end
-          res[#res+1]=v1
-        elseif d0>0 then
+        if (d1>0)!=side then
           res[#res+1]=v_clip(v0,v1,d0/(d0-d1))
         end
         v0,d0=v1,d1
@@ -421,23 +419,19 @@ function draw_flats(v_cache,segs,nearest_things)
       end
 
       -- draw things (if any) in this convex space
-      for thing in pairs(segs.things) do
-        -- is thing on its nearest visible sector?
-        if nearest_things[thing]==segs then
-          local x,y=thing[1],thing[2]
-          local ax,az=m1*x+m3*y+m4,m9*x+m11*y+m12
-          -- todo: take radius into account 
-          if az>8 and az<854 and ax<az and -ax<az then
-            -- default: insert at end of sorted array
-            local w,thingi=128/az,#things+1
-            -- basic insertion sort
-            for i,otherthing in ipairs(things) do          
-              if(otherthing[1]>w) thingi=i break
-            end
-
-            -- thing offset+cam offset
-            add(things,{w,thing,63.5+ax*w,63.5-(thing[3]+m8)*w},thingi)
+      for thing in pairs(segs.things) do        
+        local x,y=thing[1],thing[2]
+        local ax,az=m1*x+m3*y+m4,m9*x+m11*y+m12
+        -- todo: take radius into account 
+        if az>8 and az<854 and ax<az and -ax<az then
+          -- default: insert at end of sorted array
+          local w,thingi=128/az,#things+1
+          -- basic insertion sort
+          for i,otherthing in ipairs(things) do          
+            if(otherthing[1]>w) thingi=i break
           end
+          -- thing offset+cam offset
+          add(things,{w,thing,63.5+ax*w,63.5-(thing[3]+m8)*w},thingi)
         end
       end
       -- things are sorted, draw them
@@ -451,7 +445,7 @@ function draw_flats(v_cache,segs,nearest_things)
         if(pal0!=pal1) memcpy(0x5f00,0x4300|pal1<<4,16) pal0=pal1            
         -- pick side (if any)
         if sides>1 then
-          local angle=((atan2(px-thing[1],thing[2]-py)-thing.angle+0.0625)%1+1)%1
+          local angle=((atan2(px-thing[1],thing[2]-py)-thing.angle+0.0625)+1)%1
           side=(sides*angle)\1
           -- get flip bit from mask
           flipx=flipx&(1<<side)!=0
@@ -908,18 +902,21 @@ function with_health(thing)
 end
 
 function attach_plyr(thing,actor)
-  local bobx,boby,speed,da,wp,wp_slot,wp_yoffset,wp_y,hit_ttl,dmg_factor,wp_switching=0,0,actor.speed,0,thing.weapons,thing.active_slot,0,0,0,pack(0.5,1,1,2)[_skill]
+  local bobx,boby,speed,da,wp,wp_slot,wp_yoffset,wp_y,hit_ttl,dmg_factor,wp_switching=0,0,actor.speed,0,thing.weapons,thing.active_slot,0,0,0,split"0.5,1,1,2"[_skill]
 
   local function wp_switch(slot)
     if(wp_switching) return
-    wp_switching=true
-    do_async(function()
-      wp_yoffset=-32
-      wait_async(15)
-      wp_slot,wp_yoffset=slot,0
-      wait_async(15)
-      wp_switching=nil
-    end)
+    -- not already selected + valid weapon?
+    if wp_slot!=slot and wp[slot] then    
+      wp_switching=true
+      do_async(function()
+        wp_yoffset=-32
+        wait_async(15)
+        wp_slot,wp_yoffset=slot,0
+        wait_async(15)
+        wp_switching=nil
+      end)
+    end
   end
 
   return inherit({
@@ -939,7 +936,7 @@ function attach_plyr(thing,actor)
           for i,k in pairs{0,3,1,2,🅾️} do
             if btnp(k) or btnp(k,1) then
               -- only switch if we have the weapon and it's not the current weapon
-              _wp_hud,_btns=(wp_slot!=i and wp[i]) and wp_switch(i),{}
+              _wp_hud,_btns=wp_switch(i),{}
             end
           end
         else
@@ -972,6 +969,11 @@ function attach_plyr(thing,actor)
           if(_btns[0x11]) dx=-1
           if(_btns[0x12]) dz=1
           if(_btns[0x13]) dz=-1
+
+          -- direct weapon selection (via keyboard)?
+          for i=1,5 do
+            if(stat(28,29+i)) wp_switch(i) break
+          end
         end
 
         self.angle-=da/256
@@ -1021,8 +1023,8 @@ function attach_plyr(thing,actor)
       pal()
       local ammotype=active_wp.actor.ammotype
       if(ammotype) printb(ammotype.icon..self.inventory[ammotype],106,120,9)
-      printb("♥"..self.health,2,110,12)
-      printb("웃"..self.armor,2,120,3)
+      ?"♥"..self.health,2,110,12
+      ?"웃"..self.armor,2,120,3
 
       -- keys
       for item,amount in pairs(self.inventory) do
@@ -1047,9 +1049,9 @@ function attach_plyr(thing,actor)
       memcpy(0x5f10,0x4400|hit_ttl<<4,16)
     end,
     hit=function(self,dmg,...)
-      -- call parent function
-      -- + skill adjustment
-      local hp=thing.hit(self,dmg_factor*dmg,...)
+      -- call parent function      
+      -- + skill adjustment      
+      local hp=thing:hit(dmg_factor*dmg,...)
       -- hp can be null if actor is dead
       if hp and hp>0 then
         hit_ttl=min(ceil(hp),15)
@@ -1092,27 +1094,19 @@ function draw_bsp()
   cls()
   --
   -- draw bsp & visible things
-  local id,v_cache,active_subs,nearest_things=_plyr.ssector.id,{},{},{}
+  local id,v_cache=_plyr.ssector.id,{}
 
-  -- visit bsp (back to front)
+  -- visit bsp
   visit_bsp(_bsp,_plyr,function(node,side,pos,visitor)
     if node.leaf[side] then
       local subs=node[side]
       if subs:in_pvs(id) then
-        -- register closest subs this thing is
-        for thing in pairs(subs.things) do
-          nearest_things[thing]=subs
-        end
-        add(active_subs,subs)
+        draw_flats(v_cache,subs)
       end
     elseif _cam:is_visible(node.bbox[side]) then
       visit_bsp(node[side],pos,visitor)
     end
   end)
-
-  for i,subs in ipairs(active_subs) do
-    draw_flats(v_cache,subs,nearest_things)
-  end
 end
 
 -->8
@@ -1201,7 +1195,7 @@ function play_state()
     function()
       -- must be done after load to not register unpacking time!
       if(not _start_time) _start_time=time()
-
+      
       if _plyr.dead then
         next_state(gameover_state,_plyr,_plyr.angle,_plyr.target,45)
       end
@@ -1246,7 +1240,7 @@ function gameover_state(pos,angle,target,h)
       -- track 'death' instigator
       if target then
         target_angle=atan2(-target[1]+pos[1],target[2]-pos[2])+0.5
-        angle=lerp(shortest_angle(target_angle,angle),target_angle,0.08)
+        angle=lerp(shortest_angle(target_angle,angle),target_angle,0.2)
       end
       _cam:track(pos,angle,pos[3]+h)
       
@@ -1280,10 +1274,10 @@ end
 function _init()
   -- force gc
   stat(0)
-  -- mouse 
-  -- enable lock+button alias
-  poke(0x5f2d,7)
 
+  -- mouse 
+  -- enable lock+button alias+raw scan codes
+  poke(0x5f2d,7)
   cartdata(mod_name)
 
   -- exit menu entry
@@ -1304,9 +1298,10 @@ end
 
 function _update()
   -- get btn states and suppress pressed buttons until btnp occurs  
-  for p,mask in pairs{[0]=0,0x10} do
+  for p=0,1 do
     for i=0,5 do
-      _btns[mask|i]=btnp(i,p) or _btns[mask|i] and btn(i,p)
+      local id=i|p<<4
+      _btns[id]=btnp(i,p) or _btns[id] and btn(i,p)      
     end
   end
 
@@ -1332,8 +1327,6 @@ function _update()
   end
 
   _update_state()
-  -- capture video!
-  if(peek(0x5f83)==1) poke(0x5f83,0) extcmd("video") 
   
   _slow+=1
 end
@@ -1345,7 +1338,7 @@ function unpack_variant()
 	local h=mpeek()
 	-- above 127?
   if h&0x80>0 then
-    h=(h&0x7f)<<8|mpeek()
+    return (h&0x7f)<<8|mpeek()
   end
 	return h
 end
@@ -1483,7 +1476,7 @@ function unpack_actors()
     -- width/transparent color
     -- xoffset/yoffset in tiles unit (16x16)
     local wtc=mpeek()
-		local frame=add(frames,{wtc&0xf,(mpeek()-128)/16,(mpeek()-128)/16,flr(wtc>>4),{}})
+		local frame=add(frames,{wtc&0xf,(mpeek()-128)/16,(mpeek()-128)/16,wtc\16,{}})
 		unpack_array(function()
 			-- tiles index
 			frame[5][mpeek()]=unpack_variant()
@@ -1499,7 +1492,7 @@ function unpack_actors()
 
   -- inventory & things
   -- actor properties + skill ammo factor
-  local properties_factory=split("0x0.0001,health,unpack_variant,0x0.0002,armor,unpack_variant,0x0.0004,amount,unpack_variant,0x0.0008,maxamount,unpack_variant,0x0.0010,icon,unpack_chr,0x0.0020,slot,mpeek,0x0.0040,ammouse,unpack_variant,0x0.0080,speed,unpack_variant,0x0.0100,damage,unpack_variant,0x0.0200,ammotype,unpack_ref,0x0.0800,mass,unpack_variant,0x0.1000,pickupsound,unpack_variant,0x0.2000,attacksound,unpack_variant,0x0.4000,hudcolor,unpack_variant,0x0.8000,deathsound,unpack_variant,0x1,meleerange,unpack_variant,0x2,maxtargetrange,unpack_variant,0x4,ammogive,unpack_variant,0x8,trailtype,unpack_ref,0x10,drag,unpack_fixed",",",1)
+  local properties_factory=split"0x0.0001,health,unpack_variant,0x0.0002,armor,unpack_variant,0x0.0004,amount,unpack_variant,0x0.0008,maxamount,unpack_variant,0x0.0010,icon,unpack_chr,0x0.0020,slot,mpeek,0x0.0040,ammouse,unpack_variant,0x0.0080,speed,unpack_variant,0x0.0100,damage,unpack_variant,0x0.0200,ammotype,unpack_ref,0x0.0800,mass,unpack_variant,0x0.1000,pickupsound,unpack_variant,0x0.2000,attacksound,unpack_variant,0x0.4000,hudcolor,unpack_variant,0x0.8000,deathsound,unpack_variant,0x1,meleerange,unpack_variant,0x2,maxtargetrange,unpack_variant,0x4,ammogive,unpack_variant,0x8,trailtype,unpack_ref,0x10,drag,unpack_fixed"
 
   -- actors functions
   local function_factory={
@@ -1678,7 +1671,7 @@ function unpack_actors()
   -- float
   -- dropoff
   -- dontfall
-  local all_flags=split("0x1,is_solid,0x2,is_shootable,0x4,is_missile,0x8,is_monster,0x10,is_nogravity,0x20,floating,0x40,is_dropoff,0x80,is_dontfall,0x100,randomize,0x200,countkill,0x400,nosectordmg,0x800,noblood",",",1)
+  local all_flags=split"0x1,is_solid,0x2,is_shootable,0x4,is_missile,0x8,is_monster,0x10,is_nogravity,0x20,floating,0x40,is_dropoff,0x80,is_dontfall,0x100,randomize,0x200,countkill,0x400,nosectordmg,0x800,noblood"
   unpack_array(function()
     local kind,id,state_labels,states,weapons,active_slot,inventory=unpack_variant(),unpack_variant(),{},{},{}
 
@@ -1819,7 +1812,7 @@ function unpack_actors()
       local ctrl,cmd=flags&0x3,{jmp=-1}
       if ctrl==2 then
         -- loop or goto label id   
-        cmd={jmp=flr(flags>>4)}
+        cmd={jmp=flags\16}
       elseif ctrl==0 then
         -- normal command
         -- todo: use a reference to sprite sides (too many duplicates for complex states)
@@ -1918,7 +1911,7 @@ function unpack_map()
       add(verts,{unpack_fixed(),unpack_fixed()})
     end)
 
-    local all_flags=split("0x1,twosided,0x2,special,0x4,dontpegtop,0x8,playeruse,0x10,playercross,0x20,repeatspecial,0x40,blocking",",",1)
+    local all_flags=split"0x1,twosided,0x2,special,0x4,dontpegtop,0x8,playeruse,0x10,playercross,0x20,repeatspecial,0x40,blocking"
     unpack_array(function()
       local line=add(lines,with_flags({
         -- sides
@@ -2075,12 +2068,12 @@ function unpack_map()
   -- things
   local things={}
   local function unpack_thing()
-    local flags,id,x,y=mpeek(),unpack_variant(),unpack_fixed(),unpack_fixed()
+    local flags,actor,x,y=mpeek(),unpack_ref(_actors),unpack_fixed(),unpack_fixed()
     if flags&(0x10<<(_skill-1))!=0 then
       -- layout must match make_thing
       return add(things,{
         -- link to underlying actor
-        _actors[id],
+        actor,
         -- coordinates
         x,y,
         -- dummy height, extracted from sector
