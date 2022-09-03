@@ -47,7 +47,10 @@ class TEXTURES(TEXTURESListener):
         'height':height,
         'mx':xoffset,
         'my':yoffset,
-        'transparent': patch.translucent() is not None
+        'transparent': patch.translucent() is not None,
+        # flats cannot be x-flipped
+        'flippable': namespace=="texture",
+        'flipped': False
       })
       self.flats[name] = texture
       for j in range(height):          
@@ -96,6 +99,32 @@ class TextureReader(TEXTURESListener):
     img.paste(src, (0,0,width,height))
 
     logging.info("Found tileset: {} - {}x{}px".format(texture_name,width, height))
+
+    # identify mirrored textures (excludes flats)
+    for name, texture in {name:texture for name,texture in listener.flats.items() if texture.flippable}.items():
+      # try mirrored?
+      mirrored = True
+      mirrored_tiles = {}
+      tw = int(texture.width*8)
+      th = int(texture.height*8)
+      xoffset = int(texture.mx*8)
+      yoffset = int(texture.my*8)
+      for y in range(yoffset, yoffset+th):
+        for x in range(0, tw//2):
+          lpix = img.getpixel((xoffset + x,y))
+          rpix = img.getpixel((xoffset + tw-x-1,y))
+          if lpix!=rpix:
+            mirrored = False
+            break
+          mirrored_tiles[((xoffset + tw-x-1)//8)+(y//8)*128]=True
+        if not mirrored:
+          break
+      if mirrored:
+        logging.info("Found mirrored texture: {}".format(name))
+        texture.flipped = True
+        # "kill" flipped tiles
+        for k in mirrored_tiles:
+          texture_by_tile.pop(k, None)          
 
     # extract tiles
     pico_gfx = []

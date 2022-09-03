@@ -573,11 +573,12 @@ def pack_zmap(map, textures, actors):
     # get pair or self
     s+= pack_texture(texture_pairs.get(name, texture))
 
-  # transparent textures
-  transparent_textures=list([texture for name,texture in flats.items() if texture.transparent])
+  # transparent & x-flipped textures
+  transparent_textures=list([texture for name,texture in flats.items() if texture.transparent or texture.flipped])
   s += pack_variant(len(transparent_textures))
   for texture in transparent_textures:
     s+= pack_texture(texture)
+    s+= pack_byte(texture.transparent and 0x10 or 0 | texture.flipped and 0x01 or 0)
 
   # things
   things = []
