@@ -448,7 +448,7 @@ def get_zmap_textures(map):
 
   return textures|onoff_textures
 
-def pack_zmap(map, textures, actors):
+def pack_zmap(map, textures):
   # shortcut to wall textures
   flats = textures.flats
 
@@ -580,6 +580,10 @@ def pack_zmap(map, textures, actors):
     s+= pack_texture(texture)
     s+= pack_byte(texture.transparent and 0x10 or 0 | texture.flipped and 0x01 or 0)
 
+  return s
+
+def pack_things(map, actors):
+  s = ""
   # things
   things = []
   actors = [actor.get('id',-1) for actor in actors.values()]
@@ -611,6 +615,41 @@ def pack_ratio(x):
   if x<0 or x>255:
     raise Exception("Invalid ratio: {}, must be in range [0;1]".format(x))
   return pack_byte(int(255*x))
+
+def pack_actor_properties(actor):
+  properties = 0
+  properties_data = ""
+  actor_properties={
+    0x1     :('health',pack_variant),
+    0x2     :('armor',pack_variant),
+    0x4     :('amount',pack_variant),
+    0x8     :('maxamount',pack_variant),
+    0x10    :('icon',lambda v:"{:02x}".format(v)),
+    0x20    :('slotnumber',pack_byte),
+    0x40    :('ammouse',pack_variant),
+    0x80    :('speed',pack_variant),
+    0x100   :('damage',pack_variant),
+    0x200   :('ammotype',pack_variant),
+    # 0x400 custom format
+    0x800   :('mass',pack_variant),
+    0x1000  :('pickupsound',pack_variant),
+    0x2000  :('attacksound',pack_variant),
+    0x4000  :('hudcolor',pack_variant),
+    0x8000  :('deathsound',pack_variant),
+    0x10000 :('meleerange',pack_variant),
+    0x20000 :('maxtargetrange',pack_variant),
+    0x40000 :('ammogive',pack_variant),
+    0x80000 :('trailtype',pack_variant),
+    0x100000:('drag',pack_fixed),
+    0x200000:('respawntics',pack_variant),
+    0x400000:('recoil',pack_fixed)
+  }
+  for mask,info in actor_properties.items():
+    name, packer = info
+    if actor.get(name):
+      properties |= mask
+      properties_data += packer(actor.get(name))
+  return (properties, properties_data)
 
 def pack_actors(image_reader, actors):
   s = ""
@@ -704,68 +743,7 @@ def pack_actors(image_reader, actors):
     s += "{:02x}".format(flags)
     
     ################## properties
-    properties = 0
-    properties_data = ""
-    if actor.get('health'):
-      properties |= 0x1
-      properties_data += pack_variant(actor.health)
-    if actor.get('armor'):
-      properties |= 0x2
-      properties_data += pack_variant(actor.armor)
-    if actor.get('amount'):
-      properties |= 0x4
-      properties_data += pack_variant(actor.amount)
-    if actor.get('maxamount'):
-      properties |= 0x8
-      properties_data += pack_variant(actor.maxamount)
-    if actor.get('icon'):
-      properties |= 0x10
-      properties_data += "{:02x}".format(actor.get('icon',63))
-    if actor.get('slotnumber'):
-      properties |= 0x20
-      properties_data += "{:02x}".format(actor.slotnumber)
-    if actor.get('ammouse'):
-      properties |= 0x40
-      properties_data += pack_variant(actor.ammouse)
-    if actor.get('speed'):
-      properties |= 0x80
-      properties_data += pack_variant(actor.speed)
-    if actor.get('damage'):
-      properties |= 0x100
-      properties_data += pack_variant(actor.damage)
-    if actor.get('ammotype'):
-      properties |= 0x200
-      properties_data += pack_variant(actor.ammotype)
-    if actor.get('mass'):
-      properties |= 0x800
-      properties_data += pack_variant(actor.mass)      
-    if actor.get('pickupsound'):
-      properties |= 0x1000
-      properties_data += pack_variant(actor.pickupsound)      
-    if actor.get('attacksound'):
-      properties |= 0x2000
-      properties_data += pack_variant(actor.attacksound)      
-    if actor.get('hudcolor'):
-      properties |= 0x4000
-      properties_data += pack_variant(actor.hudcolor)      
-    if actor.get('deathsound'):
-      properties |= 0x8000
-      properties_data += pack_variant(actor.deathsound)      
-    if actor.get('meleerange'):
-      properties |= 0x10000
-      properties_data += pack_variant(actor.meleerange)      
-    if actor.get('maxtargetrange'):
-      properties |= 0x20000
-      properties_data += pack_variant(actor.maxtargetrange)      
-    if actor.get('ammogive'):
-      properties |= 0x40000
-      properties_data += pack_variant(actor.ammogive)     
-    if actor.get('trailtype'):
-      properties |= 0x80000
-      properties_data += pack_variant(actor.trailtype)     
-    if actor.get('drag'):
-      properties |= 0x100000
-      properties_data += pack_fixed(actor.drag)     
+    properties, properties_data = pack_actor_properties(actor)
 
     # must be at the end 
     if actor.get('startitems'):
@@ -818,7 +796,10 @@ def pack_actors(image_reader, actors):
         flipbits = 0
         for i,frame in enumerate(frames):
           flipbits|=(frame[1]==True and 1 or 0)<<i
-        state_s += "{:02x}".format(flipbits)
+        state_s += "{:02x}".format(flipbits) 
+        # transparency
+        state_s += "{:04x}".format(state.alpha)
+        # images references
         state_s += pack_variant(len(frames))
         for frame in frames:
           # index to sprite metadata
@@ -839,8 +820,7 @@ def pack_actors(image_reader, actors):
 
 # generate main game cart
 def pack_sprite(arr):
-    return ["".join(map("{:02x}".format,arr[i*4:i*4+4])) for i in range(8)]
-
+  return ["".join(map("{:02x}".format,arr[i*4:i*4+4])) for i in range(8)]
 
 # remap image to given palette and export to byte string
 # if palette is not given, produces a dynamic palette
@@ -978,7 +958,6 @@ __lua__
   with open(cart_path, "w") as f:
     f.write(cart)
 
-
 def load_WAD(stream, mapname):
   with stream.open(mapname) as file:
     # read file header
@@ -1034,6 +1013,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
 
   all_maps = []
   gameinfo = {}
+
   if mapname=="":
     # all maps
     logging.info("Packing all mod maps")
@@ -1114,7 +1094,10 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
             'offset': 0
           }) 
         # compress each map separately 
-        map_data = pack_zmap(m.zmap, textures, actors)
+        map_data = pack_zmap(m.zmap, textures)
+        # things
+        map_data += pack_things(m.zmap, actors)
+
         game_data += compress and compress_byte_str(map_data, more=compress_more) or map_data
       
       # export game cart (hub for maps from same group)

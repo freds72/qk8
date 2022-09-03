@@ -134,9 +134,9 @@ class DecorateWalker(DECORATEListener):
           value = pair.ENABLED().getText()=='+'
         else:
           value = pair.value(0).getText().lower().strip('"')
-          if attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound','meleerange','maxtargetrange']:
+          if attribute in ['health','armor','height','radius','slotnumber','amount','maxamount','damage','speed','ammogive','ammouse','icon','hudcolor','attacksound','pickupsound','deathsound','meleerange','maxtargetrange','respawntics']:
             value = int(value)
-          elif attribute in ['drag']:
+          elif attribute in ['drag','recoil']:
             value = float(value)
           elif attribute in ['ammotype','trailtype']:
             if value not in self.result:
@@ -216,6 +216,7 @@ class DecorateWalker(DECORATEListener):
           'image': state.image().getText(),
           'variant': state.variant().getText(),
           'bright': state.image_modifier() is not None,
+          'alpha': state.alpha_modifier() is not None and int(state.alpha_modifier().HEXA().getText(),16) or 0x0,
           'ticks': int(state.ticks().getText()),
           'function': fn,
           'args': args

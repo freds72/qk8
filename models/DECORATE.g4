@@ -1,5 +1,10 @@
 // set CLASSPATH=antlr-4.8-complete.jar
 // java org.antlr.v4.Tool -Dlanguage=Python3 -visitor -listener DECORATE.g4
+
+// Powershell
+// $env:Path += ";D:\Java\jdk-15.0.1\bin"
+// $env:CLASSPATH="antlr-4.8-complete.jar"
+// java org.antlr.v4.Tool -Dlanguage=Python3 -visitor -listener DECORATE.g4
 grammar DECORATE;
 
 // parser
@@ -42,13 +47,17 @@ label:
   ;
 
 state_command:
- image variant ticks image_modifier? function?
+ image variant ticks image_modifier? alpha_modifier? function?
  ;
 
 image_modifier:
   'BRIGHT'|
   'Bright'|
   'bright'
+  ;
+
+alpha_modifier:
+  ('ALPHA' | 'Alpha' | 'alpha') HEXA
   ;
 
 image:
@@ -110,6 +119,10 @@ KEYWORD:
   CHAR (CHAR|DIGIT)*
   ;
 
+HEXA:
+  '0x' HEX HEX HEX HEX
+  ;
+
 fragment AZ:
   'A'..'Z'
   ;
@@ -124,6 +137,10 @@ fragment DIGIT
 
 fragment BOOLEAN
   : ('true' | 'false')
+  ;
+
+fragment HEX:
+  '0'..'9'|'a'..'f'
   ;
 
 BLOCKCOMMENT
