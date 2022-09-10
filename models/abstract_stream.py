@@ -3,11 +3,11 @@ from abc import ABC, abstractmethod
 class Stream(ABC):
   # read resource 'name'
   # returns a bytearray
-  
   @abstractmethod
   def read(self, name) -> bytearray:
       pass
   
+  # returns all files
   @abstractmethod
   def directory(self) -> []:
     pass
