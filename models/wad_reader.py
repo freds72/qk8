@@ -12,7 +12,7 @@ from decorate_reader import DecorateReader
 from mapinfo_reader import MapinfoReader
 from decorate_reader import ACTOR_KIND
 from dotdict import dotdict
-from python2pico import pack_int
+from python2pico import pack_byte
 from python2pico import pack_variant
 from python2pico import pack_fixed
 from python2pico import pack_byte
@@ -193,6 +193,7 @@ class MAPDirectory():
 # ZMAP export to pico8 format
 def pack_segs(segs):
   s = pack_variant(len(segs))
+
   for seg in segs:
     s += pack_variant(seg.v1+1)
     # side? + extra flags
@@ -206,7 +207,7 @@ def pack_segs(segs):
       flags |= 4
       # reference to connected sub-sector
       extra_data += pack_variant(seg.partner+1)
-    s += "{:02x}".format(flags)
+    s += pack_byte(flags)
     s += extra_data
   return s
 
@@ -223,13 +224,13 @@ def pack_named_texture(owner, textures, name):
   if name == '-': 
     return "00000000"
 
-  # no texture/blank texture
+  # unknown texture/blank texture
   if name not in textures: 
     return "00000000"
   return pack_texture(textures[name])
 
 def pack_lightlevel(owner, name):
-  return "{:02x}".format(owner.get(name, 160))
+  return pack_byte(owner.get(name, 160))
 
 def pack_aabb(aabb):
   return "".join(map(pack_fixed, aabb))
@@ -270,11 +271,11 @@ def pack_special(owner, lines, sides, sectors):
   special = owner.special
   # use "generic" variants
   if special == 62:
-    s = "{:02x}".format(64)  
+    s = pack_byte(64)
   elif special in [11,12,13]:
-    s = "{:02x}".format(13)
+    s = pack_byte(13)
   else:
-    s = "{:02x}".format(special)
+    s = pack_byte(special)
 
   if special==202:
     logging.error("Unsupported special: {}".format(special))
@@ -301,7 +302,7 @@ def pack_special(owner, lines, sides, sectors):
       target_height = min([other_sector.heightceiling for other_sector in other_sectors])
       target_heights[sector_id]=pack_fixed(target_height-4)
     # speed
-    s += "{:02x}".format(128+get_safe_speed(owner,'arg1'))
+    s += pack_byte(128+get_safe_speed(owner,'arg1'))
     # delay (can be larger than 256)
     # door_open(11): cannot reopen
     if special==11:
@@ -328,7 +329,7 @@ def pack_special(owner, lines, sides, sectors):
       sector = sectors[sector_id]
       target_heights[sector_id]=pack_fixed(sector.heightfloor)
     # speed
-    s += "{:02x}".format(get_safe_speed(owner,'arg1'))
+    s += pack_byte(get_safe_speed(owner,'arg1'))
     # delay (not supported)
     s += pack_variant(0)
     # lock (not supported)
@@ -352,7 +353,7 @@ def pack_special(owner, lines, sides, sectors):
       other_floor = min([other_sector.heightfloor for other_sector in other_sectors if other_sector.heightfloor>sector.heightfloor])
       target_heights[sector_id]=pack_fixed(other_floor)
     # speed
-    s += "{:02x}".format(128+get_safe_speed(owner,'arg1'))
+    s += pack_byte(128+get_safe_speed(owner,'arg1'))
     # delay
     s += pack_variant(owner.get('arg2',0))
     # lock (not supported)
@@ -376,7 +377,7 @@ def pack_special(owner, lines, sides, sectors):
       other_floor = min([other_sector.heightfloor for other_sector in other_sectors if other_sector.heightfloor<sector.heightfloor])
       target_heights[sector_id]=pack_fixed(other_floor+8)
     # speed
-    s += "{:02x}".format(get_safe_speed(owner,'arg1'))
+    s += pack_byte(get_safe_speed(owner,'arg1'))
     # delay (default: 3s)
     s += pack_variant(owner.get('arg2',0))
     # lock (not supported)
@@ -393,7 +394,7 @@ def pack_special(owner, lines, sides, sectors):
     # set lightlevel
     sector_ids = find_sectors_by_tag(owner.arg0, sectors)
     # light level
-    s += "{:02x}".format(owner.get('arg1',0))
+    s += pack_byte(owner.get('arg1',0))
     # sectors
     s += pack_sectors_by_tag(sector_ids)
   return s
@@ -414,7 +415,7 @@ def pack_thing(thing):
   if skills==0:
     skills = 15
   angle = math.floor(thing.get('angle',0)/45)%8
-  s += "{:02x}".format(angle|skills<<4)
+  s += pack_byte(angle|skills<<4)
   # id
   s += pack_variant(thing.type)
   # position
@@ -424,6 +425,34 @@ def pack_thing(thing):
 
 def pack_flag(owner, name):
   return owner.get(name,False) and 1 or 0
+
+# pack sector ref with colormap address
+def pack_sector_colormaps(colormaps):
+  count = 0
+  s = ""
+  # colormap layout
+  # {"PLAYPAL_FF0000": {'sectors':[16, 17, 18, 46],'addr':<palette addr offset>}}
+  for palette, info in colormaps.items():
+    for id in info.sectors:
+      # sector reference
+      s += pack_variant(id)
+      s += pack_variant(info.addr)
+      count += 1
+  return pack_variant(count) + s
+  
+# return active sector colors
+def get_zmap_colormaps(map):
+  colormaps = {}
+  for i,sector in enumerate(map.sectors):
+    rgb = sector.get('lightcolor',0)
+    if rgb!=0:
+      palette = f"PLAYPAL_{rgb:06X}"
+      info = colormaps.get(palette, dotdict({'sectors':[]}))
+      # store reference to sector (1-based)
+      info.sectors.append(i+1)
+      colormaps[palette] = info
+      
+  return colormaps
 
 # return active textures/flats from map
 def get_zmap_textures(map):
@@ -448,7 +477,7 @@ def get_zmap_textures(map):
 
   return textures|onoff_textures
 
-def pack_zmap(map, textures):
+def pack_zmap(map, textures, colormaps):
   # shortcut to wall textures
   flats = textures.flats
 
@@ -456,7 +485,7 @@ def pack_zmap(map, textures):
   s = pack_variant(len(map.sectors))
   for sector in map.sectors:
     # see: https://zdoom.org/wiki/Sector_specials
-    s += "{:02x}".format(sector.special)
+    s += pack_byte(sector.special)
     s += pack_fixed(sector.heightceiling)
     s += pack_fixed(sector.heightfloor)
     # sector ceiling/floor textures
@@ -464,7 +493,10 @@ def pack_zmap(map, textures):
     s += pack_named_texture(sector, flats, 'texturefloor')
     # light level
     s += pack_lightlevel(sector, 'lightlevel')
-            
+
+  # per sector colormaps
+  s += pack_sector_colormaps(colormaps)
+
   s += pack_variant(len(map.sides))
   for side in map.sides:
     s += pack_variant(side.sector+1)
@@ -494,15 +526,16 @@ def pack_zmap(map, textures):
     if 'special' in line:
       flags |= 2
       special_data += pack_special(line, map.lines, map.sides, map.sectors)
-    if 'playeruse' in line and line.playeruse==True:
+    if line.get('playeruse',False):
       flags |= 8
-    if 'playercross' in line and line.playercross==True:
+    if line.get('playercross',False):
       flags |= 16
-    if 'repeatspecial' in line and line.repeatspecial==True:
+    if line.get('repeatspecial',False):
       flags |= 32
-    if 'blocking' in line and line.blocking==True:
+    # no need to store blocking flag if otherside is empty
+    if line.sidefront!=-1 and line.sideback!=-1 and line.get('blocking',False):
       flags |= 64
-    s += "{:02x}".format(flags)
+    s += pack_byte(flags)
     s += special_data
   
   all_pvs = []
@@ -540,7 +573,7 @@ def pack_zmap(map, textures):
     s += pack_fixed(node.n[0])
     s += pack_fixed(node.n[1])
     s += pack_fixed(node.d)
-    s += "{:02x}".format(node.flags)
+    s += pack_byte(node.flags)
     # segs reference
     if node.flags & 0x1:
       s += pack_variant(node.child[0]+1)
@@ -624,7 +657,7 @@ def pack_actor_properties(actor):
     0x2     :('armor',pack_variant),
     0x4     :('amount',pack_variant),
     0x8     :('maxamount',pack_variant),
-    0x10    :('icon',lambda v:"{:02x}".format(v)),
+    0x10    :('icon',lambda v:pack_byte(v)),
     0x20    :('slotnumber',pack_byte),
     0x40    :('ammouse',pack_variant),
     0x80    :('speed',pack_variant),
@@ -678,7 +711,7 @@ def pack_actors(image_reader, actors):
   for image_index,image_data in enumerate(images):
     logging.debug("Packing sprite: {}".format(image_data.name))
     sprites[image_data.name] = image_index
-    s += "{:02x}".format(image_data.width|image_data.background<<4)
+    s += pack_byte(image_data.width|image_data.background<<4)
     s += pack_short(image_data.xoffset)
     s += pack_short(image_data.yoffset)
     tiles = image_data.tiles
@@ -704,7 +737,7 @@ def pack_actors(image_reader, actors):
   image_s = pack_variant(tiles_count)
   for image_bytes in unique_tiles:
     for b in image_bytes:
-      image_s += "{:02x}".format(b)
+      image_s += pack_byte(b)
   s += image_s
 
   # know state names
@@ -737,10 +770,10 @@ def pack_actors(image_reader, actors):
     s += pack_fixed(actor.height)
     # behavior flags
     flags = pack_flag(actor, 'solid') | pack_flag(actor, 'shootable')<<1 | pack_flag(actor, 'missile')<<2 | pack_flag(actor, 'ismonster')<<3 | pack_flag(actor, 'nogravity')<<4 | pack_flag(actor, 'float')<<5 | pack_flag(actor, 'dropoff')<<6 | pack_flag(actor, 'dontfall')<<7
-    s += "{:02x}".format(flags)
+    s += pack_byte(flags)
     # behavior flags (cont.)
     flags = pack_flag(actor, 'randomize') | pack_flag(actor, 'countkill')<<1 | pack_flag(actor, 'nosectordmg')<<2 | pack_flag(actor, 'noblood')<<3
-    s += "{:02x}".format(flags)
+    s += pack_byte(flags)
     
     ################## properties
     properties, properties_data = pack_actor_properties(actor)
@@ -796,7 +829,7 @@ def pack_actors(image_reader, actors):
         flipbits = 0
         for i,frame in enumerate(frames):
           flipbits|=(frame[1]==True and 1 or 0)<<i
-        state_s += "{:02x}".format(flipbits) 
+        state_s += pack_byte(flipbits) 
         # transparency
         state_s += "{:04x}".format(state.alpha)
         # images references
@@ -809,18 +842,18 @@ def pack_actors(image_reader, actors):
             raise Exception("Unknown state function: {}".format(state.function))
           flags|=0x8
           fn = all_functions[state.function]
-          state_s += "{:02x}".format(fn.id)
+          state_s += pack_byte(fn.id)
           for i,arg_pack in enumerate(fn.args):
             state_s += arg_pack(get_at_or_default(state.args,i,fn.get('defaults'))) 
       # print("{} -> 0x{:02x}".format(state, flags))
-      s += "{:02x}".format(flags)
+      s += pack_byte(flags)
       s += state_s
 
   return s
 
 # generate main game cart
 def pack_sprite(arr):
-  return ["".join(map("{:02x}".format,arr[i*4:i*4+4])) for i in range(8)]
+  return ["".join(map(pack_byte,arr[i*4:i*4+4])) for i in range(8)]
 
 # remap image to given palette and export to byte string
 # if palette is not given, produces a dynamic palette
@@ -899,7 +932,7 @@ __lua__
   s = ""
   # palette (e.g. gradients or screen palettes)
   #print("\n".join([" ".join(map("{:02x}".format,palette[i:i+16])) for i in range(0,len(palette),16)]))
-  tmp = "".join(map("{:02x}".format,palette))
+  tmp = "".join(map(pack_byte,palette))
   # preserve byte orders
   for i in range(0,len(tmp),2):
     s += tmp[i+1:i+2] + tmp[i:i+1]
@@ -927,7 +960,7 @@ __lua__
   cart += "\n"
 
   # pad map
-  map_data = ["".join(map("{:02x}".format,map_data[i:i+width] + [0]*(128-width))) for i in range(0,len(map_data),width)]
+  map_data = ["".join(map(pack_byte,map_data[i:i+width] + [0]*(128-width))) for i in range(0,len(map_data),width)]
   map_data = "".join(map_data)
   cart += "__map__\n"
   cart += re.sub("(.{256})", "\\1\n", map_data, 0, re.DOTALL)
@@ -975,11 +1008,11 @@ def load_WAD(stream, mapname):
       lump_name = entry.lump_name.decode('ascii').rstrip('\x00')
       # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_glnodes.cpp
       # https://github.com/rheit/zdoom/blob/4f21ff275c639de4b92f039868c1a637a8e43f49/src/p_setup.cpp
-      if re.match("E[0-9]M[0-9]",lump_name):
+      if re.match("E[0-9][A-Z][0-9]",lump_name):
         # read UDMF
         return MAPDirectory(file, lump_name, entry).read(file)
       i += 1
-  raise Exception("No entry matching E[0-9]M[0-9] found in WAD: {}".format(mapname))
+  raise Exception("No entry matching E[0-9][A-Z][0-9] found in WAD: {}".format(mapname))
 
 # compress the given byte string
 # raw = True returns an array of bytes (a byte string otherwise)
@@ -1003,13 +1036,13 @@ def compress_byte_str(s,raw=False,more=False):
   compressed = cc.toarray(b)
   if raw:
     return compressed
-  return "".join(map("{:02x}".format, compressed))
+  return "".join(map(pack_byte, compressed))
 
 def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, release=None, skybox=None, dump_sprites=False, compress_more=False):
   # resource readers
   maps_stream = FileStream(os.path.join(root, "maps"))
   file_stream = FileStream(os.path.join(root))
-  graphics_stream = FileStream(os.path.join(root, "graphics"))
+  graphics_stream = FileStream(os.path.join(root, "graphics"), recursive=True)
 
   all_maps = []
   gameinfo = {}
@@ -1059,7 +1092,9 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
       maps = list(m for m in all_maps if m.group==map_group)
       logging.info("Packing map group: {}".format(map_group))
 
-      active_textures = set()
+      active_textures = set()            
+      all_palettes = []
+      group_gradients = gradients
       for m in maps:
         logging.info("Reading map WAD: {}".format(m.name))
         zmap = load_WAD(maps_stream, m.name) 
@@ -1067,6 +1102,25 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
         # records number of secrets
         m.secrets = len([sector for sector in zmap.sectors if sector.special==195])
         active_textures |= get_zmap_textures(zmap)
+
+        m.sector_colormaps = get_zmap_colormaps(zmap)
+        # get unique palettes & assign address
+        for palette,info in m.sector_colormaps.items():
+          addr = 0
+          if palette in all_palettes:
+            addr = all_palettes.index(palette)
+          else:
+            addr = len(all_palettes)
+            all_palettes.append(palette)
+          # palette is 16*16 bytes
+          info.addr = addr * 0x100
+
+      if len(all_palettes)>0:
+        logging.info(f"Found {len(all_palettes)} sector palettes")
+
+      # add all palettes from the same group to the gradients  
+      for palette in all_palettes:
+        group_gradients += colormap.read(palette, use_palette=True)
 
       # decode textures
       reader = TextureReader(file_stream, colormap.palette)
@@ -1084,7 +1138,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
             skybox_img,skybox_code,skybox_size = pack_p8image(graphics_stream, m.sky, palette=colormap.palette, mandatory=True, min_size=(2,0), max_size=(2,128))
             skyboxes[m.sky] = dotdict({
               'height': skybox_size[1]-1,
-              'offset': int(len(skybox_data)/2)+len(gradients)+0x4300
+              'offset': int(len(skybox_data)/2)+len(group_gradients)+0x4300
             })
             skybox_data += skybox_img
           m.sky = skyboxes[m.sky]   
@@ -1093,15 +1147,15 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
             'height': 0,
             'offset': 0
           }) 
-        # compress each map separately 
-        map_data = pack_zmap(m.zmap, textures)
+        # main map data
+        map_data = pack_zmap(m.zmap, textures, m.sector_colormaps)
         # things
         map_data += pack_things(m.zmap, actors)
 
         game_data += compress and compress_byte_str(map_data, more=compress_more) or map_data
       
       # export game cart (hub for maps from same group)
-      to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, gradients, skybox_data, compress, release)
+      to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, group_gradients, skybox_data, compress, release)
 
   # list of weapons
   wp_anchors = [50,64,78,64,64]
@@ -1140,13 +1194,13 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
 -- *********************************
 -- generated code - do not edit
 -- *********************************
-mod_name,title_cart="{0}","{0}_0.p8"
-_maps_group=split"{1}"
-_maps_cart=split"{2}"
-_maps_offset=split"{3}"
-_maps_sky=split("{4}",",",1)
-_maps_music=split"{5}"
-_wp_wheel=split("{6}","|")
+local mod_name,title_cart="{0}","{0}_0.p8"
+local _maps_group=split"{1}"
+local _maps_cart=split"{2}"
+local _maps_offset=split"{3}"
+local _maps_sky=split"{4}"
+local _maps_music=split"{5}"
+local _wp_wheel=split("{6}","|")
   """.format(
   modname,
   ",".join(["{}".format("{}_{}".format(modname,m.group)) for m in all_maps]),
@@ -1171,14 +1225,14 @@ __lua__
 -- *********************************
 #include {0}_atlas.lua
 {1}
-_maps_label=split"{2}"
-_maps_loc=split("{3}",",",1)
-_credits=split"{4}"
-_secrets=split("{5}",",",1)
+local _maps_label=split"{2}"
+local _maps_loc=split"{3}"
+local _credits=split"{4}"
+local _secrets=split"{5}"
 #include {6}
 """.format(
   modname,
-  "\n".join(['{0}_gfx={{bytes="{1}",pal={{{2}}},w={3[0]},h={3[1]}}}'.format(k,bytes_to_base255(bytes.fromhex(data[0])),data[1],data[2]) for k,data in title_images.items()]),
+  "\n".join(['local {0}_gfx={{bytes="{1}",pal={{{2}}},w={3[0]},h={3[1]}}}'.format(k,bytes_to_base255(bytes.fromhex(data[0])),data[1],data[2]) for k,data in title_images.items()]),
   ",".join(["{}".format(m.label) for m in all_maps]),
   ",".join(["{0[0]},{0[1]}".format(m.location) for m in all_maps]),
   gameinfo.get('credits',""),
