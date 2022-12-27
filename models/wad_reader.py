@@ -1122,6 +1122,10 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
       for palette in all_palettes:
         group_gradients += colormap.read(palette, use_palette=True)
 
+      # too large?
+      if len(group_gradients)>0x1300:
+        raise Exception(f"Palettes and sky ramps exceeds limits: {len(group_gradients)}/{0x1300} bytes")
+        
       # decode textures
       reader = TextureReader(file_stream, colormap.palette)
       textures = reader.read(active_textures)
