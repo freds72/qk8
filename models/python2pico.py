@@ -105,7 +105,6 @@ for i=1,#data,2 do
 end
 cstore(0, 0, 0x4300, "{}")
 """
-
     tmp=s[:2*0x2000]
     # swap bytes
     gfx_data = ""
@@ -130,6 +129,7 @@ cstore(0, 0, 0x4300, "{}")
     cart_path = os.path.join(carts_path,"{}_tmp.p8".format(cart_name))
     with open(cart_path, "w") as f:
         f.write(cart.format(cart_name, sfx_data, cart_filename))
+    
     # run cart
     subprocess.run([os.path.join(pico_path,"pico8"),"-x",os.path.abspath(cart_path)], stdout=PIPE, stderr=PIPE, check=True)
 
@@ -180,10 +180,31 @@ def to_multicart(s,pico_path,carts_path,cart_name,boot_code=None,label=None):
     to_cart(cart_data, pico_path, carts_path, cart_name, cart_id, cart_code=cart_id==0 and boot_code, label=cart_id==0 and label)
   return cart_id
 
-def pack_release(modname, pico_path, carts_path, all_carts, release, mode="bin"):
+def to_bin_cart(s, carts_path, cart_name, cart_id):
+    # save binary
+    with open(os.path.join(carts_path,"..","plates","{}_{}.bin".format(cart_name,cart_id)), "wb") as f:
+        f.write(bytearray.fromhex(s))
+
+def pack_release(modname, pico_path, carts_path, all_carts, game_data, release, mode="bin"):
     all_carts = list(["{}_{}.p8".format(modname,id) for id in all_carts])
 
-    # entry point
+    if mode=="html":
+        cart_basename = f"{modname}_{release}"
+        # export all carts as binaries in "plates" folder
+        cart_id = 0
+        cart_data = ""
+        for b in tqdm(game_data, desc="Generating bin blobs", unit="bytes"):
+            cart_data += b
+            # full cart?
+            if len(cart_data)==2*0x4300:
+                to_bin_cart(cart_data,carts_path, cart_basename, cart_id)
+                cart_id += 1
+                cart_data = ""
+        # remaining data?
+        if len(cart_data)!=0:
+            to_bin_cart(cart_data,carts_path, cart_basename, cart_id)
+
+    # remove entry point (pico exports current cart by default)
     main_cart = all_carts.pop(0)
 
     #
@@ -204,7 +225,6 @@ def pack_release(modname, pico_path, carts_path, all_carts, release, mode="bin")
     #    with open(os.path.join(carts_path, "{}_{}.html".format(modname, release)), "w", encoding='utf-8') as f:
     #        f.write(html)
     
-
 
 # read infile and write minified version to outfile
 def minify_file(infile, outfile):

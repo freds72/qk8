@@ -158,12 +158,7 @@ class DecorateWalker(DECORATEListener):
             attribute = 'startitems'
           
         # persist value
-        if value: properties[attribute] = value
-      
-      if properties.kind==ACTOR_KIND.AMMO:
-        # ammo must have a "single" ammo type
-        # override anything from decorate
-        properties['ammotype']=properties.get('parent',properties.id)
+        if value: properties[attribute] = value    
       
       # loop/goto index is encoded in a byte
       if len(self.states)>255:

@@ -494,9 +494,6 @@ def pack_zmap(map, textures, colormaps):
     # light level
     s += pack_lightlevel(sector, 'lightlevel')
 
-  # per sector colormaps
-  s += pack_sector_colormaps(colormaps)
-
   s += pack_variant(len(map.sides))
   for side in map.sides:
     s += pack_variant(side.sector+1)
@@ -601,17 +598,18 @@ def pack_zmap(map, textures, colormaps):
 
   # on/off textures
   s += pack_variant(len(flats))
+  logging.info(f'on/off texture: {len(flats)}')
   for name,texture in flats.items():
     s+= pack_texture(texture)
     # get pair or self
     s+= pack_texture(texture_pairs.get(name, texture))
 
-  # transparent & x-flipped textures
-  transparent_textures=list([texture for name,texture in flats.items() if texture.transparent or texture.flipped])
+  # transparent
+  transparent_textures=list([texture for name,texture in flats.items() if texture.transparent])
   s += pack_variant(len(transparent_textures))
+  logging.info(f'transparent textures: {len(transparent_textures)}')
   for texture in transparent_textures:
     s+= pack_texture(texture)
-    s+= pack_byte(texture.transparent and 0x10 or 0 | texture.flipped and 0x01 or 0)
 
   return s
 
@@ -679,7 +677,7 @@ def pack_actor_properties(actor):
   }
   for mask,info in actor_properties.items():
     name, packer = info
-    if actor.get(name):
+    if actor.get(name, None):
       properties |= mask
       properties_data += packer(actor.get(name))
   return (properties, properties_data)
@@ -798,7 +796,8 @@ def pack_actors(image_reader, actors):
     for state_label,state_address in actor._labels.items():
       if state_label not in all_states:
         raise Exception("Unkown state: \"{}\" for actor: {} - Custom state names are not supported.".format(state_label,actor.name))
-      s += "{:02x}{:02x}".format(all_states.index(state_label),state_address+1)
+      s += pack_byte(all_states.index(state_label))
+      s += pack_byte(state_address+1)
     # export states
     s += pack_variant(len(actor._states))
     for state in actor._states:
@@ -830,8 +829,6 @@ def pack_actors(image_reader, actors):
         for i,frame in enumerate(frames):
           flipbits|=(frame[1]==True and 1 or 0)<<i
         state_s += pack_byte(flipbits) 
-        # transparency
-        state_s += "{:04x}".format(state.alpha)
         # images references
         state_s += pack_variant(len(frames))
         for frame in frames:
@@ -908,7 +905,7 @@ def pack_p8image(stream, asset, palette=None, swap=False, min_size=(0,0), max_si
   # convert palette into a "pal" call
   return data, "[0]={},".format(autopalette[0])+",".join(str(c) for c in autopalette[1:]), size
 
-def to_gamecart(carts_path, name, group_name, width, map_data, gfx_data, palette, skybox_data, compress=False, release=None):
+def to_gamecart(carts_path, name, group_name, width, map_data, gfx_data, palette, skybox_data, compress=False, release=None, export_mode=None):
   cart="""\
 pico-8 cartridge // http://www.pico-8.com
 version 29
@@ -923,7 +920,7 @@ __lua__
 #include {2}
 """.format(
   name,
-  compress and "lzs.lua" or "plain.lua",
+  compress and "lzs.lua" or (export_mode=="html" and "gpio.lua" or "plain.lua"),
   release and "{}_main_mini.lua".format(name) or "main.lua")
 
   # transpose gfx
@@ -1038,7 +1035,7 @@ def compress_byte_str(s,raw=False,more=False):
     return compressed
   return "".join(map(pack_byte, compressed))
 
-def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, release=None, skybox=None, dump_sprites=False, compress_more=False):
+def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, release=None, skybox=None, dump_sprites=False, compress_more=False, export_mode=None):
   # resource readers
   maps_stream = FileStream(os.path.join(root, "maps"))
   file_stream = FileStream(os.path.join(root))
@@ -1159,7 +1156,7 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
         game_data += compress and compress_byte_str(map_data, more=compress_more) or map_data
       
       # export game cart (hub for maps from same group)
-      to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, group_gradients, skybox_data, compress, release)
+      to_gamecart(carts_path, modname, map_group, textures.width, textures.map, textures.gfx, group_gradients, skybox_data, compress, release=release, export_mode=export_mode)
 
   # list of weapons
   wp_anchors = [50,64,78,64,64]
@@ -1247,19 +1244,24 @@ local _secrets=split"{5}"
 
   if release:
     all_carts = []
-    for i in range(int(len(game_data)/cart_len)+1):
-      all_carts.append(i)
+    if export_mode=="html":
+      # pack title + "map group" carts only
+      all_carts.append(0)
+    else:
+      # pack all carts
+      for i in range(int(len(game_data)/cart_len)+1):
+        all_carts.append(i)
     all_carts += map_groups
 
     # minifying main
     minify_file(os.path.join(carts_path, "main.lua"), os.path.join(carts_path, "{}_main_mini.lua".format(modname)))
     minify_file(os.path.join(carts_path, "title.lua"), os.path.join(carts_path, "{}_title_mini.lua".format(modname)))
 
-    logging.info("Generating {} binaries".format(release))
+    logging.info(f"Exporting {release} package for: {export_mode}")
 
     # pico8 command line export is totally broken :/
     # pack_release(modname, pico_path, carts_path, all_carts, release, mode="bin")
-    pack_release(modname, pico_path, carts_path, all_carts, release, mode="html")
+    pack_release(modname, pico_path, carts_path, all_carts, game_data, release, mode=export_mode)
 
 def to_float(n):
   return float((n-0x100000000)/65535.0) if n>0x7fffffff else float(n/65535.0)
@@ -1359,14 +1361,24 @@ def main():
   parser.add_argument("--map", type=str, default="", required=False, help="Map name to compile (ex: E1M1)")
   parser.add_argument("--compress", action='store_true', required=False, help="Enable compression (default: false)")
   parser.add_argument("--compress-more", action='store_true', required=False, help="Brute force search of best compression parameters. Warning: takes time (default: false)")
-  parser.add_argument("--release", required=False,  type=str, help="Generate html+bin packages with given version. Note: compression mandatory if number of carts above 16.")
+  parser.add_argument("--release", required=False,  type=str, help="Version number. Note: mandatory for binary exports")
+  parser.add_argument("--package", required=False,  type=str, help="html or bin. note: html export uses gpio fast loader.")
   parser.add_argument("--sky", required=False, type=str, help="Skybox texture name (only for single map compilation)")
   parser.add_argument("--dump-sprites", action='store_true', required=False, help="Writes all sprites to a single image with their 16x16 tile overlay.")
   args = parser.parse_args()
 
   logging.basicConfig(level=logging.INFO)
   
-  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress or args.compress_more, release=args.release, skybox=args.sky, dump_sprites=args.dump_sprites, compress_more=args.compress_more)
+  if args.package=="html":
+    if args.release is None:
+      raise Exception(f"Export mode: {args.mode} requires a 'release' version.")
+    # disable compression
+    if args.compress or args.compress_more:
+      logging.info("Disabling compression")
+      args.compress = None
+      args.compress_more = None
+
+  pack_archive(args.pico_home, args.carts_path, os.path.curdir, args.mod_name, args.map, compress=args.compress or args.compress_more, release=args.release, skybox=args.sky, dump_sprites=args.dump_sprites, compress_more=args.compress_more, export_mode=args.package)
   logging.info('DONE')
 
 if __name__ == '__main__':

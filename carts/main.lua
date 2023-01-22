@@ -371,7 +371,7 @@ function draw_flats(v_cache,segs)
             w0<<=4
             if(x0<0) cx0=0
             if(x1>127) x1=127
-            for x=cx0,x1\1 do
+            for x=cx0,x1 do
               -- lerp ratio
               local xratio=(x-x0)/dx
               -- @farbs: exact w value (e.g. no DDA) - fixes wobbling textures
