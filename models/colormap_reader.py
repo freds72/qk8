@@ -85,6 +85,10 @@ def std_palette():
 def std_rgba_palette():
   return {(int(rgb[2:4],16),int(rgb[4:6],16),int(rgb[6:8],16),255):p8 for rgb,p8 in rgb_to_pico8.items() if p8<16}
 
+# full rgba:hw index map
+def rgba_palette():
+  return {(int(rgb[2:4],16),int(rgb[4:6],16),int(rgb[6:8],16),255):p8 for rgb,p8 in rgb_to_pico8.items()}
+  
 # helper methods for gradient/colormap manipulation
 class ColormapReader():
   def __init__(self, stream):
