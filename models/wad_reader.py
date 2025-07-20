@@ -500,6 +500,8 @@ def pack_zmap(map, textures, colormaps):
   s += pack_variant(len(map.sides))
   for side in map.sides:
     s += pack_variant(side.sector+1)
+    # supports y offset for textures (todo: pack 2 signed bytes?)
+    s += pack_fixed(side.offsety/8)
     s += pack_named_texture(side, flats, 'texturetop')
     s += pack_named_texture(side, flats, 'texturemiddle')
     s += pack_named_texture(side, flats, 'texturebottom')
@@ -606,12 +608,12 @@ def pack_zmap(map, textures, colormaps):
     # get pair or self
     s+= pack_texture(texture_pairs.get(name, texture))
 
-  # transparent & x-flipped textures
-  transparent_textures=list([texture for name,texture in flats.items() if texture.transparent or texture.flipped])
+  # transparent textures
+  transparent_textures=list([texture for name,texture in flats.items() if texture.transparent])
   s += pack_variant(len(transparent_textures))
   for texture in transparent_textures:
     s+= pack_texture(texture)
-    s+= pack_byte(texture.transparent and 0x10 or 0 | texture.flipped and 0x01 or 0)
+    s+= pack_byte(texture.transparent and 0x10 or 0)
 
   return s
 

@@ -53,11 +53,13 @@ class SideWalker(udmfListener):
     def exitBlock(self, ctx):  
         block = ctx.keyword().getText()  
         if block=='sidedef':
-          side = dotdict()
+          side = dotdict({
+             'offsety':0
+          })
           for pair in ctx.pair():
             attribute = pair.keyword().getText()
             value = pair.value().getText().strip('"')
-            if attribute == 'sector':
+            if attribute in ['sector','offsety']:
               value = int(value)
             side[attribute] = value
           self.result.append(side)
