@@ -88,12 +88,11 @@ def std_rgba_palette():
 # helper methods for gradient/colormap manipulation
 class ColormapReader():
   def __init__(self, stream):
-    palette_data = stream.read("PLAYPAL")
+    palette_data = stream.read("PAINPAL")
     if len(palette_data)!=16*16*3:
-      raise Exception("Invalid 'PLAYPAL' palette size: {} - must be 16*16*3".format(len(palette_data)))
+      raise Exception("Invalid 'PAINPAL' palette size: {} - must be 16*16*3".format(len(palette_data)))
     palette = []
     for i in range(0,16*16*3,3*16):
-      i += 3*8
       r,g,b = palette_data[i],palette_data[i+1],palette_data[i+2]
       palette.append((r,g,b,255))
     self.palette = palette
@@ -123,7 +122,7 @@ class ColormapReader():
       else:
         # remap hardware color identifiers (0-15/129-145) to palette index (0-15) (for shading gradients)
         if rgb not in palette:
-          raise Exception("Unable to reference: {}  in remap palette: {}".format(rgb,palette))
+          raise Exception("Unknown color: {} in hardware palette: {}".format(rgb,palette))
         p8 = palette.index(rgb)
       c = i%16
       columns[c].append(p8)
