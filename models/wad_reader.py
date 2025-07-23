@@ -214,19 +214,25 @@ def pack_segs(segs):
 def pack_texture(texture):
   return "{:02x}{:02x}{:02x}{:02x}".format(texture.my,texture.mx,texture.height,texture.width)
 
-def pack_named_texture(owner, textures, name):
-  # no upper/middle/lower/ceiling/floor entries?
+def is_valid_texture_name(owner, textures, name):
   if name not in owner: 
-    return "00000000"
+    return False
   # de-reference texture name
   name = owner[name]
   # logical 'no texture'
   if name == '-': 
-    return "00000000"
+    return False
 
   # unknown texture/blank texture
   if name not in textures: 
+    return False
+  return True
+  
+def pack_named_texture(owner, textures, name):
+  if not is_valid_texture_name(owner, textures, name):
     return "00000000"
+  # de-reference texture name
+  name = owner[name]
   return pack_texture(textures[name])
 
 def pack_lightlevel(owner, name):
@@ -499,12 +505,20 @@ def pack_zmap(map, textures, colormaps):
 
   s += pack_variant(len(map.sides))
   for side in map.sides:
-    s += pack_variant(side.sector+1)
+    flags = 0x1
+    if is_valid_texture_name(side, flats, 'texturetop') or is_valid_texture_name(side, flats, 'texturemiddle') or is_valid_texture_name(side, flats, 'texturebottom'):
+      flags |= 0x2
+      if side.offsety!=0:
+        flags |= 0x4
+    s += pack_byte(flags)
+    s += pack_variant(side.sector+1)        
     # supports y offset for textures (todo: pack 2 signed bytes?)
-    s += pack_fixed(side.offsety/8)
-    s += pack_named_texture(side, flats, 'texturetop')
-    s += pack_named_texture(side, flats, 'texturemiddle')
-    s += pack_named_texture(side, flats, 'texturebottom')
+    if flags & 0x2:
+      s += pack_named_texture(side, flats, 'texturetop')
+      s += pack_named_texture(side, flats, 'texturemiddle')
+      s += pack_named_texture(side, flats, 'texturebottom')
+      # no need to pack offsets for empty textures anyway...
+      if flags & 0x4: s += pack_fixed(side.offsety/8)
 
   s += pack_variant(len(map.vertices)+len(map.other_vertices))
   for v in map.vertices:
