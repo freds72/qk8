@@ -5,6 +5,7 @@ import io
 import math
 import logging
 import argparse
+import binascii
 from collections import namedtuple
 from udmf_reader import UDMF
 from textures_reader import TextureReader
@@ -879,11 +880,9 @@ def pack_image(img, palette=None, label=False):
 
   data = bytearray()
   for y in range(img.size[1]):
-    for x in range(0,img.size[0],2):
-      low = p.register(img.getpixel((x, y)))
-      high = p.register(img.getpixel((x + 1,y)))
-      data.append(low)
-      data.append(high)
+    for x in range(0,img.size[0]):
+      pix = p.register(img.getpixel((x, y)))
+      data.append(pix)
   
   s = ""
   pal = p.pal(label=label)
@@ -894,7 +893,7 @@ def pack_image(img, palette=None, label=False):
   return s, pal
 
 # convert image to pico8 format
-def pack_p8image(stream, asset, palette=None, swap=False, min_size=(0,0), max_size=(128,128), crop=False, mandatory=False, label=False):
+def pack_p8image(stream, asset, palette=None, swap=False, min_size=(0,0), max_size=(128,128), crop=False, mandatory=False, label=False, rle=False):
   src = None
   try:
     src = Image.open(io.BytesIO(stream.read(asset)))
@@ -915,7 +914,28 @@ def pack_p8image(stream, asset, palette=None, swap=False, min_size=(0,0), max_si
 
   img = Image.new('RGBA', size, (0,0,0,0))
   img.paste(src)
-  data,autopalette = pack_image(img, palette=palette, label=label)
+  data, autopalette = pack_image(img, palette=palette, label=label)
+  if rle:
+    i = 0
+    raw = bytes.fromhex(data)
+    n = len(raw)
+    tmp = bytearray()
+    while i<n:
+      zeroes = 0
+      while zeroes!=255 and i<n and raw[i]==0:
+        zeroes += 1
+        i += 1
+      if zeroes:
+        tmp.append(0)
+        tmp.append(zeroes)
+      else:
+        if swap:
+          tmp.append((raw[i]&0xf0)>>4|(raw[i]&0xf)<<4)
+        else:
+          tmp.append(raw[i])
+        i += 1
+    data = tmp.hex()
+    swap = False
   if swap:
     s = ""
     for i in range(0,len(data),2):
@@ -1205,9 +1225,9 @@ def pack_archive(pico_path, carts_path, root, modname, mapname, compress=False, 
   # get loading game image
   logging.info("Packing title images")  
   title_images = dotdict({
-    'title': pack_p8image(graphics_stream, "G_TITLE", swap=True, mandatory=True, min_size=(128,140),max_size=(128,140)),    
-    'loading': pack_p8image(graphics_stream, "G_LOAD", palette=colormap.palette, swap=True, mandatory=True),
-    'endgame': pack_p8image(graphics_stream, "G_END", swap=True, mandatory=True)
+    'title': pack_p8image(graphics_stream, "G_TITLE", swap=True, mandatory=True, min_size=(128,140),max_size=(128,140), rle=True),    
+    'loading': pack_p8image(graphics_stream, "G_LOAD", palette=colormap.palette, swap=True, mandatory=True, rle=True),
+    'endgame': pack_p8image(graphics_stream, "G_END", swap=True, mandatory=True, rle=True)
   })
 
   atlas_code="""
