@@ -915,32 +915,13 @@ def pack_p8image(stream, asset, palette=None, swap=False, min_size=(0,0), max_si
   img = Image.new('RGBA', size, (0,0,0,0))
   img.paste(src)
   data, autopalette = pack_image(img, palette=palette, label=label)
-  if rle:
-    i = 0
-    raw = bytes.fromhex(data)
-    n = len(raw)
-    tmp = bytearray()
-    while i<n:
-      zeroes = 0
-      while zeroes!=255 and i<n and raw[i]==0:
-        zeroes += 1
-        i += 1
-      if zeroes:
-        tmp.append(0)
-        tmp.append(zeroes)
-      else:
-        if swap:
-          tmp.append((raw[i]&0xf0)>>4|(raw[i]&0xf)<<4)
-        else:
-          tmp.append(raw[i])
-        i += 1
-    data = tmp.hex()
-    swap = False
   if swap:
     s = ""
     for i in range(0,len(data),2):
       s += data[i+1:i+2] + data[i:i+1]
     data = s
+  if rle:
+    data = compress_byte_str(data)
   # convert palette into a "pal" call
   return data, "[0]={},".format(autopalette[0])+",".join(str(c) for c in autopalette[1:]), size
 
